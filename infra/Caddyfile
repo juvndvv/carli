@@ -1,0 +1,81 @@
+{
+	admin off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+(security_headers) {
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		-X-Powered-By
+	}
+
+	@hsts {
+		protocol https
+		not host localhost 127.0.0.1
+	}
+	header @hsts Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	@apiDocs path /docs /docs/*
+	header @apiDocs Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+
+	@app not path /docs /docs/*
+	header @app Content-Security-Policy "default-src 'self'; script-src 'self' {$CSP_SCRIPT_HASHES:}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+}
+
+(laravel) {
+	request_body {
+		max_size 25MB
+	}
+	rewrite * /index.php
+	reverse_proxy {$PHP_FPM_UPSTREAM:app:9000} {
+		transport fastcgi {
+			root /var/www/html/public
+			split .php
+		}
+	}
+}
+
+{$SITE_ADDRESS::80} {
+	import security_headers
+
+	encode zstd gzip
+
+	@backend {
+		path /api /api/* /sanctum/* /user/* /docs /docs/* /up /broadcasting/*
+	}
+	@backendAuth {
+		path /login /logout /two-factor-challenge /forgot-password /reset-password
+		not method GET HEAD
+	}
+
+	handle @backend {
+		import laravel
+	}
+
+	handle @backendAuth {
+		import laravel
+	}
+
+	handle {
+		root * /srv/frontend
+
+		@hashedAsset path_regexp -[A-Za-z0-9]{8,}\.(js|mjs|css|woff2?|ttf|otf|svg|png|jpe?g|gif|webp|avif|ico)$
+		handle @hashedAsset {
+			header Cache-Control "public, max-age=31536000, immutable"
+			file_server
+		}
+
+		handle {
+			header Cache-Control "no-cache"
+			try_files {path} /index.html
+			file_server
+		}
+	}
+}

@@ -1,8 +1,13 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+Schedule::command('queue:prune-failed --hours=168')->daily();
+
+Schedule::call(fn () => DatabaseNotification::query()
+    ->whereNotNull('read_at')
+    ->where('created_at', '<', now()->subDays(90))
+    ->delete())
+    ->name('notifications:prune-read')
+    ->dailyAt('04:00');

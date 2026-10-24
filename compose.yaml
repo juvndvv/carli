@@ -1,5 +1,65 @@
 name: personal-app
 
+x-php-build: &php-build
+  context: ./backend
+  dockerfile: ../infra/docker/php/Dockerfile
+  additional_contexts:
+    php-config: ./infra/docker/php
+  target: production
+
+x-laravel-env: &laravel-env
+  APP_NAME: ${APP_NAME:-Personal}
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY:-}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${APP_URL:-http://localhost:8180}
+  APP_TIMEZONE: Europe/Madrid
+  APP_LOCALE: es
+  APP_FALLBACK_LOCALE: es
+  APP_FAKER_LOCALE: es_ES
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_DATABASE: ${DB_DATABASE:-personal}
+  DB_USERNAME: ${DB_USERNAME:-personal}
+  DB_PASSWORD: ${DB_PASSWORD:-personal}
+  SESSION_DRIVER: database
+  SESSION_LIFETIME: ${SESSION_LIFETIME:-43200}
+  SESSION_DOMAIN: ${SESSION_DOMAIN:-null}
+  SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+  SESSION_SAME_SITE: lax
+  SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8180,localhost,127.0.0.1:8180}
+  QUEUE_CONNECTION: database
+  CACHE_STORE: database
+  BROADCAST_CONNECTION: log
+  FILESYSTEM_DISK: local
+  MAIL_MAILER: ${MAIL_MAILER:-log}
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-personal@localhost}
+  MAIL_FROM_NAME: ${APP_NAME:-Personal}
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
+  SEED_DEMO_USER: ${SEED_DEMO_USER:-false}
+  RUN_MIGRATIONS: "false"
+
+x-php-service: &php-service
+  image: ${PHP_IMAGE:-personal-app-php:latest}
+  build: *php-build
+  restart: unless-stopped
+  environment:
+    <<: *laravel-env
+  volumes:
+    - app-storage:/var/www/html/storage/app
+  depends_on:
+    postgres:
+      condition: service_healthy
+
 services:
   postgres:
     image: postgres:18
@@ -19,8 +79,114 @@ services:
       timeout: 5s
       retries: 20
 
+  app:
+    <<: *php-service
+    environment:
+      <<: *laravel-env
+      RUN_MIGRATIONS: "true"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+
+  worker:
+    <<: *php-service
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3", "--max-time=3600"]
+    stop_signal: SIGTERM
+    depends_on:
+      app:
+        condition: service_healthy
+
+  scheduler:
+    <<: *php-service
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+  caddy:
+    image: ${CADDY_IMAGE:-personal-app-caddy:latest}
+    build:
+      context: ./frontend
+      dockerfile: ../infra/docker/caddy/Dockerfile
+      additional_contexts:
+        caddy-config: ./infra
+      target: production
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      PHP_FPM_UPSTREAM: app:9000
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8180}:80"
+      - "${APP_BIND:-127.0.0.1}:${APP_HTTPS_PORT:-8543}:443"
+      - "${APP_BIND:-127.0.0.1}:${APP_HTTPS_PORT:-8543}:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+  backup:
+    build:
+      context: ./infra/docker/backup
+    image: ${BACKUP_IMAGE:-personal-app-backup:latest}
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Madrid
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${DB_DATABASE:-personal}
+      PGUSER: ${DB_USERNAME:-personal}
+      PGPASSWORD: ${DB_PASSWORD:-personal}
+      BACKUP_TIME: ${BACKUP_TIME:-03:00}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      AWS_ACCESS_KEY_ID: ${RESTIC_AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${RESTIC_AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend-test:
+    profiles: ["test"]
+    build:
+      <<: *php-build
+      target: dev
+    image: personal-app-php:dev
+    environment:
+      SKIP_ENTRYPOINT: "true"
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ${TEST_DB_DATABASE:-personal_test}
+      DB_USERNAME: ${DB_USERNAME:-personal}
+      DB_PASSWORD: ${DB_PASSWORD:-personal}
+      LOG_CHANNEL: stderr
+    command: ["php", "artisan", "test"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend-test:
+    profiles: ["test"]
+    build:
+      context: ./frontend
+      dockerfile: ../infra/docker/caddy/Dockerfile
+      target: frontend-test
+    image: personal-app-frontend:test
+
 volumes:
   pgdata:
+  app-storage:
+  caddy-data:
+  caddy-config:
 
 networks:
   default:

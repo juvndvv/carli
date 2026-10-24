@@ -1,0 +1,252 @@
+<div class="page">
+  <header class="top">
+    <a ui-button variant="ghost" icon="arrow-left" iconOnly aria-label="Volver al inicio" routerLink="/"></a>
+    <div class="titles">
+      <div class="crumb">Base · tokens y componentes</div>
+      <h1>Design system</h1>
+    </div>
+    <ui-segmented
+      class="theme"
+      ariaLabel="Tema"
+      [options]="themeOptions"
+      [value]="theme.preference()"
+      (valueChange)="setTheme($event)"
+    />
+  </header>
+
+  <div class="stack">
+    <ui-card heading="Superficies y texto">
+      <div class="grid-cards g-4">
+        @for (token of surfaceTokens; track token) {
+          <div>
+            <div class="swatch" [style.background]="'var(--' + token + ')'"></div>
+            <div class="small token">--{{ token }}</div>
+          </div>
+        }
+      </div>
+    </ui-card>
+
+    <ui-card heading="Semánticos">
+      <div class="grid-cards g-4">
+        @for (token of statusTokens; track token) {
+          <div>
+            <div class="swatch" [style.background]="'var(--' + token + ')'"></div>
+            <div class="swatch soft" [style.background]="'var(--' + token + '-soft)'"></div>
+            <div class="small token">--{{ token }} / -soft</div>
+          </div>
+        }
+      </div>
+    </ui-card>
+
+    <ui-card heading="Categórica (orden fijo, solo gráficos)">
+      <div class="grid-cards g-4">
+        @for (slot of categoricalSlots; track slot) {
+          <div>
+            <div class="swatch" [style.background]="'var(--c' + slot + ')'"></div>
+            <div class="small token">--c{{ slot }}</div>
+          </div>
+        }
+      </div>
+    </ui-card>
+
+    <ui-card heading="Tipografía">
+      <div class="stack">
+        <div class="display num">{{ 1234567 | money }}</div>
+        <h1>Título de página · h1</h1>
+        <h2>Título de tarjeta · h2</h2>
+        <div>Cuerpo de texto 15/22 para descripciones y listas.</div>
+        <div class="small muted">Texto secundario 13/18</div>
+        <div class="caption">Caption · ejes y etiquetas</div>
+        <div class="row wrap small">
+          <span class="num">{{ -4250 | money: 'signed' }}</span>
+          <span class="num pos">{{ 265000 | money: 'signed' }}</span>
+          <span class="num muted">{{ -50000 | money: 'absolute' }}</span>
+          <span>{{ today | relativeDate }}</span>
+          <span>{{ yesterday | relativeDate }}</span>
+          <span>{{ lastWeek | relativeDate }}</span>
+          <span>{{ samplePeriod }}</span>
+        </div>
+      </div>
+    </ui-card>
+
+    <ui-card heading="Botones">
+      <div class="row wrap">
+        <button ui-button variant="primary" icon="plus">Primario</button>
+        <button ui-button variant="secondary">Secundario</button>
+        <button ui-button variant="ghost">Ghost</button>
+        <button ui-button variant="danger" icon="trash-2">Peligro</button>
+        <button ui-button variant="primary" size="sm">Pequeño</button>
+        <button ui-button variant="primary" size="lg">Grande</button>
+        <button ui-button variant="secondary" icon="settings" iconOnly aria-label="Ajustes"></button>
+        <button ui-button variant="primary" loading>Guardando</button>
+        <button ui-button variant="secondary" disabled>Deshabilitado</button>
+      </div>
+    </ui-card>
+
+    <ui-card heading="Badges, chips y progreso">
+      <div class="stack">
+        <div class="row wrap">
+          <ui-badge>Neutral</ui-badge>
+          <ui-badge tone="primary" icon="users">Compartido</ui-badge>
+          <ui-badge tone="positive" icon="check">OK</ui-badge>
+          <ui-badge tone="warning" icon="triangle-alert">Aviso</ui-badge>
+          <ui-badge tone="negative" icon="circle-x">Excedido</ui-badge>
+        </div>
+        <div class="row wrap">
+          <button ui-chip [selected]="chipOn()" (click)="chipOn.set(!chipOn())">Activo</button>
+          <button ui-chip icon="tag">Filtro</button>
+          <button ui-chip icon="calendar" trailingIcon="chevron-down">Octubre 2026</button>
+        </div>
+        <ui-progress [value]="4500" [max]="10000" label="Ropa" showStatus statusText="Te quedan 55,00 €" />
+        <ui-progress [ratio]="0.86" label="Ocio" showStatus />
+        <ui-progress [ratio]="1.1" label="Restaurantes" showStatus statusText="Excedido en 14,50 €" />
+        <ui-progress [ratio]="0.42" tone="primary" label="Objetivo" />
+      </div>
+    </ui-card>
+
+    <div class="grid-cards g-4">
+      <ui-stat label="Patrimonio neto" icon="landmark" [value]="1556695 | money" delta="+939,73 € vs sep" deltaIcon="trending-up" deltaTone="positive" />
+      <ui-stat label="Ingresos" icon="arrow-down-left" [value]="269500 | money" tone="positive" delta="−0,9 % vs sep" deltaIcon="minus" />
+      <ui-stat label="Gastos" icon="arrow-up-right" [value]="175527 | money" delta="−18,0 % vs sep" deltaIcon="trending-down" deltaTone="positive" />
+      <ui-stat label="Proyección" [value]="194000 | money" tone="warning" delta="Superarías el total" deltaIcon="triangle-alert" deltaTone="warning" />
+    </div>
+
+    <ui-card heading="Formularios">
+      <div class="stack">
+        <div class="grid-cards g-2">
+          <ui-field label="Concepto" for="catalog-concept" hint="Comercio o descripción">
+            <input ui-input id="catalog-concept" placeholder="Ej. Mercadona" />
+          </ui-field>
+          <ui-field label="Con error" for="catalog-error" error="Este campo es obligatorio">
+            <input ui-input id="catalog-error" invalid />
+          </ui-field>
+          <ui-field label="Cuenta" for="catalog-account">
+            <ui-select inputId="catalog-account" [options]="accountOptions" [(value)]="account" />
+          </ui-field>
+          <ui-field label="Comercio (combobox)" for="catalog-payee" [hint]="'Valor: ' + (payee() ?? '—')">
+            <ui-combobox
+              inputId="catalog-payee"
+              icon="store"
+              placeholder="Busca o escribe"
+              allowCustom
+              [options]="payeeOptions"
+              [(value)]="payee"
+            />
+          </ui-field>
+          <ui-field label="Importe (campo)" for="catalog-amount" [hint]="'Céntimos: ' + amount()">
+            <ui-money-input inputId="catalog-amount" appearance="field" [(value)]="amount" />
+          </ui-field>
+          <ui-field label="Nota" for="catalog-note">
+            <textarea ui-textarea id="catalog-note" placeholder="Opcional"></textarea>
+          </ui-field>
+        </div>
+        <ui-segmented ariaLabel="Tipo de movimiento" [options]="kindOptions" [(value)]="kind" />
+        <div class="money-demo">
+          <ui-money-input [(value)]="amount" [sign]="kind() === 'income' ? 'positive' : 'negative'" />
+        </div>
+        <ui-field label="Categoría">
+          <ui-category-picker [categories]="categories" [(value)]="category" />
+        </ui-field>
+        <ui-field label="Fecha" [hint]="'Valor: ' + date()">
+          <ui-date-picker [(value)]="date" />
+        </ui-field>
+        <ui-search placeholder="Buscar por comercio, concepto o nota" [(value)]="search" />
+        <div class="row between">
+          <span>Interruptor</span>
+          <ui-switch label="Interruptor de ejemplo" [(checked)]="switchOn" />
+        </div>
+      </div>
+    </ui-card>
+
+    <ui-card heading="Pestañas">
+      <ui-tabs [tabs]="tabs" [(active)]="tab" ariaLabel="Ejemplo de pestañas" />
+      <p class="small muted">Pestaña activa: {{ tab() }}</p>
+    </ui-card>
+
+    <ui-card heading="Filas de lista" padding="list">
+      <div class="ui-list">
+        <ui-list-item icon="shopping-cart" heading="Mercadona" subtitle="Alimentación · Visa Oro" [value]="-4250 | money: 'signed'" interactive>
+          <ui-badge badges>#casa</ui-badge>
+        </ui-list-item>
+        <ui-list-item icon="utensils" heading="Cena con Ana" subtitle="Restaurantes · Cuenta corriente · Ana te debe 40,00 €" [value]="-8000 | money: 'signed'" interactive>
+          <ui-badge badges tone="primary" icon="users">Compartido</ui-badge>
+        </ui-list-item>
+        <ui-list-item icon="arrow-left-right" iconSoft heading="Traspaso a Ahorro" subtitle="Transferencia · Cuenta corriente" [value]="50000 | money" valueTone="muted" interactive />
+        <ui-list-item icon="briefcase" heading="Nómina Acme S.L." subtitle="Nómina · Cuenta corriente" [value]="265000 | money: 'signed'" valueTone="positive" interactive>
+          <ui-badge badges tone="warning" icon="clock">Pendiente</ui-badge>
+        </ui-list-item>
+        <ui-list-item heading="Ana" subtitle="Cena · 24 oct">
+          <ui-avatar leading name="Ana" />
+          <span trailing class="num pos">Te debe {{ 4000 | money }}</span>
+        </ui-list-item>
+      </div>
+    </ui-card>
+
+    <div class="grid-cards g-main">
+      <ui-card heading="Ingresos y gastos">
+        <ui-chart
+          type="bar"
+          ariaLabel="Ingresos y gastos de los últimos 12 meses"
+          [labels]="months"
+          [series]="incomeExpenses"
+        />
+      </ui-card>
+      <ui-card heading="Gasto por categoría">
+        <ui-chart
+          type="doughnut"
+          ariaLabel="Gasto por categoría"
+          categoryHeader="Categoría"
+          legendValues
+          [height]="180"
+          [labels]="spendingLabels"
+          [series]="spending"
+          [colors]="spendingColors"
+          centerLabel="Gastado"
+          [centerValue]="165095 | money"
+        />
+      </ui-card>
+    </div>
+    <ui-card heading="Patrimonio · 12 meses">
+      <ui-chart type="line" ariaLabel="Evolución del patrimonio" [labels]="months" [series]="netWorth" [showLegend]="false" />
+    </ui-card>
+
+    <div class="grid-cards g-2">
+      <ui-card heading="Overlays">
+        <div class="row wrap">
+          <button ui-button variant="primary" (click)="openDialog()">Diálogo</button>
+          <button ui-button variant="secondary" (click)="openSheet()">Sheet</button>
+          <button ui-button variant="secondary" (click)="openConfirm()">Confirmación</button>
+          <button ui-button variant="secondary" (click)="showToast()">Toast con deshacer</button>
+          <button ui-button variant="ghost" (click)="showErrorToast()">Toast de error</button>
+          <button ui-button variant="ghost" icon="info" iconOnly aria-label="Información" uiTooltip="Tooltip invertido con radio 8"></button>
+        </div>
+      </ui-card>
+      <ui-card heading="Carga y avatares">
+        <div class="stack">
+          <div class="row">
+            <ui-avatar name="Ana" />
+            <ui-avatar name="Carlos Pérez" />
+            <ui-avatar name="Piso compartido" [size]="44" />
+          </div>
+          <ui-skeleton width="40%" height="12px" />
+          <ui-skeleton height="36px" />
+          <ui-skeleton width="70%" />
+        </div>
+      </ui-card>
+    </div>
+
+    <ui-card>
+      <ui-empty-state icon="inbox" heading="Aún no hay movimientos" description="Apunta tu primer gasto y empezarás a ver tu resumen.">
+        <button ui-button variant="primary" icon="plus" (click)="openDialog()">Añadir movimiento</button>
+      </ui-empty-state>
+    </ui-card>
+
+    <ui-card heading="Iconos (Lucide, trazo 1,75, 18 px)">
+      <div class="row wrap">
+        @for (icon of ['wallet', 'landmark', 'piggy-bank', 'credit-card', 'banknote', 'shopping-cart', 'car', 'utensils', 'heart-pulse', 'repeat', 'target', 'users', 'bell', 'settings']; track icon) {
+          <ui-icon [name]="icon" [uiTooltip]="icon" />
+        }
+      </div>
+    </ui-card>
+  </div>
+</div>

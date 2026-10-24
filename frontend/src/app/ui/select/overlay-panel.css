@@ -1,0 +1,55 @@
+.panel {
+  max-height: 320px;
+  overflow: auto;
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-2);
+  outline: none;
+  animation: ui-pop var(--motion-enter) ease-out;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 14px;
+}
+.option:hover,
+.option.cdk-option-active,
+.option.active {
+  background: var(--surface-2);
+}
+.option[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.option .text {
+  flex: 1;
+  min-width: 0;
+}
+.option .description {
+  display: block;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.option .check {
+  margin-left: auto;
+}
+.empty {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+@keyframes ui-pop {
+  from {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+}
