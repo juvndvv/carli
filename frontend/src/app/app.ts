@@ -23,7 +23,6 @@ export class App {
 
   constructor() {
     inject(ThemeService);
-    void this.biometricLock.start();
-    inject(LaunchScreen).dismissAfterFirstNavigation();
+    void inject(LaunchScreen).dismissAfterStartup(this.biometricLock.start());
   }
 }
