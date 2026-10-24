@@ -102,7 +102,7 @@ const INBOX_POSITIONS: ConnectedPosition[] = [
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 14px 32px;
+      padding: calc(14px + env(safe-area-inset-top)) 32px 14px;
       position: sticky;
       top: 0;
       background: var(--bg);
@@ -150,7 +150,7 @@ const INBOX_POSITIONS: ConnectedPosition[] = [
     }
     @media (max-width: 1023px) {
       .topbar {
-        padding: 12px 16px;
+        padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
         gap: 4px;
       }
       .title {
