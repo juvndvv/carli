@@ -56,8 +56,8 @@ export class BiometricLockService {
     this.verifying.set(true);
     try {
       await NativeBiometric.verifyIdentity({
-        reason: 'Desbloquea Personal',
-        title: 'Desbloquear Personal',
+        reason: 'Desbloquea carli',
+        title: 'Desbloquear carli',
         useFallback: true,
       });
       this.lockedState.set(false);

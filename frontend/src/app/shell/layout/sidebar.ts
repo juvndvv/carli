@@ -3,16 +3,17 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ModuleRegistry } from '@core/modules/app-module';
 import { UiBadge } from '@ui/badge/badge';
 import { UiIcon } from '@ui/icon/icon';
+import { UiLogo } from '@ui/logo/logo';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, UiIcon, UiBadge],
+  imports: [RouterLink, RouterLinkActive, UiIcon, UiBadge, UiLogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="sidebar" aria-label="Navegación principal">
       <a class="brand" routerLink="/">
-        <span class="brand-mark" aria-hidden="true">P</span>
-        Personal App
+        <ui-logo [size]="28" />
+        carli
       </a>
       <a
         class="nav-item"
@@ -98,18 +99,10 @@ import { UiIcon } from '@ui/icon/icon';
       align-items: center;
       gap: 10px;
       padding: 6px 10px 16px;
+      font-size: 18px;
       font-weight: 650;
+      letter-spacing: -0.03em;
       text-decoration: none;
-    }
-    .brand-mark {
-      width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      background: var(--primary);
-      color: var(--on-primary);
-      display: grid;
-      place-items: center;
-      font-weight: 700;
     }
     .nav-section {
       margin: 14px 10px 6px;

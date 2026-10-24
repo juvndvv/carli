@@ -4,7 +4,7 @@ const serverUrl = process.env['CAP_SERVER_URL'] ?? 'http://192.168.0.20:8180';
 
 const config: CapacitorConfig = {
   appId: 'dev.jotade.personal',
-  appName: 'Personal',
+  appName: 'carli',
   webDir: 'dist/frontend/browser',
   server: {
     url: serverUrl,

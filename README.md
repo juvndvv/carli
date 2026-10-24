@@ -1,6 +1,6 @@
-# Personal App
+# carli
 
-App personal modular (Finanzas, y más adelante Tareas, Salud, Hábitos y Notas).
+Asistente personal modular (Finanzas, y más adelante Tareas, Salud, Hábitos y Notas).
 Stack: Angular 22 · Laravel 13 · PostgreSQL 18. Autoalojada en VPS propio.
 
 ## Documentación

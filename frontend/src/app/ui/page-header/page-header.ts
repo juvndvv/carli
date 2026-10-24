@@ -13,7 +13,7 @@ import {
 import { Title } from '@angular/platform-browser';
 import { PageHeaderStore } from './page-header.store';
 
-export const APP_TITLE = 'Personal App';
+export const APP_TITLE = 'carli';
 
 @Component({
   selector: 'ui-page-header',

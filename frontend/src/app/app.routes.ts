@@ -7,12 +7,12 @@ export const routes: Routes = [
   {
     path: 'login',
     canMatch: [guestGuard],
-    title: 'Entrar · Personal App',
+    title: 'Entrar · carli',
     loadComponent: () => import('./shell/login/login-page').then((m) => m.LoginPage),
   },
   {
     path: 'dev/ui',
-    title: 'Design system · Personal App',
+    title: 'Design system · carli',
     loadComponent: () => import('./dev/ui-catalog-page').then((m) => m.UiCatalogPage),
   },
   {

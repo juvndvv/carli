@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BiometricLockScreen } from '@core/biometric/biometric-lock-screen';
 import { BiometricLockService } from '@core/biometric/biometric-lock.service';
+import { LaunchScreen } from '@core/launch/launch-screen';
 import { ThemeService } from '@core/theme/theme.service';
 import { UiToastHost } from '@ui/toast/toast-host';
 
@@ -23,5 +24,6 @@ export class App {
   constructor() {
     inject(ThemeService);
     void this.biometricLock.start();
+    inject(LaunchScreen).dismissAfterFirstNavigation();
   }
 }

@@ -7,21 +7,22 @@ import { firstValidationMessage } from '@core/http/api';
 import { UiButton } from '@ui/button/button';
 import { UiField } from '@ui/field/field';
 import { UiInput } from '@ui/input/input';
+import { UiLogo } from '@ui/logo/logo';
 
 type LoginStep = 'credentials' | 'two_factor';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, UiButton, UiField, UiInput],
+  imports: [ReactiveFormsModule, UiButton, UiField, UiInput, UiLogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="login">
       <section class="panel stack" aria-labelledby="login-title">
         <div class="row">
-          <span class="brand-mark" aria-hidden="true">P</span>
+          <ui-logo [size]="36" />
           <div>
-            <h1 id="login-title" class="brand-name">Personal App</h1>
-            <div class="small faint">Tu espacio privado</div>
+            <h1 id="login-title" class="brand-name">carli</h1>
+            <div class="small faint">Tu asistente personal</div>
           </div>
         </div>
 
@@ -118,22 +119,11 @@ type LoginStep = 'credentials' | 'two_factor';
       background: var(--surface);
       border-radius: var(--r-lg);
     }
-    .brand-mark {
-      width: 30px;
-      height: 30px;
-      border-radius: 999px;
-      background: var(--primary);
-      color: var(--on-primary);
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      flex: none;
-    }
     .brand-name {
-      font-size: 15px;
-      line-height: 22px;
+      font-size: 20px;
+      line-height: 24px;
       font-weight: 650;
-      letter-spacing: 0;
+      letter-spacing: -0.03em;
     }
     .remember {
       gap: 8px;

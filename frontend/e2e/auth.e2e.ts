@@ -7,7 +7,7 @@ test.describe('authentication', () => {
   test('redirects guests to the login page', async ({ page }) => {
     await page.goto('/finanzas');
     await expect(page).toHaveURL(/\/login\?redirect=/);
-    await expect(page.getByRole('heading', { name: 'Personal App' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'carli' })).toBeVisible();
   });
 
   test('rejects a wrong password with a Spanish message', async ({ page }) => {

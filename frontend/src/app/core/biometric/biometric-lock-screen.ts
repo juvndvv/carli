@@ -11,7 +11,7 @@ import { BiometricLockService } from './biometric-lock.service';
   template: `
     <div class="content stack">
       <span class="mark"><ui-icon name="scan-face" [size]="40" /></span>
-      <h1 id="lock-title" class="title">Personal está bloqueada</h1>
+      <h1 id="lock-title" class="title">carli está bloqueada</h1>
       <p class="small muted">Usa {{ lock.label() }} para continuar.</p>
       <button ui-button type="button" variant="primary" size="lg" icon="scan-face" [loading]="lock.busy()" (click)="lock.unlock()">
         Desbloquear

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Personal</string>
+	<string>carli</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -32,9 +32,9 @@
 		<true/>
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Personal usa Face ID para desbloquear la app.</string>
+	<string>carli usa Face ID para desbloquear la app.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Personal se conecta a tu servidor en la red local.</string>
+	<string>carli se conecta a tu servidor en la red local.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

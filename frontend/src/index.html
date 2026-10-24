@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Personal App</title>
+  <title>carli</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta name="description" content="Tu espacio privado: finanzas y más módulos personales.">
+  <meta name="description" content="Tu asistente personal: finanzas y más módulos.">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Personal">
+  <meta name="apple-mobile-web-app-title" content="carli">
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -54,9 +54,72 @@
   <!-- splash:end -->
   <link rel="manifest" href="manifest.webmanifest">
   <script src="theme-init.js"></script>
+  <style>
+    .launch {
+      --launch-bg: #FFFFFF;
+      --launch-face: #0D0D0D;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: var(--launch-bg);
+      transition: opacity 240ms ease-out;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .launch { --launch-bg: #212121; --launch-face: #FFFFFF; }
+    }
+    :root[data-theme="dark"] .launch { --launch-bg: #212121; --launch-face: #FFFFFF; }
+    .launch-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 96px;
+      height: 96px;
+      margin: -48px 0 0 -48px;
+    }
+    .launch-mark svg { display: block; width: 100%; height: 100%; }
+    .launch-face { fill: var(--launch-face); }
+    .launch-eye { fill: var(--launch-bg); transform-box: fill-box; transform-origin: center; }
+    .launch-word {
+      position: absolute;
+      top: calc(50% + 64px);
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: var(--launch-face);
+      font: 650 26px/32px ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+      letter-spacing: -0.03em;
+      opacity: 0;
+    }
+    .launch-animated .launch-eye { animation: launch-blink 1100ms ease-in-out 200ms both; }
+    .launch-animated .launch-word { animation: launch-rise 380ms ease-out 900ms both; }
+    .launch-out { opacity: 0; pointer-events: none; }
+    @keyframes launch-blink {
+      0%, 18%, 36%, 58%, 76%, 100% { transform: scaleY(1); }
+      27%, 67% { transform: scaleY(0.12); }
+    }
+    @keyframes launch-rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .launch-animated .launch-eye, .launch-animated .launch-word { animation: none; }
+      .launch-animated .launch-word { opacity: 1; }
+    }
+  </style>
 </head>
 <body>
+  <div id="launch" class="launch" aria-hidden="true">
+    <div class="launch-mark">
+      <svg viewBox="12 12 76 76">
+        <rect class="launch-face" x="12" y="12" width="76" height="76" rx="28"/>
+        <ellipse class="launch-eye" cx="39" cy="47" rx="5.5" ry="9"/>
+        <ellipse class="launch-eye" cx="61" cy="47" rx="5.5" ry="9"/>
+      </svg>
+    </div>
+    <span class="launch-word">carli</span>
+  </div>
+  <script src="launch-init.js"></script>
   <app-root></app-root>
-  <noscript>Personal App necesita JavaScript para funcionar.</noscript>
+  <noscript>carli necesita JavaScript para funcionar.</noscript>
 </body>
 </html>

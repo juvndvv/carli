@@ -1,7 +1,7 @@
 {
-  "name": "Personal App",
-  "short_name": "Personal",
-  "description": "Tu espacio privado: finanzas y más módulos personales.",
+  "name": "carli",
+  "short_name": "carli",
+  "description": "Tu asistente personal: finanzas y más módulos.",
   "lang": "es-ES",
   "dir": "ltr",
   "start_url": "/",
