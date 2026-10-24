@@ -1,9 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, linkedSignal, OnInit, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActiveSession } from '@core/auth/auth.models';
 import { AuthService } from '@core/auth/auth.service';
+import { BiometricLockService } from '@core/biometric/biometric-lock.service';
 import { firstValidationMessage } from '@core/http/api';
 import { UiBadge } from '@ui/badge/badge';
 import { UiButton } from '@ui/button/button';
@@ -13,6 +14,7 @@ import { UiField } from '@ui/field/field';
 import { UiInput } from '@ui/input/input';
 import { UiListItem } from '@ui/list-item/list-item';
 import { UiSkeleton } from '@ui/skeleton/skeleton';
+import { UiSwitch } from '@ui/switch/switch';
 import { ToastService } from '@ui/toast/toast.service';
 import { firstValueFrom } from 'rxjs';
 import { formatTimeAgo } from '../notifications/time-ago';
@@ -39,7 +41,7 @@ export function describeUserAgent(userAgent: string | null): string {
 
 @Component({
   selector: 'app-security-settings',
-  imports: [ReactiveFormsModule, UiCard, UiField, UiInput, UiButton, UiBadge, UiListItem, UiSkeleton],
+  imports: [ReactiveFormsModule, UiCard, UiField, UiInput, UiButton, UiBadge, UiListItem, UiSkeleton, UiSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="grid-cards g-2">
@@ -136,6 +138,20 @@ export function describeUserAgent(userAgent: string | null): string {
         </div>
       </ui-card>
 
+      @if (biometricLock.supported()) {
+        <ui-card [heading]="'Bloqueo con ' + biometricLock.label()">
+          <div class="row between">
+            <p class="small muted">Pide {{ biometricLock.label() }} al abrir la app y al volver tras más de un minuto fuera.</p>
+            <ui-switch
+              [label]="'Bloqueo con ' + biometricLock.label()"
+              [checked]="biometricSwitch()"
+              [disabled]="biometricLock.busy()"
+              (checkedChange)="toggleBiometricLock($event)"
+            />
+          </div>
+        </ui-card>
+      }
+
       <ui-card heading="Sesiones activas">
         <button card-actions ui-button type="button" variant="ghost" size="sm" (click)="logoutOthers()">
           Cerrar las demás
@@ -192,6 +208,8 @@ export function describeUserAgent(userAgent: string | null): string {
 })
 export class SecuritySettings implements OnInit {
   protected readonly auth = inject(AuthService);
+  protected readonly biometricLock = inject(BiometricLockService);
+  protected readonly biometricSwitch = linkedSignal(() => this.biometricLock.enabled());
   private readonly dialogs = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly sanitizer = inject(DomSanitizer);
@@ -217,6 +235,15 @@ export class SecuritySettings implements OnInit {
 
   ngOnInit(): void {
     void this.loadSessions();
+  }
+
+  protected async toggleBiometricLock(enabled: boolean): Promise<void> {
+    this.biometricSwitch.set(enabled);
+    const changed = await this.biometricLock.setEnabled(enabled);
+    this.biometricSwitch.set(this.biometricLock.enabled());
+    if (changed) {
+      this.toast.show(enabled ? 'Bloqueo activado' : 'Bloqueo desactivado');
+    }
   }
 
   protected timeAgo(value: string): string {
