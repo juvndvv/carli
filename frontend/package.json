@@ -10,6 +10,7 @@
     "e2e": "playwright test",
     "api:types": "php ../backend/artisan scramble:export --path=src/app/core/api/openapi.json && openapi-typescript src/app/core/api/openapi.json -o src/app/core/api/schema.d.ts",
     "lint": "eslint src",
+    "icons": "node scripts/generate-icons.mjs",
     "splash": "node scripts/generate-splash.mjs"
   },
   "private": true,
