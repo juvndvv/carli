@@ -7,44 +7,47 @@ import {
   provideEnvironmentInitializer,
   signal,
 } from '@angular/core';
-import { lucideLegacyIcon, type LucideIcon, type LucideIconData } from '@lucide/angular';
-import type { IconNode } from 'lucide';
 import { BASE_ICONS } from './icon-set';
 
-export type IconSource = LucideIcon | LucideIconData;
+export type IconNode = readonly (readonly [
+  tag: string,
+  attrs: Readonly<Record<string, string | number>>,
+])[];
 
-export function iconsFromNodes(nodes: Record<string, IconNode>): LucideIconData[] {
-  return Object.entries(nodes).map(([name, node]) => lucideLegacyIcon(name, node as LucideIconData['node']));
+export interface IconData {
+  name: string;
+  node: IconNode;
+  aliases?: string[];
 }
 
-export const APP_ICONS = new InjectionToken<IconSource[]>('APP_ICONS');
+export function iconsFromNodes(nodes: Record<string, IconNode>): IconData[] {
+  return Object.entries(nodes).map(([name, node]) => ({ name, node }));
+}
 
-const toIconData = (source: IconSource): LucideIconData =>
-  typeof source === 'function' ? source.icon : source;
+export const APP_ICONS = new InjectionToken<IconData[]>('APP_ICONS');
 
 @Injectable({ providedIn: 'root' })
 export class IconRegistry {
-  private readonly icons = signal<ReadonlyMap<string, LucideIconData>>(new Map());
+  private readonly icons = signal<ReadonlyMap<string, IconData>>(new Map());
 
   constructor() {
     this.register(...BASE_ICONS);
   }
 
-  register(...sources: IconSource[]): void {
+  register(...icons: IconData[]): void {
     this.icons.update((current) => {
       const next = new Map(current);
-      for (const source of sources) {
-        const data = toIconData(source);
-        next.set(data.name, data);
-        for (const alias of data.aliases ?? []) {
-          next.set(alias, data);
+      for (const icon of icons) {
+        next.set(icon.name, icon);
+        for (const alias of icon.aliases ?? []) {
+          next.set(alias, icon);
         }
       }
       return next;
     });
   }
 
-  get(name: string): LucideIconData | null {
+  get(name: string): IconData | null {
     return this.icons().get(name) ?? null;
   }
 
@@ -53,8 +56,8 @@ export class IconRegistry {
   }
 }
 
-export function provideAppIcons(...sources: IconSource[]): EnvironmentProviders {
+export function provideAppIcons(...icons: IconData[]): EnvironmentProviders {
   return makeEnvironmentProviders([
-    provideEnvironmentInitializer(() => inject(IconRegistry).register(...sources)),
+    provideEnvironmentInitializer(() => inject(IconRegistry).register(...icons)),
   ]);
 }

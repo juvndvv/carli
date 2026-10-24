@@ -81,7 +81,7 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 ### 2.5 Forma, sombras y movimiento
 
 - Radios: `--r-sm 8px` (badges cuadrados, tooltips), `--r-md 12px` (inputs, filas), `--r-lg 20px` (tarjetas), `--r-xl 28px` (sheets móviles, diálogos), `--r-full 999px` (botones, chips, buscador, segmentado, iconos, FAB, toast).
-- Iconos: Lucide, trazo 1.75, 18 px.
+- Iconos: Hugeicons (`@hugeicons/core-free-icons`, estilo stroke rounded), trazo 1.5, 18 px. Los nombres que usa la app (y que guarda la base de datos) siguen la nomenclatura kebab-case de siempre (`shopping-cart`, `piggy-bank`…) y se traducen al glifo de Hugeicons en `ui/icon/icon-set.ts` y `finance-icons.ts`; para añadir uno, se registra ahí con su equivalente.
 - Sombras: ninguna en tarjetas. `--shadow-2` solo para diálogos, menús y FAB.
 - Espaciado (px): `2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64`.
 - Movimiento: `120ms` hover, `200ms ease-out` entrada de diálogos y sheets; respetar `prefers-reduced-motion`.
