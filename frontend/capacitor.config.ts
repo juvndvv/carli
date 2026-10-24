@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const serverUrl = process.env['CAP_SERVER_URL'] ?? 'http://192.168.0.20:8180';
 
 const config: CapacitorConfig = {
-  appId: 'dev.jotade.personal',
+  appId: 'dev.jotade.carli',
   appName: 'carli',
   webDir: 'dist/frontend/browser',
   server: {
