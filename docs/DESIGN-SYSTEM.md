@@ -1,6 +1,6 @@
 # Design System · "Base"
 
-Design system propio de Personal App, **inspirado en la estética de la app de ChatGPT**: monocromo, mucho aire, sin sombras, controles en forma de píldora y el color reservado para los datos y los estados. Se implementa en `frontend/src/app/ui/` como componentes Angular standalone, con tokens en CSS custom properties y Tailwind CSS v4 (`@theme`) como capa de utilidades. El [mockup](../mockup/index.html) usa exactamente estos tokens y tiene una página "Design system" con el catálogo.
+Design system propio de **carli**, el asistente personal, **inspirado en la estética de la app de ChatGPT**: monocromo, mucho aire, sin sombras, controles en forma de píldora y el color reservado para los datos y los estados. Se implementa en `frontend/src/app/ui/` como componentes Angular standalone, con tokens en CSS custom properties y Tailwind CSS v4 (`@theme`) como capa de utilidades. El [mockup](../mockup/index.html) usa exactamente estos tokens y tiene una página "Design system" con el catálogo.
 
 > Es una inspiración de estilo, no una copia: no se usan su tipografía (Söhne es de pago), su logo ni sus assets.
 
@@ -117,6 +117,7 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 | `ui-tooltip` | Invertido, radio 8 |
 | `ui-tabs` | Subrayado negro/blanco |
 | `ui-empty-state`, `ui-skeleton`, `ui-avatar` | Monocromos |
+| `ui-logo` | La carita de carli en `--primary` con ojos en `--on-primary`; `size` en px (30 por defecto) |
 | `ui-chart` | Wrapper Chart.js; único sitio con paleta categórica; leyenda, tooltip y vista tabla |
 | `ui-nav-*` | sidebar, bottom-nav, topbar; ítem activo = fondo `--primary-soft`, sin color |
 
@@ -134,3 +135,19 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 - Foco visible siempre, orden lógico, `Esc` cierra diálogos, `cdkTrapFocus`.
 - Gráficos con leyenda, tooltip y alternativa en tabla.
 - `prefers-reduced-motion` y `prefers-color-scheme` respetados (tema "Sistema" por defecto).
+
+## 6. Marca
+
+- **Nombre**: siempre **carli**, en minúscula, también al empezar frase ("carli está bloqueada"). En el wordmark va en la fuente del sistema, peso 650, tracking −0.03em.
+- **Logo**: una carita mínima, un cuadrado redondeado con dos ojos ovalados. Se dibuja en una caja de 100 × 100: cara `x/y 12–88` con radio 28; ojos en `(39, 47)` y `(61, 47)`, radios 5,5 × 9. Es monocroma: cara en `--primary` y ojos en `--on-primary` (negro con ojos blancos en claro, blanco con ojos oscuros en oscuro). Nunca con color, sombras ni boca.
+- **Personalidad**: cercana y simpática. La carita puede expresar estados (parpadear, pensar) cuando llegue la IA; sin más rasgos que los ojos.
+- **Firma**: logo a la izquierda del nombre, separados 10 px, logo ≈ 1,4 × la altura de la x (28 px con texto de 18 px en la sidebar, 36 px con 20 px en el login).
+- **Iconos de app**: la geometría vive en `frontend/scripts/lib/carli-mark.mjs` y `npm run icons` genera todo con ella.
+  - `icon.svg`, `icon-*.png`, `favicon-32.png`: la carita sola, negra con ojos blancos, sin fondo.
+  - `maskable-*.png`: fondo negro y carita blanca al 56 % (dentro de la zona segura).
+  - `apple-touch-icon.png` y el `AppIcon` de iOS: fondo negro y carita blanca al 62 %.
+- **Arranque**:
+  - La pantalla de lanzamiento nativa (iOS y PWA) es la carita de 96 pt centrada sobre `--bg`, en claro y oscuro (`npm run splash`).
+  - La web arranca con ese mismo fotograma (`#launch` en `index.html`), así que no hay salto.
+  - En la app instalada (PWA o Capacitor) la carita parpadea dos veces y aparece "carli" debajo; dura 1,7 s, se salta al tocar y se funde en 240 ms. Lo cierra `core/launch/launch-screen.ts` tras la primera navegación.
+  - En una pestaña normal del navegador, o con `prefers-reduced-motion`, no hay animación y se cierra en cuanto la app está lista.
