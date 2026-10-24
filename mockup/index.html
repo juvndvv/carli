@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Personal App · Mockup</title>
+<script src="vendor/lucide.min.js"></script>
+<style>
+/* ============ TOKENS (ver docs/DESIGN-SYSTEM.md) · estilo inspirado en ChatGPT ============ */
+:root{
+  color-scheme: light;
+  --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F4F4F4; --sidebar:#F9F9F9; --border:#E5E5E5;
+  --text:#0D0D0D; --text-2:#5D5D5D; --text-3:#767676;
+  --primary:#0D0D0D; --primary-hover:#333333; --primary-soft:#ECECEC; --on-primary:#FFFFFF;
+  --positive:#0F7B4A; --positive-soft:#E6F4EC;
+  --warning:#B45309; --warning-soft:#FDF1E1;
+  --negative:#D92D20; --negative-soft:#FDECEA;
+  --focus-ring:rgba(13,13,13,.18);
+  --c1:#2A78D6; --c2:#EB6834; --c3:#1BAF7A; --c4:#EDA100; --c5:#E87BA4; --c6:#008300; --c7:#6250D6; --c8:#E34948;
+  --shadow-1:none; --shadow-2:0 4px 24px rgb(0 0 0 / .10), 0 0 0 1px rgb(0 0 0 / .04);
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:28px; --r-full:999px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#212121; --surface:#212121; --surface-2:#2F2F2F; --sidebar:#181818; --border:#383838;
+    --text:#ECECEC; --text-2:#B4B4B4; --text-3:#8F8F8F;
+    --primary:#FFFFFF; --primary-hover:#DADADA; --primary-soft:#2F2F2F; --on-primary:#0D0D0D;
+    --positive:#4ADE80; --positive-soft:#1B3326; --warning:#FBBF24; --warning-soft:#3A2E12;
+    --negative:#F87171; --negative-soft:#3D1F1F; --focus-ring:rgba(255,255,255,.25);
+    --c1:#3987E5; --c2:#D95926; --c3:#199E70; --c4:#C98500; --c5:#D55181; --c6:#008300; --c7:#9085E9; --c8:#E66767;
+    --shadow-1:none; --shadow-2:0 4px 24px rgb(0 0 0 / .5), 0 0 0 1px rgb(255 255 255 / .06);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+    --bg:#212121; --surface:#212121; --surface-2:#2F2F2F; --sidebar:#181818; --border:#383838;
+    --text:#ECECEC; --text-2:#B4B4B4; --text-3:#8F8F8F;
+    --primary:#FFFFFF; --primary-hover:#DADADA; --primary-soft:#2F2F2F; --on-primary:#0D0D0D;
+    --positive:#4ADE80; --positive-soft:#1B3326; --warning:#FBBF24; --warning-soft:#3A2E12;
+    --negative:#F87171; --negative-soft:#3D1F1F; --focus-ring:rgba(255,255,255,.25);
+    --c1:#3987E5; --c2:#D95926; --c3:#199E70; --c4:#C98500; --c5:#D55181; --c6:#008300; --c7:#9085E9; --c8:#E66767;
+    --shadow-1:none; --shadow-2:0 4px 24px rgb(0 0 0 / .5), 0 0 0 1px rgb(255 255 255 / .06);
+}
+
+/* ============ BASE ============ */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:400 15px/22px ui-sans-serif,-apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:3px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:none;box-shadow:0 0 0 3px var(--focus-ring);border-radius:var(--r-md)}
+svg.lucide{width:18px;height:18px;stroke-width:1.75;flex:none}
+h1{font-size:22px;line-height:30px;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-size:16px;line-height:24px;font-weight:600;margin:0}
+.small{font-size:13px;line-height:18px}
+.caption{font-size:12px;line-height:16px;font-weight:500;color:var(--text-3)}
+.muted{color:var(--text-2)} .faint{color:var(--text-3)}
+.pos{color:var(--positive)} .neg{color:var(--negative)} .warn{color:var(--warning)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ============ SHELL ============ */
+.app{display:flex;min-height:100vh}
+.sidebar{width:260px;flex:none;background:var(--sidebar);padding:12px 8px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 16px;font-weight:650}
+.brand-mark{width:30px;height:30px;border-radius:999px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-weight:700}
+.nav-section{margin:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--text);font-size:14px;cursor:pointer;border:0;background:none;width:100%;text-align:left;min-height:38px}
+.nav-item:hover{background:var(--primary-soft)}
+.nav-item.active{background:var(--primary-soft);color:var(--text);font-weight:500}
+.nav-item.sub{padding-left:38px;min-height:34px;font-size:14px}
+.nav-item.disabled{opacity:.55;cursor:default}
+.nav-item.disabled:hover{background:none}
+.nav-item .pill{margin-left:auto}
+.mod-dot{width:22px;height:22px;display:grid;place-items:center;color:var(--text);flex:none}
+.mod-dot svg.lucide{width:18px;height:18px}
+.sidebar .spacer{flex:1}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;padding:14px 32px;position:sticky;top:0;background:var(--bg);z-index:5}
+.topbar .title{flex:1;min-width:0}
+.topbar .crumb{font-size:13px;color:var(--text-3)}
+.content{padding:8px 32px 48px;max-width:1160px;width:100%}
+.bottomnav,.fab,.m-only{display:none}
+@media (max-width:1023px){
+  .sidebar{display:none}
+  .topbar{padding:12px 16px}
+  .content{padding:4px 16px 120px}
+  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:20}
+  .bottomnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--text-3);padding:6px 0;min-height:48px;cursor:pointer}
+  .bottomnav button.active{color:var(--text)}
+  .fab{display:grid;place-items:center;position:fixed;right:16px;bottom:80px;width:56px;height:56px;border-radius:999px;background:var(--primary);color:var(--on-primary);border:0;box-shadow:var(--shadow-2);z-index:21;cursor:pointer}
+  .fab svg.lucide{width:24px;height:24px}
+  .d-only{display:none!important}
+  .m-only{display:initial}
+}
+
+/* ============ COMPONENTES ============ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 18px;border-radius:999px;border:1px solid transparent;font-weight:500;cursor:pointer;transition:background .12s;white-space:nowrap}
+.btn-primary{background:var(--primary);color:var(--on-primary)} .btn-primary:hover{background:var(--primary-hover)}
+.btn-secondary{background:var(--surface);border-color:var(--border);color:var(--text)} .btn-secondary:hover{background:var(--surface-2)}
+.btn-ghost{background:none;color:var(--text)} .btn-ghost:hover{background:var(--surface-2)}
+.btn-danger{background:var(--negative);color:#fff}
+.btn-sm{height:32px;padding:0 12px;font-size:14px}
+.btn-icon{width:40px;padding:0}
+.btn-sm.btn-icon{width:32px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.grid{display:grid;gap:16px}
+.g-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g-main{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+@media (max-width:1023px){.g-4{grid-template-columns:repeat(2,minmax(0,1fr))}.g-3,.g-main{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.g-2{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;align-items:center;gap:12px}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.stat .label{font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:6px}
+.stat .value{font-size:24px;line-height:32px;font-weight:600;margin-top:4px;letter-spacing:-.01em}
+.stat .delta{font-size:13px;margin-top:2px;display:flex;align-items:center;gap:4px}
+.stat .delta svg.lucide{width:14px;height:14px}
+.hero{font-size:36px;line-height:42px;font-weight:600;letter-spacing:-.02em}
+.badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
+.badge svg.lucide{width:12px;height:12px}
+.badge.primary{background:var(--primary-soft);color:var(--text)}
+.badge.positive{background:var(--positive-soft);color:var(--positive)}
+.badge.warning{background:var(--warning-soft);color:var(--warning)}
+.badge.negative{background:var(--negative-soft);color:var(--negative)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--text-2);cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--primary);border-color:transparent;color:var(--on-primary);font-weight:500}
+.chip svg.lucide{width:14px;height:14px}
+.progress{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.progress>span{display:block;height:100%;border-radius:999px;background:var(--text)}
+.progress.warning>span{background:var(--warning)}
+.progress.negative>span{background:var(--negative)}
+.progress.primary>span{background:var(--primary)}
+.list{display:flex;flex-direction:column}
+.li{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border);min-height:56px}
+.li:last-child{border-bottom:0}
+.li .body{flex:1;min-width:0}
+.li .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .s{font-size:13px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .v{font-weight:550;text-align:right;white-space:nowrap}
+.li.click{cursor:pointer;border-radius:12px} .li.click:hover{background:var(--surface-2)}
+.ico{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--text)}
+.ico.soft{background:var(--surface-2);color:var(--text-2)}
+.day-head{display:flex;justify-content:space-between;padding:16px 4px 6px;font-size:13px;color:var(--text-3);font-weight:550}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);overflow-x:auto;margin-bottom:16px}
+.tab{padding:10px 12px;border:0;background:none;color:var(--text-2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+.tab.on{color:var(--text);border-bottom-color:var(--text)}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:3px;gap:2px;width:100%}
+.seg button{flex:1;min-width:0;font-size:14px;border:0;background:none;height:34px;border-radius:999px;cursor:pointer;color:var(--text-2);font-weight:500}
+.seg button.on{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:550;color:var(--text-2)}
+.input{height:44px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);padding:0 12px;color:var(--text);font:inherit;width:100%}
+.input:focus{outline:none;border-color:var(--text-3);box-shadow:none}
+.input-icon{position:relative}.input-icon svg.lucide{position:absolute;left:16px;top:15px;color:var(--text-3)}.input-icon .input{padding-left:44px;height:48px;border-radius:999px;background:var(--surface-2);border-color:transparent}
+.money-input{font-size:40px;line-height:48px;font-weight:600;letter-spacing:-.02em;text-align:center;border:0;background:none;width:100%;color:var(--text)}
+.switch{width:40px;height:24px;border-radius:999px;background:var(--border);position:relative;flex:none;cursor:pointer;border:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .12s}
+.switch.on{background:var(--primary)} .switch.on::after{left:19px}
+.empty{text-align:center;padding:32px 16px;color:var(--text-2)}
+.hscroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--text-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.sw{width:100%;height:56px;border-radius:10px;border:1px solid var(--border)}
+
+/* ============ OVERLAYS ============ */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.scrim.open{display:flex}
+.dialog{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow-2);width:100%;max-width:480px;max-height:92vh;overflow:auto;padding:20px;animation:pop .2s ease-out}
+@keyframes pop{from{transform:translateY(8px);opacity:0}}
+@media (max-width:640px){.scrim{align-items:flex-end;padding:0}.dialog{border-radius:var(--r-xl) var(--r-xl) 0 0;max-width:none;padding-bottom:calc(20px + env(safe-area-inset-bottom))}}
+.cat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.cat-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:var(--r-md);border:1px solid transparent;background:none;cursor:pointer;font-size:12px;color:var(--text-2)}
+.cat-btn.on{background:var(--primary-soft);color:var(--text)} .cat-btn.on .ico{background:var(--primary);color:var(--on-primary)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px 10px 18px;border-radius:999px;display:none;align-items:center;gap:16px;z-index:60;box-shadow:var(--shadow-2)}
+.toast.show{display:flex}
+.toast button{background:none;border:0;color:var(--bg);text-decoration:underline;font-weight:600;cursor:pointer}
+@media (max-width:1023px){.toast{bottom:150px}}
+.tip{position:fixed;pointer-events:none;background:var(--text);color:var(--bg);border:0;border-radius:8px;padding:8px 10px;font-size:13px;z-index:70;display:none;white-space:nowrap}
+
+/* ============ LOGIN ============ */
+.login{min-height:100vh;display:grid;place-items:center;padding:16px}
+.login .card{width:100%;max-width:380px;padding:28px;border:0}
+
+/* ============ CHARTS ============ */
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .axis{fill:var(--text-3);font-size:11px}
+.chart .grid-line{stroke:var(--border);stroke-width:1}
+.hit{cursor:default}
+.hit:hover{opacity:.85}
+@media (max-width:640px){.chart.scroll{overflow-x:auto}.chart.scroll svg{min-width:600px}}
+.donut-wrap{display:grid;grid-template-columns:160px 1fr;gap:20px;align-items:center}
+@media (max-width:420px){.donut-wrap{grid-template-columns:1fr;justify-items:center}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="scrim" id="scrim" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"><span id="toast-text"></span><button onclick="hideToast()">Deshacer</button></div>
+<div class="tip" id="tip"></div>
+
+<script>
+/* ===================== DATOS DE EJEMPLO ===================== */
+const eur = new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',useGrouping:'always'});
+const fmt = c => eur.format(c/100);
+const fmtS = c => (c>0?'+':'') + eur.format(c/100);
+const fmtK = c => (Math.abs(c)>=100000? (c/100000).toLocaleString('es-ES',{maximumFractionDigits:1})+' k€' : Math.round(c/100)+' €');
+
+const CATS = {
+  vivienda:{n:'Vivienda',i:'home',c:'var(--c1)'},
+  comida:{n:'Alimentación',i:'shopping-cart',c:'var(--c2)'},
+  transporte:{n:'Transporte',i:'car',c:'var(--c3)'},
+  ocio:{n:'Ocio',i:'party-popper',c:'var(--c4)'},
+  salud:{n:'Salud',i:'heart-pulse',c:'var(--c5)'},
+  suscripciones:{n:'Suscripciones',i:'repeat',c:'var(--c6)'},
+  ropa:{n:'Ropa',i:'shirt',c:'var(--c7)'},
+  restaurantes:{n:'Restaurantes',i:'utensils',c:'var(--c8)'},
+  nomina:{n:'Nómina',i:'briefcase',c:'var(--positive)'},
+  extra:{n:'Ingresos extra',i:'sparkles',c:'var(--positive)'},
+};
+const ACCOUNTS = [
+  {id:'bbva',n:'Cuenta corriente',b:'BBVA',t:'Corriente',i:'landmark',bal:342865,c:'var(--c1)'},
+  {id:'ahorro',n:'Ahorro',b:'ING Cuenta Naranja',t:'Ahorro',i:'piggy-bank',bal:1254000,c:'var(--c3)'},
+  {id:'visa',n:'Visa Oro',b:'BBVA',t:'Tarjeta de crédito',i:'credit-card',bal:-48720,c:'var(--c2)',limit:300000},
+  {id:'cash',n:'Efectivo',b:'Cartera',t:'Efectivo',i:'banknote',bal:8550,c:'var(--c4)'},
+];
+const TX = [
+  {d:'Hoy',dt:'24 oct',p:'Mercadona',cat:'comida',a:-4250,acc:'Visa Oro',tags:['casa']},
+  {d:'Hoy',dt:'24 oct',p:'Cena con Ana',cat:'restaurantes',a:-8000,acc:'Cuenta corriente',shared:'Ana te debe 40,00 €'},
+  {d:'Ayer',dt:'23 oct',p:'Gasolinera Repsol',cat:'transporte',a:-6200,acc:'Visa Oro'},
+  {d:'Ayer',dt:'23 oct',p:'Traspaso a Ahorro',cat:null,a:-50000,acc:'Cuenta corriente',transfer:true},
+  {d:'Ayer',dt:'23 oct',p:'Spotify',cat:'suscripciones',a:-1199,acc:'Cuenta corriente',pending:true},
+  {d:'Miércoles 22 oct',dt:'22 oct',p:'Farmacia',cat:'salud',a:-1835,acc:'Efectivo'},
+  {d:'Miércoles 22 oct',dt:'22 oct',p:'Cines Yelmo',cat:'ocio',a:-2400,acc:'Visa Oro',tags:['finde']},
+  {d:'Lunes 20 oct',dt:'20 oct',p:'Venta Wallapop',cat:'extra',a:4500,acc:'Cuenta corriente'},
+  {d:'Lunes 20 oct',dt:'20 oct',p:'Zara',cat:'ropa',a:-5995,acc:'Visa Oro'},
+  {d:'Viernes 17 oct',dt:'17 oct',p:'Alquiler octubre',cat:'vivienda',a:-85000,acc:'Cuenta corriente'},
+  {d:'Viernes 17 oct',dt:'17 oct',p:'Nómina Acme S.L.',cat:'nomina',a:265000,acc:'Cuenta corriente'},
+];
+const BUDGETS = [
+  {cat:'vivienda',b:95000,s:85000+6340},
+  {cat:'comida',b:40000,s:31260},
+  {cat:'restaurantes',b:15000,s:16450},
+  {cat:'ocio',b:12000,s:10200},
+  {cat:'transporte',b:15000,s:9850},
+  {cat:'suscripciones',b:6000,s:4597},
+  {cat:'ropa',b:10000,s:5995},
+  {cat:'salud',b:5000,s:1835},
+];
+const MONTHS = ['nov','dic','ene','feb','mar','abr','may','jun','jul','ago','sep','oct'];
+const INC = [265000,412000,265000,265000,271000,265000,265000,398000,265000,265000,272000,269500];
+const EXP = [198000,286000,231000,205000,219500,224000,209000,251000,276000,302000,214000,175527];
+const NETW = [1180000,1220000,1251000,1290000,1322000,1356000,1381000,1418000,1405000,1431000,1462722,1556695];
+const RECUR = [
+  {n:'Alquiler',cat:'vivienda',a:-85000,f:'Mensual · día 1',next:'1 nov',days:8,mode:'auto'},
+  {n:'Nómina Acme S.L.',cat:'nomina',a:265000,f:'Mensual · día 28',next:'28 oct',days:4,mode:'confirm'},
+  {n:'Netflix',cat:'suscripciones',a:-1399,f:'Mensual · día 27',next:'27 oct',days:3,mode:'confirm',sub:true},
+  {n:'Spotify',cat:'suscripciones',a:-1199,f:'Mensual · día 23',next:'23 nov',days:30,mode:'auto',sub:true},
+  {n:'iCloud+ 200 GB',cat:'suscripciones',a:-299,f:'Mensual · día 5',next:'5 nov',days:12,mode:'auto',sub:true},
+  {n:'Gimnasio',cat:'salud',a:-3990,f:'Mensual · día 1',next:'1 nov',days:8,mode:'auto',sub:true},
+  {n:'Seguro coche',cat:'transporte',a:-38500,f:'Anual · 15 ene',next:'15 ene',days:83,mode:'confirm'},
+  {n:'Amazon Prime',cat:'suscripciones',a:-4990,f:'Anual · 3 mar',next:'3 mar',days:130,mode:'auto',sub:true},
+];
+const GOALS = [
+  {n:'Fondo de emergencia',i:'shield',c:'var(--c1)',cur:1254000,t:1500000,date:'jun 2027',monthly:30750,linked:'Ahorro'},
+  {n:'Viaje a Japón',i:'plane',c:'var(--c5)',cur:180000,t:450000,date:'abr 2027',monthly:45000},
+  {n:'Portátil nuevo',i:'laptop',c:'var(--c7)',cur:95000,t:180000,date:null,monthly:null},
+];
+const CONTACTS = [
+  {n:'Ana',bal:4000,last:'Cena · 24 oct',c:'var(--c5)'},
+  {n:'Carlos',bal:-2350,last:'Entradas concierto · 12 oct',c:'var(--c1)'},
+  {n:'Piso compartido',bal:6780,last:'Luz y agua · 3 oct',c:'var(--c3)'},
+];
+const DEBTS = [
+  {n:'Préstamo coche',dir:'i_owe',who:'Cetelem',total:1200000,left:735000,inst:'245,00 € / mes · 30 de 48 cuotas',due:'5 nov'},
+  {n:'Préstamo a Luis',dir:'owed_to_me',who:'Luis',total:50000,left:30000,inst:'Sin plan de pagos',due:'31 dic'},
+];
+const MODULES = [
+  {id:'finance',n:'Finanzas',i:'wallet',c:'#1BAF7A',on:true},
+  {id:'tasks',n:'Tareas',i:'check-square',c:'#2A78D6'},
+  {id:'health',n:'Salud',i:'heart-pulse',c:'#E34948'},
+  {id:'habits',n:'Hábitos',i:'flame',c:'#EDA100'},
+  {id:'notes',n:'Notas',i:'notebook-pen',c:'#6250D6'},
+];
+
+/* ===================== HELPERS ===================== */
+const $ = s => document.querySelector(s);
+const icon = (n, extra='') => `<i data-lucide="${n}" ${extra}></i>`;
+const catIco = k => { const c = CATS[k]; return c ? `<div class="ico" style="--accent:${c.c}">${icon(c.i)}</div>` : `<div class="ico soft">${icon('arrow-left-right')}</div>`; };
+const pctState = p => p>1 ? 'negative' : p>=.8 ? 'warning' : '';
+const sum = a => a.reduce((x,y)=>x+y,0);
+
+function txRow(t){
+  const cls = t.transfer ? 'muted' : t.a>0 ? 'pos' : '';
+  const sub = [t.transfer ? 'Transferencia' : CATS[t.cat].n, t.acc].join(' · ');
+  const badges = [
+    t.pending ? `<span class="badge warning">${icon('clock')}Pendiente</span>` : '',
+    t.shared ? `<span class="badge primary">${icon('users')}Compartido</span>` : '',
+    ...(t.tags||[]).map(x=>`<span class="badge">#${x}</span>`)
+  ].join(' ');
+  return `<div class="li click" onclick="openTx()">
+    ${catIco(t.cat)}
+    <div class="body"><div class="t">${t.p}</div><div class="s">${sub}${t.shared?' · '+t.shared:''}</div>${badges?`<div class="row wrap" style="gap:4px;margin-top:4px">${badges}</div>`:''}</div>
+    <div class="v num ${cls}">${t.transfer? fmt(Math.abs(t.a)) : fmtS(t.a)}</div></div>`;
+}
+
+/* ===================== CHARTS (SVG) ===================== */
+function donut(items){
+  const total = sum(items.map(i=>i.v)); const R=70, r=48, cx=80, cy=80; let a0=-Math.PI/2; const gap=0.02;
+  const arcs = items.map(it=>{
+    const a1 = a0 + (it.v/total)*Math.PI*2; const s=a0+gap/2, e=a1-gap/2; a0=a1;
+    const large = (e-s)>Math.PI?1:0;
+    const p=(ang,rad)=>[cx+rad*Math.cos(ang), cy+rad*Math.sin(ang)];
+    const [x1,y1]=p(s,R),[x2,y2]=p(e,R),[x3,y3]=p(e,r),[x4,y4]=p(s,r);
+    return `<path class="hit" d="M${x1} ${y1} A${R} ${R} 0 ${large} 1 ${x2} ${y2} L${x3} ${y3} A${r} ${r} 0 ${large} 0 ${x4} ${y4}Z" fill="${it.c}" data-tip="${it.n}: ${fmt(it.v)} (${Math.round(it.v/total*100)} %)"/>`;
+  }).join('');
+  return `<div class="chart" style="width:160px"><svg viewBox="0 0 160 160" role="img" aria-label="Gasto por categoría">${arcs}
+    <text x="80" y="76" text-anchor="middle" style="fill:var(--text-3);font-size:11px">Gastado</text>
+    <text x="80" y="94" text-anchor="middle" class="num" style="fill:var(--text);font-size:15px;font-weight:650">${fmtK(total)}</text></svg></div>`;
+}
+function bars(){
+  const W=640,H=220,pl=40,pb=24,pt=8; const max=450000; const cw=(W-pl)/12; const bw=Math.min(14,cw/3);
+  const y=v=>pt+(H-pt-pb)*(1-v/max);
+  let g=''; [0,100000,200000,300000,400000].forEach(v=>{g+=`<line class="grid-line" x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${pl-8}" y="${y(v)+4}" text-anchor="end">${v/100000} k€</text>`});
+  const rb=(x,v,c,tip)=>{const h=H-pb-y(v); const rr=Math.min(4,h); return `<path class="hit" fill="${c}" data-tip="${tip}" d="M${x} ${H-pb} V${y(v)+rr} Q${x} ${y(v)} ${x+rr} ${y(v)} H${x+bw-rr} Q${x+bw} ${y(v)} ${x+bw} ${y(v)+rr} V${H-pb}Z"/>`;};
+  let b=''; MONTHS.forEach((m,i)=>{const cx=pl+cw*i+cw/2; b+=rb(cx-bw-1,INC[i],'var(--c1)',`${m}: ingresos ${fmt(INC[i])}`)+rb(cx+1,EXP[i],'var(--c2)',`${m}: gastos ${fmt(EXP[i])}`)+`<text class="axis" x="${cx}" y="${H-6}" text-anchor="middle">${m}</text>`});
+  return `<div class="chart scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ingresos y gastos de los últimos 12 meses">${g}${b}</svg></div>`;
+}
+function line(data,h=220){
+  const W=1100,H=h,pl=44,pb=22,pt=10; const min=Math.min(...data)*0.95,max=Math.max(...data)*1.03;
+  const x=i=>pl+(W-pl-8)*i/(data.length-1), y=v=>pt+(H-pt-pb)*(1-(v-min)/(max-min));
+  const pts=data.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+  let g=''; [min+(max-min)*.2,min+(max-min)*.6,min+(max-min)*.95].forEach(v=>{g+=`<line class="grid-line" x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${pl-8}" y="${y(v)+4}" text-anchor="end">${(v/100000).toFixed(0)} k€</text>`});
+  const dots=data.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="10" fill="transparent" class="hit" data-tip="${MONTHS[i]}: ${fmt(v)}"/><circle cx="${x(i)}" cy="${y(v)}" r="${i===data.length-1?4:0}" fill="var(--c1)" stroke="var(--surface)" stroke-width="2" pointer-events="none"/>`).join('');
+  const labels=MONTHS.map((m,i)=>i%2===1?`<text class="axis" x="${x(i)}" y="${H-4}" text-anchor="middle">${m}</text>`:'').join('');
+  return `<div class="chart scroll"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del patrimonio">${g}<polyline points="${pts}" fill="none" stroke="var(--c1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}${labels}</svg></div>`;
+}
+
+/* ===================== PANTALLAS ===================== */
+const SCREENS = {};
+
+SCREENS['inicio'] = () => ({ title:'Buenos días, Juanda', crumb:'Viernes, 24 de octubre', html:`
+  <div class="grid g-3">
+    <div class="card click" style="cursor:pointer" onclick="go('finanzas')">
+      <div class="row between"><div class="row"><div class="ico" style="--accent:#1BAF7A">${icon('wallet')}</div><h2>Finanzas</h2></div>${icon('chevron-right','class="faint"')}</div>
+      <div style="margin-top:16px" class="caption">Patrimonio neto</div>
+      <div class="hero num">${fmt(sum(ACCOUNTS.map(a=>a.bal)))}</div>
+      <div class="row wrap small muted" style="margin-top:8px;gap:16px"><span>Gastado en oct: <b class="num" style="color:var(--text)">1.755,27 €</b></span><span class="badge warning">${icon('alert-triangle')}1 presupuesto excedido</span></div>
+      <div class="small faint" style="margin-top:12px">Próximo: Netflix 13,99 € el 27 oct</div>
+    </div>
+    ${MODULES.filter(m=>!m.on).map(m=>`
+    <div class="card" style="opacity:.75">
+      <div class="row between"><div class="row"><div class="ico" style="--accent:${m.c}">${icon(m.i)}</div><h2>${m.n}</h2></div><span class="badge">Próximamente</span></div>
+      <div class="small muted" style="margin-top:16px">${{tasks:'Listas, fechas y recordatorios.',health:'Peso, sueño, actividad y citas médicas.',habits:'Rachas diarias y objetivos semanales.',notes:'Notas rápidas y diario personal.'}[m.id]}</div>
+    </div>`).join('')}
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-head"><h2>Notificaciones recientes</h2><button class="btn btn-ghost btn-sm">Ver todas</button></div>
+    <div class="list">
+      <div class="li"><div class="ico soft">${icon('alert-triangle')}</div><div class="body"><div class="t">Has superado el presupuesto de Restaurantes</div><div class="s">164,50 € de 150,00 € · hace 2 h</div></div></div>
+      <div class="li"><div class="ico soft">${icon('bell')}</div><div class="body"><div class="t">Netflix se cobra en 3 días</div><div class="s">13,99 € · Cuenta corriente · hoy 09:00</div></div></div>
+      <div class="li"><div class="ico soft">${icon('clock')}</div><div class="body"><div class="t">Spotify pendiente de confirmar</div><div class="s">11,99 € · ayer</div></div><button class="btn btn-secondary btn-sm">Confirmar</button></div>
+    </div>
+  </div>`});
+
+SCREENS['finanzas'] = () => {
+  const nw = sum(ACCOUNTS.map(a=>a.bal));
+  const spent = BUDGETS.map(b=>({n:CATS[b.cat].n,v:b.s,c:CATS[b.cat].c})).sort((a,b)=>b.v-a.v);
+  return { title:'Resumen', crumb:'Finanzas · periodo 28 sep – 27 oct (abierto)', actions:monthPicker(), html:`
+  <div class="grid g-4">
+    <div class="card stat"><div class="label">${icon('landmark')}Patrimonio neto</div><div class="value num">${fmt(nw)}</div><div class="delta pos">${icon("trending-up")}+939,73 € vs sep</div></div>
+    <div class="card stat"><div class="label">${icon('arrow-down-left')}Ingresos</div><div class="value num pos">${fmt(INC[11])}</div><div class="delta muted">${icon('minus')}−0,9 % vs sep</div></div>
+    <div class="card stat"><div class="label">${icon('arrow-up-right')}Gastos</div><div class="value num">${fmt(EXP[11])}</div><div class="delta pos">${icon('trending-down')}−18,0 % vs sep</div></div>
+    <div class="card stat"><div class="label">${icon('piggy-bank')}Ahorro del mes</div><div class="value num">${fmt(INC[11]-EXP[11])}</div><div class="delta muted">Tasa de ahorro 34,9 %</div></div>
+  </div>
+  <div class="grid g-main" style="margin-top:16px">
+    <div class="card">
+      <div class="card-head"><h2>Ingresos y gastos</h2><div class="legend"><span><i style="background:var(--c1)"></i>Ingresos</span><span><i style="background:var(--c2)"></i>Gastos</span></div></div>
+      ${bars()}
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Gasto por categoría</h2></div>
+      <div class="donut-wrap">${donut(spent)}
+        <div class="list" style="width:100%">${spent.slice(0,6).map(s=>`<div class="row between small" style="padding:4px 0"><span class="row" style="gap:8px"><i style="width:10px;height:10px;border-radius:3px;background:${s.c};display:inline-block"></i>${s.n}</span><span class="num">${fmt(s.v)}</span></div>`).join('')}</div>
+      </div>
+    </div>
+  </div>
+  <div class="grid g-3" style="margin-top:16px">
+    <div class="card">
+      <div class="card-head"><h2>Presupuestos</h2><a href="#finanzas/presupuestos" class="small">Ver todos</a></div>
+      <div class="stack" style="gap:14px">${[...BUDGETS].sort((a,b)=>b.s/b.b-a.s/a.b).slice(0,5).map(budgetRow).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Próximos cargos</h2><a href="#finanzas/recurrentes" class="small">Ver todos</a></div>
+      <div class="list">${RECUR.filter(r=>r.days<=10).sort((a,b)=>a.days-b.days).map(r=>`<div class="li">${catIco(r.cat)}<div class="body"><div class="t">${r.n}</div><div class="s">${r.next} · en ${r.days} días</div></div><div class="v num ${r.a>0?'pos':''}">${fmtS(r.a)}</div></div>`).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Últimos movimientos</h2><a href="#finanzas/movimientos" class="small">Ver todos</a></div>
+      <div class="list">${TX.slice(0,5).map(txRow).join('')}</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="card-head"><h2>Patrimonio · 12 meses</h2><span class="small faint">Pasa el cursor por los puntos</span></div>${line(NETW)}</div>
+  `};
+};
+function budgetRow(b){
+  const p=b.s/b.b, st=pctState(p), c=CATS[b.cat];
+  const note = p>1 ? `<span class="neg">${icon('alert-circle','style="width:14px;height:14px;vertical-align:-2px"')} Excedido en ${fmt(b.s-b.b)}</span>` : `<span class="muted">Te quedan ${fmt(b.b-b.s)}</span>`;
+  return `<div><div class="row between small" style="margin-bottom:6px"><span class="row" style="gap:8px;font-weight:550;font-size:14px">${c.n}</span><span class="num muted">${fmt(b.s)} / ${fmt(b.b)}</span></div>
+    <div class="progress ${st}"><span style="width:${Math.min(100,p*100)}%"></span></div><div class="small" style="margin-top:4px">${note}</div></div>`;
+}
+function monthPicker(){return `<div class="row" style="gap:4px"><button class="btn btn-ghost btn-sm btn-icon" aria-label="Mes anterior">${icon('chevron-left')}</button><button class="btn btn-secondary btn-sm d-only">Periodo de octubre · 28 sep – hoy</button><button class="btn btn-ghost btn-sm btn-icon" aria-label="Mes siguiente">${icon('chevron-right')}</button></div>`;}
+
+SCREENS['finanzas/movimientos'] = () => {
+  const days = [...new Set(TX.map(t=>t.d))];
+  return { title:'Movimientos', crumb:'Finanzas', actions:`<button class="btn btn-secondary btn-sm d-only">${icon('download')}Exportar CSV</button><button class="btn btn-primary btn-sm d-only" onclick="openTx()">${icon('plus')}Nuevo</button>`, html:`
+  <div class="stack" style="gap:12px">
+    <div class="input-icon">${icon('search')}<input class="input" placeholder="Buscar por comercio, concepto o nota"></div>
+    <div class="hscroll">
+      <button class="chip on">${icon('calendar')}Octubre 2026</button>
+      <button class="chip">${icon('wallet')}Todas las cuentas</button>
+      <button class="chip">${icon('tag')}Categoría</button>
+      <button class="chip">${icon('hash')}Etiqueta</button>
+      <button class="chip">Gastos e ingresos</button>
+      <button class="chip">${icon('clock')}Pendientes (1)</button>
+      <button class="chip">${icon('sliders-horizontal')}Más filtros</button>
+    </div>
+    <div class="card" style="padding:12px 16px">
+      <div class="row wrap between small"><span class="muted">11 movimientos</span><span class="row" style="gap:16px"><span>Ingresos <b class="num pos">+2.695,00 €</b></span><span>Gastos <b class="num">−1.755,27 €</b></span></span></div>
+    </div>
+    <div class="card" style="padding:4px 16px 8px">
+      ${days.map(d=>{const ts=TX.filter(t=>t.d===d); const tot=sum(ts.filter(t=>!t.transfer).map(t=>t.a)); return `<div class="day-head"><span>${d}</span><span class="num">${fmtS(tot)}</span></div><div class="list">${ts.map(txRow).join('')}</div>`}).join('')}
+    </div>
+  </div>`};
+};
+
+SCREENS['finanzas/cuentas'] = () => ({ title:'Cuentas', crumb:'Finanzas', actions:`<button class="btn btn-primary btn-sm">${icon('plus')}<span class="d-only">Nueva cuenta</span></button>`, html:`
+  <div class="card" style="margin-bottom:16px"><div class="caption">Patrimonio neto</div><div class="hero num">${fmt(sum(ACCOUNTS.map(a=>a.bal)))}</div>
+    <div class="small muted" style="margin-top:4px">4 cuentas · tarjetas de crédito restan</div></div>
+  <div class="grid g-2">
+    ${ACCOUNTS.map(a=>`<div class="card">
+      <div class="row between"><div class="row"><div class="ico" style="--accent:${a.c}">${icon(a.i)}</div><div><div style="font-weight:600">${a.n}</div><div class="small faint">${a.b} · ${a.t}</div></div></div>
+        <button class="btn btn-ghost btn-sm btn-icon" aria-label="Opciones">${icon('more-horizontal')}</button></div>
+      <div class="num" style="font-size:24px;font-weight:650;margin-top:16px">${fmt(a.bal)}</div>
+      ${a.limit ? `<div style="margin-top:10px"><div class="progress primary"><span style="width:${-a.bal/a.limit*100}%"></span></div><div class="row between small muted" style="margin-top:6px"><span>Dispuesto ${fmt(-a.bal)}</span><span>Disponible ${fmt(a.limit+a.bal)}</span></div><div class="small faint" style="margin-top:4px">Corte día 25 · se carga el 5 de nov en Cuenta corriente</div></div>`
+       : `<div class="small faint" style="margin-top:4px">Conciliada el 20 oct</div>`}
+      <div class="row" style="margin-top:14px;gap:8px"><button class="btn btn-secondary btn-sm">${icon('list')}Movimientos</button><button class="btn btn-ghost btn-sm">${icon('check-check')}Conciliar</button></div>
+    </div>`).join('')}
+  </div>
+  <div class="small faint" style="margin-top:16px">${icon('archive','style="width:14px;height:14px;vertical-align:-2px"')} 1 cuenta archivada</div>`});
+
+SCREENS['finanzas/presupuestos'] = () => {
+  const tb=sum(BUDGETS.map(b=>b.b)), ts=sum(BUDGETS.map(b=>b.s));
+  return { title:'Presupuestos', crumb:'Finanzas', actions:monthPicker(), html:`
+  <div class="grid g-3">
+    <div class="card stat"><div class="label">Presupuestado</div><div class="value num">${fmt(tb)}</div></div>
+    <div class="card stat"><div class="label">Gastado</div><div class="value num">${fmt(ts)}</div><div class="delta muted">${Math.round(ts/tb*100)} % del total · nómina prevista el 28 oct</div></div>
+    <div class="card stat"><div class="label">Proyección fin de mes</div><div class="value num warn">${fmt(Math.round(ts/27*30))}</div><div class="delta warn">${icon('alert-triangle')}Superarías el total en ${fmt(Math.round(ts/27*30)-tb)}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="card-head"><h2>Por categoría</h2><div class="row" style="gap:8px"><button class="btn btn-ghost btn-sm">${icon('copy')}<span class="d-only">Copiar de septiembre</span></button><button class="btn btn-secondary btn-sm">${icon('pencil')}<span class="d-only">Editar</span></button></div></div>
+    <div class="list">${BUDGETS.map(b=>{const p=b.s/b.b,st=pctState(p);return `<div class="li" style="align-items:flex-start;padding:14px 4px">${catIco(b.cat)}<div class="body">${budgetRow(b)}</div>
+      <div style="width:84px;text-align:right">${st==='negative'?`<span class="badge negative">${icon('x-circle')}${Math.round(p*100)} %</span>`:st==='warning'?`<span class="badge warning">${icon('alert-triangle')}${Math.round(p*100)} %</span>`:`<span class="badge positive">${icon('check')}${Math.round(p*100)} %</span>`}</div></div>`}).join('')}</div>
+  </div>`};
+};
+
+SCREENS['finanzas/recurrentes'] = () => {
+  const subs=RECUR.filter(r=>r.sub); const monthly=sum(subs.map(s=>s.f.startsWith('Anual')?s.a/12:s.a));
+  return { title:'Recurrentes', crumb:'Finanzas', actions:`<button class="btn btn-primary btn-sm">${icon('plus')}<span class="d-only">Nuevo recurrente</span></button>`, html:`
+  <div class="tabs"><button class="tab on">Todos</button><button class="tab">Suscripciones</button><button class="tab">Pendientes de confirmar (1)</button><button class="tab">Canceladas</button></div>
+  <div class="grid g-3">
+    <div class="card stat"><div class="label">${icon('repeat')}Suscripciones al mes</div><div class="value num">${fmt(-Math.round(monthly))}</div><div class="delta muted">${subs.length} activas</div></div>
+    <div class="card stat"><div class="label">${icon('calendar')}Al año</div><div class="value num">${fmt(-Math.round(monthly*12))}</div></div>
+    <div class="card stat"><div class="label">${icon('bell')}Aviso</div><div class="value" style="font-size:18px">2 días antes</div><div class="delta muted">Notificación push a las 09:00</div></div>
+  </div>
+  <div class="card" style="margin-top:16px;padding:8px 16px">
+    <div class="list">${RECUR.map(r=>`<div class="li">${catIco(r.cat)}<div class="body"><div class="t">${r.n} ${r.sub?'<span class="badge">Suscripción</span>':''}</div><div class="s">${r.f} · próximo ${r.next}</div></div>
+      <span class="badge ${r.mode==='auto'?'':'primary'} d-only">${r.mode==='auto'?icon('zap')+'Automático':icon('hand')+'Con confirmación'}</span>
+      <div class="v num ${r.a>0?'pos':''}" style="min-width:96px">${fmtS(r.a)}</div></div>`).join('')}</div>
+  </div>`};
+};
+
+SCREENS['finanzas/objetivos'] = () => ({ title:'Objetivos de ahorro', crumb:'Finanzas', actions:`<button class="btn btn-primary btn-sm">${icon('plus')}<span class="d-only">Nuevo objetivo</span></button>`, html:`
+  <div class="grid g-3">${GOALS.map(g=>{const p=g.cur/g.t;return `<div class="card">
+    <div class="row between"><div class="ico" style="--accent:${g.c}">${icon(g.i)}</div><span class="badge ${p>=1?'positive':''}">${Math.round(p*100)} %</span></div>
+    <h2 style="margin-top:14px">${g.n}</h2>
+    <div class="num" style="margin-top:4px"><b style="font-size:20px">${fmt(g.cur)}</b> <span class="muted">de ${fmt(g.t)}</span></div>
+    <div class="progress primary" style="margin-top:12px"><span style="width:${p*100}%"></span></div>
+    <div class="small muted" style="margin-top:10px">${g.date?`Meta: ${g.date} · aporta <b class="num" style="color:var(--text)">${fmt(g.monthly)}/mes</b>`:'Sin fecha límite'}</div>
+    ${g.linked?`<div class="small faint" style="margin-top:4px">${icon('link','style="width:13px;height:13px;vertical-align:-2px"')} Vinculado a la cuenta ${g.linked}</div>`:''}
+    <div class="row" style="margin-top:14px"><button class="btn btn-secondary btn-sm">${icon('plus')}Aportar</button></div>
+  </div>`}).join('')}</div>`});
+
+SCREENS['finanzas/deudas'] = () => ({ title:'Deudas y compartidos', crumb:'Finanzas', actions:`<button class="btn btn-primary btn-sm">${icon('plus')}<span class="d-only">Nueva deuda</span></button>`, html:`
+  <div class="grid g-2">
+    <div class="card stat"><div class="label">${icon('arrow-down-left')}Te deben</div><div class="value num pos">${fmt(4000+6780+30000)}</div><div class="delta muted">3 personas</div></div>
+    <div class="card stat"><div class="label">${icon('arrow-up-right')}Debes</div><div class="value num">${fmt(2350+735000)}</div><div class="delta muted">1 préstamo · 1 persona</div></div>
+  </div>
+  <div class="grid g-2" style="margin-top:16px">
+    <div class="card"><div class="card-head"><h2>Gastos compartidos</h2><button class="btn btn-ghost btn-sm">${icon('user-plus')}Contacto</button></div>
+      <div class="list">${CONTACTS.map(c=>`<div class="li click"><div class="ico" style="--accent:${c.c};border-radius:999px;font-weight:650">${c.n[0]}</div><div class="body"><div class="t">${c.n}</div><div class="s">${c.last}</div></div>
+        <div style="text-align:right"><div class="v num ${c.bal>0?'pos':''}">${c.bal>0?'Te debe ':'Le debes '}${fmt(Math.abs(c.bal))}</div><button class="btn btn-ghost btn-sm" style="margin-top:2px">Liquidar</button></div></div>`).join('')}</div></div>
+    <div class="card"><div class="card-head"><h2>Préstamos y deudas</h2></div>
+      <div class="stack">${DEBTS.map(d=>{const paid=1-d.left/d.total;return `<div><div class="row between"><div><div style="font-weight:600">${d.n}</div><div class="small faint">${d.who} · ${d.inst}</div></div><span class="badge ${d.dir==='i_owe'?'':'positive'}">${d.dir==='i_owe'?'Debes':'Te deben'}</span></div>
+        <div class="row between small" style="margin:10px 0 6px"><span class="muted">Pendiente <b class="num" style="color:var(--text)">${fmt(d.left)}</b> de ${fmt(d.total)}</span><span class="faint">Próx. ${d.due}</span></div>
+        <div class="progress primary"><span style="width:${paid*100}%"></span></div></div>`}).join('<hr style="border:0;border-top:1px solid var(--border);margin:4px 0">')}</div></div>
+  </div>`});
+
+SCREENS['finanzas/mas'] = () => ({ title:'Finanzas', crumb:'Más secciones', html:`
+  <div class="card" style="padding:8px 16px"><div class="list">
+  ${FIN_NAV.map(n=>`<div class="li click" onclick="go('${n.r}')"><div class="ico soft">${icon(n.i)}</div><div class="body"><div class="t">${n.n}</div></div>${icon('chevron-right','class="faint"')}</div>`).join('')}
+  <div class="li click" onclick="go('ajustes')"><div class="ico soft">${icon('settings')}</div><div class="body"><div class="t">Ajustes</div></div>${icon('chevron-right','class="faint"')}</div>
+  <div class="li click" onclick="go('ds')"><div class="ico soft">${icon('palette')}</div><div class="body"><div class="t">Design system</div></div>${icon('chevron-right','class="faint"')}</div>
+  </div></div>`});
+
+SCREENS['ajustes'] = () => ({ title:'Ajustes', crumb:'Cuenta', html:`
+  <div class="tabs"><button class="tab on">General</button><button class="tab">Seguridad</button><button class="tab">Notificaciones</button><button class="tab">Módulos</button><button class="tab">Finanzas</button></div>
+  <div class="grid g-2">
+    <div class="card stack"><h2>Apariencia</h2>
+      <div class="field"><label>Tema</label><div class="seg" id="theme-seg">${['light','dark','system'].map(t=>`<button data-t="${t}" onclick="setTheme('${t}')">${{light:'Claro',dark:'Oscuro',system:'Sistema'}[t]}</button>`).join('')}</div></div>
+      <div class="field"><label>Periodo financiero</label><select class="input"><option>De nómina a nómina (automático)</option><option>Mes natural</option></select></div>
+      <div class="field"><label>Cuenta por defecto</label><select class="input">${ACCOUNTS.map(a=>`<option>${a.n}</option>`)}</select></div>
+    </div>
+    <div class="card stack"><h2>Notificaciones push</h2>
+      <div class="row between"><div><div style="font-weight:500">Este dispositivo</div><div class="small faint">Chrome · macOS · activadas</div></div><span class="badge positive">${icon('check')}Activo</span></div>
+      ${[['Presupuesto al 80 % y 100 %',1],['Cargo recurrente próximo',1],['Recurrente pendiente de confirmar',1],['Recordatorio de deudas',1],['Objetivo alcanzado',0],['Resumen semanal (lunes 09:00)',0]].map(([n,on])=>`<div class="row between"><span>${n}</span><button class="switch ${on?'on':''}" onclick="this.classList.toggle('on')" aria-label="${n}"></button></div>`).join('')}
+    </div>
+    <div class="card stack"><h2>Módulos</h2>
+      ${MODULES.map(m=>`<div class="row between"><span class="row"><span class="mod-dot" style="--accent:${m.c}">${icon(m.i)}</span>${m.n}</span>${m.on?`<button class="switch on" aria-label="${m.n}"></button>`:'<span class="badge">Próximamente</span>'}</div>`).join('')}
+    </div>
+    <div class="card stack"><h2>Seguridad</h2>
+      <div class="row between"><div><div style="font-weight:500">Verificación en dos pasos</div><div class="small faint">App de autenticación (TOTP)</div></div><button class="btn btn-secondary btn-sm">Activar</button></div>
+      <div class="row between"><div><div style="font-weight:500">Sesiones activas</div><div class="small faint">2 dispositivos</div></div><button class="btn btn-ghost btn-sm">Gestionar</button></div>
+      <div class="row between"><div><div style="font-weight:500">Exportar datos</div><div class="small faint">Movimientos en CSV, copia completa en JSON</div></div><button class="btn btn-ghost btn-sm">${icon('download')}</button></div>
+    </div>
+  </div>`, after(){syncThemeSeg()}});
+
+SCREENS['ds'] = () => ({ title:'Design system', crumb:'Base · tokens y componentes', html:`
+  <div class="stack">
+  <div class="card"><div class="card-head"><h2>Superficies y texto</h2></div><div class="grid g-4">${['bg','surface','surface-2','border','text','text-2','text-3','primary'].map(t=>`<div><div class="sw" style="background:var(--${t})"></div><div class="small" style="margin-top:6px">--${t}</div></div>`).join('')}</div></div>
+  <div class="card"><div class="card-head"><h2>Semánticos</h2></div><div class="grid g-4">${['positive','warning','negative','primary'].map(t=>`<div><div class="sw" style="background:var(--${t})"></div><div class="sw" style="background:var(--${t}-soft);height:28px;margin-top:4px"></div><div class="small" style="margin-top:6px">--${t} / -soft</div></div>`).join('')}</div></div>
+  <div class="card"><div class="card-head"><h2>Categórica (orden fijo)</h2></div><div class="grid g-4">${[1,2,3,4,5,6,7,8].map(i=>`<div><div class="sw" style="background:var(--c${i})"></div><div class="small" style="margin-top:6px">--c${i}</div></div>`).join('')}</div></div>
+  <div class="card stack"><h2>Tipografía</h2>
+    <div class="hero num">12.345,67 €</div><h1>Título de página · h1</h1><h2>Título de tarjeta · h2</h2><div>Cuerpo de texto 15/22 para descripciones y listas.</div><div class="small muted">Texto secundario 13/18</div><div class="caption">Caption · ejes y etiquetas</div></div>
+  <div class="card stack"><h2>Botones</h2><div class="row wrap"><button class="btn btn-primary">${icon('plus')}Primario</button><button class="btn btn-secondary">Secundario</button><button class="btn btn-ghost">Ghost</button><button class="btn btn-danger">${icon('trash-2')}Peligro</button><button class="btn btn-primary btn-sm">Pequeño</button><button class="btn btn-secondary btn-icon" aria-label="Icono">${icon('settings')}</button></div></div>
+  <div class="card stack"><h2>Badges, chips y progreso</h2>
+    <div class="row wrap"><span class="badge">Neutral</span><span class="badge primary">Primario</span><span class="badge positive">${icon('check')}OK</span><span class="badge warning">${icon('alert-triangle')}Aviso</span><span class="badge negative">${icon('x-circle')}Excedido</span></div>
+    <div class="row wrap"><button class="chip on">Activo</button><button class="chip">${icon('tag')}Filtro</button></div>
+    <div class="progress"><span style="width:45%"></span></div><div class="progress warning"><span style="width:86%"></span></div><div class="progress negative"><span style="width:100%"></span></div></div>
+  <div class="card stack"><h2>Formularios</h2><div class="grid g-2">
+    <div class="field"><label>Concepto</label><input class="input" placeholder="Ej. Mercadona"></div>
+    <div class="field"><label>Fecha</label><input class="input" value="24/10/2026"></div></div>
+    <div class="seg"><button class="on">Gasto</button><button>Ingreso</button><button>Transferencia</button></div>
+    <div class="row between"><span>Interruptor</span><button class="switch on" onclick="this.classList.toggle('on')" aria-label="Interruptor"></button></div></div>
+  <div class="card"><div class="card-head"><h2>Fila de lista</h2></div><div class="list">${TX.slice(0,3).map(txRow).join('')}</div></div>
+  <div class="card"><div class="empty">${icon('inbox','style="width:32px;height:32px"')}<h2 style="margin-top:8px">Aún no hay movimientos</h2><p class="small">Apunta tu primer gasto y empezarás a ver tu resumen.</p><button class="btn btn-primary" onclick="openTx()">${icon('plus')}Añadir movimiento</button></div></div>
+  </div>`});
+
+/* ===================== NAVEGACIÓN ===================== */
+const FIN_NAV = [
+  {r:'finanzas',n:'Resumen',i:'layout-dashboard'},
+  {r:'finanzas/movimientos',n:'Movimientos',i:'list'},
+  {r:'finanzas/cuentas',n:'Cuentas',i:'landmark'},
+  {r:'finanzas/presupuestos',n:'Presupuestos',i:'gauge'},
+  {r:'finanzas/recurrentes',n:'Recurrentes',i:'repeat'},
+  {r:'finanzas/objetivos',n:'Objetivos',i:'target'},
+  {r:'finanzas/deudas',n:'Deudas y compartidos',i:'users'},
+];
+const BOTTOM = [
+  {r:'inicio',n:'Inicio',i:'house'},
+  {r:'finanzas',n:'Resumen',i:'layout-dashboard'},
+  {r:'finanzas/movimientos',n:'Movimientos',i:'list'},
+  {r:'finanzas/presupuestos',n:'Presupuestos',i:'gauge'},
+  {r:'finanzas/mas',n:'Más',i:'menu'},
+];
+function go(r){ location.hash = r; }
+function route(){ return location.hash.replace(/^#/,'') || 'login'; }
+
+function renderLogin(){
+  $('#root').innerHTML = `<div class="login"><div class="card stack">
+    <div class="row"><div class="brand-mark">P</div><div><div style="font-weight:650">Personal App</div><div class="small faint">Tu espacio privado</div></div></div>
+    <div class="field"><label>Email</label><input class="input" type="email" value="juanda@ejemplo.com"></div>
+    <div class="field"><label>Contraseña</label><input class="input" type="password" value="••••••••••"></div>
+    <label class="row small muted" style="gap:8px"><input type="checkbox" checked> Mantener la sesión iniciada</label>
+    <button class="btn btn-primary" onclick="go('inicio')">Entrar</button>
+    <div class="small faint" style="text-align:center">Acceso privado · sin registro público</div>
+  </div></div>`;
+  lucide.createIcons();
+}
+
+function render(){
+  const r = route();
+  if (r==='login') return renderLogin();
+  const s = (SCREENS[r]||SCREENS['inicio'])();
+  const inFin = r.startsWith('finanzas');
+  $('#root').innerHTML = `<div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">P</div>Personal App</div>
+      <button class="nav-item ${r==='inicio'?'active':''}" onclick="go('inicio')">${icon('house')}Inicio</button>
+      <div class="nav-section caption">Módulos</div>
+      <button class="nav-item ${inFin&&false?'active':''}" onclick="go('finanzas')"><span class="mod-dot" style="--accent:#1BAF7A">${icon('wallet')}</span>Finanzas</button>
+      ${FIN_NAV.map(n=>`<button class="nav-item sub ${r===n.r?'active':''}" onclick="go('${n.r}')">${n.n}</button>`).join('')}
+      ${MODULES.filter(m=>!m.on).map(m=>`<button class="nav-item disabled" aria-disabled="true"><span class="mod-dot" style="--accent:${m.c}">${icon(m.i)}</span>${m.n}<span class="badge pill">Pronto</span></button>`).join('')}
+      <div class="spacer"></div>
+      <button class="nav-item ${r==='ds'?'active':''}" onclick="go('ds')">${icon('palette')}Design system</button>
+      <button class="nav-item ${r==='ajustes'?'active':''}" onclick="go('ajustes')">${icon('settings')}Ajustes</button>
+      <button class="nav-item" onclick="go('login')">${icon('log-out')}Cerrar sesión</button>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="title"><div class="crumb">${s.crumb||''}</div><h1>${s.title}</h1></div>
+        ${s.actions||''}
+        <button class="btn btn-ghost btn-icon" onclick="cycleTheme()" aria-label="Cambiar tema" title="Cambiar tema">${icon(themeIcon())}</button>
+        <button class="btn btn-ghost btn-icon" aria-label="Notificaciones" style="position:relative">${icon('bell')}<span style="position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--negative);border:2px solid var(--bg)"></span></button>
+      </header>
+      <main class="content">${s.html}</main>
+    </div>
+  </div>
+  <nav class="bottomnav">${BOTTOM.map(b=>`<button class="${r===b.r||(b.r==='finanzas/mas'&&['finanzas/cuentas','finanzas/recurrentes','finanzas/objetivos','finanzas/deudas','ajustes','ds','finanzas/mas'].includes(r))?'active':''}" onclick="go('${b.r}')">${icon(b.i)}${b.n}</button>`).join('')}</nav>
+  <button class="fab" onclick="openTx()" aria-label="Nuevo movimiento">${icon('plus')}</button>`;
+  lucide.createIcons();
+  s.after && s.after();
+  window.scrollTo(0,0);
+}
+
+/* ===================== NUEVO MOVIMIENTO ===================== */
+let txType='expense', txCat='comida';
+function openTx(){
+  const cats = Object.entries(CATS).filter(([k])=> txType==='income' ? ['nomina','extra'].includes(k) : !['nomina','extra'].includes(k));
+  $('#scrim').innerHTML = `<div class="dialog stack" onclick="event.stopPropagation()">
+    <div class="row between"><h2>Nuevo movimiento</h2><button class="btn btn-ghost btn-icon btn-sm" onclick="closeTx()" aria-label="Cerrar">${icon('x')}</button></div>
+    <div class="seg">${[['expense','Gasto'],['income','Ingreso'],['transfer','Transferencia']].map(([k,n])=>`<button class="${txType===k?'on':''}" onclick="txType='${k}';openTx()">${n}</button>`).join('')}</div>
+    <input class="money-input num ${txType==='income'?'pos':''}" inputmode="decimal" value="${txType==='income'?'+':'−'}42,50 €" aria-label="Importe">
+    ${txType==='transfer' ? `<div class="grid g-2"><div class="field"><label>Desde</label><select class="input">${ACCOUNTS.map(a=>`<option>${a.n}</option>`)}</select></div><div class="field"><label>Hacia</label><select class="input">${ACCOUNTS.map((a,i)=>`<option ${i===1?'selected':''}>${a.n}</option>`)}</select></div></div>` : `
+    <div class="field"><label>Categoría</label><div class="cat-grid">${cats.map(([k,c])=>`<button class="cat-btn ${txCat===k?'on':''}" onclick="txCat='${k}';openTx()"><div class="ico" style="--accent:${c.c}">${icon(c.i)}</div>${c.n}</button>`).join('')}</div></div>
+    <div class="grid g-2"><div class="field"><label>Cuenta</label><select class="input">${ACCOUNTS.map((a,i)=>`<option ${i===2?'selected':''}>${a.n}</option>`)}</select></div>
+    <div class="field"><label>Fecha</label><div class="row" style="gap:6px"><button class="chip on">Hoy</button><button class="chip">Ayer</button><button class="chip">${icon('calendar')}</button></div></div></div>
+    <div class="field"><label>Comercio o concepto</label><input class="input" value="Mercadona"><span class="small faint">${icon('sparkles','style="width:13px;height:13px;vertical-align:-2px"')} Sugerida: Alimentación (por usos anteriores)</span></div>
+    <details><summary class="small" style="cursor:pointer;color:var(--primary);font-weight:550">Más opciones: etiquetas, nota, compartir, dividir</summary>
+      <div class="stack" style="margin-top:12px">
+        <div class="field"><label>Etiquetas</label><div class="row wrap" style="gap:6px"><span class="chip on">#casa ×</span><span class="chip">${icon('plus')}Añadir</span></div></div>
+        <div class="field"><label>Nota</label><textarea class="input" style="height:72px;padding:10px 12px"></textarea></div>
+        <div class="row between"><span>Gasto compartido</span><button class="switch" onclick="this.classList.toggle('on')" aria-label="Gasto compartido"></button></div>
+        <div class="row between"><span>Dividir en varias categorías</span><button class="switch" onclick="this.classList.toggle('on')" aria-label="Dividir"></button></div>
+      </div></details>`}
+    <button class="btn btn-primary" style="height:48px" onclick="saveTx()">Guardar</button>
+  </div>`;
+  $('#scrim').classList.add('open');
+  lucide.createIcons();
+}
+function closeTx(){ $('#scrim').classList.remove('open'); }
+$('#scrim').addEventListener('click', closeTx);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeTx(); });
+let toastT;
+function saveTx(){ closeTx(); $('#toast-text').textContent='Movimiento guardado'; $('#toast').classList.add('show'); clearTimeout(toastT); toastT=setTimeout(hideToast,5000); }
+function hideToast(){ $('#toast').classList.remove('show'); }
+
+/* ===================== TEMA ===================== */
+function getTheme(){ try{ return localStorage.getItem('pa-theme')||'system'; }catch(e){ return 'system'; } }
+function applyTheme(t){ if(t==='system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',t); }
+function setTheme(t){ try{ localStorage.setItem('pa-theme',t);}catch(e){} applyTheme(t); render(); }
+function cycleTheme(){ const o=['light','dark','system']; setTheme(o[(o.indexOf(getTheme())+1)%3]); }
+function themeIcon(){ return {light:'sun',dark:'moon',system:'monitor'}[getTheme()]; }
+function syncThemeSeg(){ document.querySelectorAll('#theme-seg button').forEach(b=>b.classList.toggle('on', b.dataset.t===getTheme())); }
+
+/* ===================== TOOLTIP ===================== */
+const tip = $('#tip');
+document.addEventListener('mouseover', e=>{ const el=e.target.closest('[data-tip]'); if(!el){tip.style.display='none';return;} tip.textContent=el.dataset.tip; tip.style.display='block'; });
+document.addEventListener('mousemove', e=>{ if(tip.style.display==='block'){ tip.style.left=Math.min(e.clientX+12, innerWidth-tip.offsetWidth-8)+'px'; tip.style.top=(e.clientY-36)+'px'; } });
+
+applyTheme(getTheme());
+window.addEventListener('hashchange', render);
+render();
+</script>
+</body>
+</html>
