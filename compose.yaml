@@ -46,6 +46,9 @@ x-laravel-env: &laravel-env
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
   SEED_DEMO_USER: ${SEED_DEMO_USER:-false}
+  ENABLE_BANKING_APP_ID: ${ENABLE_BANKING_APP_ID:-}
+  ENABLE_BANKING_REDIRECT_URL: ${ENABLE_BANKING_REDIRECT_URL:-}
+  ENABLE_BANKING_PRIVATE_KEY_PATH: /run/secrets/enable_banking.pem
   RUN_MIGRATIONS: "false"
 
 x-php-service: &php-service
@@ -56,6 +59,9 @@ x-php-service: &php-service
     <<: *laravel-env
   volumes:
     - app-storage:/var/www/html/storage/app
+  secrets:
+    - source: enable_banking
+      target: enable_banking.pem
   depends_on:
     postgres:
       condition: service_healthy
@@ -181,6 +187,10 @@ services:
       dockerfile: ../infra/docker/caddy/Dockerfile
       target: frontend-test
     image: personal-app-frontend:test
+
+secrets:
+  enable_banking:
+    file: ${ENABLE_BANKING_PRIVATE_KEY_FILE:-/dev/null}
 
 volumes:
   pgdata:

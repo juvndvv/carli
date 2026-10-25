@@ -55,6 +55,24 @@ La configuración de Laravel llega a los contenedores por variables de entorno d
 3. `make up` y `make create-user`. Caddy obtiene y renueva el certificado TLS automáticamente y activa HSTS.
 4. Actualizar: `git pull && make up` (reconstruye las imágenes y migra al arrancar).
 
+### Sincronización bancaria (Enable Banking, F3)
+
+Opcional: sin configurar, la app funciona en manual y `Ajustes → Bancos` responde que la conexión no está configurada.
+
+1. Crea una aplicación en [Enable Banking](https://enablebanking.com) en modo *restricted* (gratis para cuentas propias) y enlaza en su panel las cuentas de Revolut, BBVA y MyInvestor.
+2. Registra como redirect URL `https://<dominio>/api/v1/finance/bank/callback` (en local, `http://localhost:8180/api/v1/finance/bank/callback`).
+3. Descarga la clave privada de la aplicación y guárdala **fuera del repo**, legible por el contenedor (p. ej. `/etc/personal-app/enable_banking.pem`, `chmod 644`).
+4. En `.env`:
+   ```dotenv
+   ENABLE_BANKING_APP_ID=<id de la aplicación>
+   ENABLE_BANKING_PRIVATE_KEY_FILE=/etc/personal-app/enable_banking.pem
+   # ENABLE_BANKING_REDIRECT_URL=...   # por defecto ${APP_URL}/api/v1/finance/bank/callback
+   ```
+   Compose monta el fichero como Docker secret en `/run/secrets/enable_banking.pem` en `app`, `worker` y `scheduler`. La clave nunca se guarda en la base de datos; el `session_id` de cada conexión se guarda cifrado con `APP_KEY`.
+5. `make up`. El `scheduler` sincroniza a las 07:00, 13:00 y 19:00 (`finance:bank-sync`) y avisa a 7 y 1 día de que caduque el consentimiento (`finance:bank-consent-expiry`, 09:00). El botón "Sincronizar ahora" encola un job en el `worker`.
+
+Para desarrollo sin Docker, define `ENABLE_BANKING_APP_ID` y `ENABLE_BANKING_PRIVATE_KEY_PATH` en `backend/.env`.
+
 ### Backups
 
 El servicio `backup` hace un `pg_dump` diario a las 03:00 (Europe/Madrid) en `./backups` y conserva 7 diarios, 4 semanales y 12 mensuales. Si defines `RESTIC_REPOSITORY` y `RESTIC_PASSWORD` (y credenciales S3 si aplica) también sube una instantánea cifrada con restic con la misma retención.
