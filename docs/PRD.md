@@ -45,13 +45,17 @@ El primer módulo es **Finanzas**: registrar manualmente ingresos y gastos, sabe
 | **F0 · Shell** | Login, layout (sidebar/bottom nav), launcher de módulos, ajustes, tema claro/oscuro, PWA instalable, notificaciones push |
 | **F1 · Finanzas MVP** | Cuentas, movimientos, transferencias, categorías y etiquetas, dashboard, presupuestos |
 | **F2 · Finanzas v1.1** | Recurrentes/suscripciones, objetivos de ahorro, deudas y préstamos, gastos compartidos, exportación CSV |
-| **F3+** | Otros módulos: Tareas, Salud, Hábitos, Notas (solo se reserva su hueco en el shell) |
+| **F3 · Sincronización bancaria** | Conexión de Revolut, BBVA y MyInvestor vía Open Banking (Enable Banking), importación automática de movimientos, bandeja "Sin categorizar", aviso de renovación del consentimiento (§7.2, FI-BK) |
+| **F4+** | Otros módulos: Tareas, Salud, Hábitos, Notas (solo se reserva su hueco en el shell) |
 
 > Recomendación: no empezar F2 hasta usar F1 dos o tres semanas. Lo que eches en falta en el uso real pesa más que este documento.
 
 ### 5.2 Fuera de alcance (explícito)
 
-- Conexión bancaria (PSD2/open banking) e importación CSV/Excel.
+- Importación CSV/Excel.
+- Deduplicación o emparejamiento automático entre movimientos manuales e importados del banco (lo resuelve el usuario).
+- Iniciación de pagos (PIS): la conexión bancaria es solo de lectura.
+- Movimientos pendientes (no contabilizados) del banco.
 - Multimoneda, inversiones, cripto.
 - Modo offline / sincronización.
 - Varios usuarios, cuentas compartidas con otras personas, roles.
@@ -188,6 +192,27 @@ Todo módulo aporta: entrada en la navegación (icono + nombre), tarjeta-resumen
 | FI-EX-02 | Backup completo del módulo en JSON. | Could |
 | FI-ST-01 | Ajustes: cuenta por defecto, umbrales de aviso de presupuesto y configuración del periodo financiero (§7.5). | Should |
 
+#### Sincronización bancaria (F3)
+Complementa la entrada manual, no la sustituye. Proveedor: Enable Banking (agregador con licencia AISP, modo gratuito para cuentas propias). Bancos: Revolut, BBVA y MyInvestor; se conectan todas las cuentas que exponga la API (tarjetas de crédito incluidas si aparecen). PSD2 solo da acceso a cuentas de pago: de MyInvestor se sincronizan la cuenta remunerada (tipo ahorro) y la tarjeta, **no** fondos, acciones, cartera indexada ni plan de pensiones.
+
+| ID | Requisito | Prio |
+|---|---|---|
+| FI-BK-01 | Conectar un banco desde Ajustes → Bancos: elegir banco, redirección al banco para autorizar (SCA), volver a la app y **vincular cada cuenta del banco a una cuenta existente** o crear una nueva. | Must |
+| FI-BK-02 | Por cada cuenta vinculada, fecha **"importar desde"** (por defecto, el día de la conexión) para no duplicar el histórico ya apuntado a mano. | Must |
+| FI-BK-03 | Sincronización automática varias veces al día (máx. 4, límite PSD2) y botón "Sincronizar ahora". | Must |
+| FI-BK-04 | Solo se importan movimientos contabilizados. Entran con concepto, comercio, importe y fecha del banco, **sin categoría**, y marcados con origen "banco" (icono en el listado). | Must |
+| FI-BK-05 | Filtro/bandeja **"Sin categorizar"** en Movimientos y contador en el dashboard. | Must |
+| FI-BK-06 | Un movimiento importado se puede editar (categoría, etiquetas, notas, compartido) y borrar. Si se borra, **no vuelve** en la siguiente sincronización. | Must |
+| FI-BK-07 | Mostrar en cada cuenta vinculada el **saldo que informa el banco** junto al calculado, y la diferencia. "Conciliar" (FI-AC-05) con ese saldo precargado. | Should |
+| FI-BK-08 | Estado de cada conexión: activa, caduca en N días, caducada, error. Push **7 días y 1 día antes** de que caduque el consentimiento (90 días en los bancos que van por Redsys, como BBVA y MyInvestor; hasta 180 en otros) y botón "Renovar". | Must |
+| FI-BK-09 | Desconectar un banco: revoca el consentimiento; los movimientos ya importados se conservan. | Must |
+| FI-BK-10 | Reglas de autocategorización por texto del comercio ("MERCADONA" → Supermercado). | Could |
+
+Notas:
+- Sin deduplicación automática: si un gasto se apunta a mano y luego llega del banco, cuenta dos veces hasta que el usuario borre uno. FI-BK-07 hace visible la diferencia.
+- Una transferencia entre dos bancos conectados (p. ej. BBVA → MyInvestor) llega como gasto en una cuenta e ingreso en la otra; convertirla en transferencia es manual.
+- Un ingreso importado no abre periodo (§7.5) hasta que el usuario le asigna la categoría Nómina.
+
 ### 7.3 Flujos principales
 
 1. **Apuntar gasto en móvil**: abrir PWA → "+" → teclear importe → elegir categoría (cuadrícula de recientes) → Guardar. Cuenta y fecha por defecto.
@@ -241,6 +266,10 @@ Ejemplo: nómina el 28/09 → periodo 28/09–27/10. Nómina el 28/10 → nuevo 
 | Entrada solo manual | Es la principal causa de abandono en apps de finanzas. Mitigación: alta ultrarrápida, recurrentes automáticos y conciliación. Si a los 2 meses no se mantiene el hábito, reconsiderar importación CSV. |
 | Push en iPhone | Solo funciona con la PWA añadida a la pantalla de inicio (iOS 16.4+). Hay que guiar la instalación. |
 | Alcance F2 | Deudas + compartidos + objetivos son 3 mini-productos; priorizar según uso real. |
+| Datos en un tercero (F3) | La sincronización bancaria hace pasar los movimientos por Enable Banking, en contra de uno de los motivos del producto (§2). Asumido: proveedor con licencia AISP en la UE, solo lectura, consentimiento revocable. |
+| Proveedor bancario | Enable Banking puede cambiar o retirar el modo gratuito (como pasó con GoCardless/Nordigen). Mitigación: proveedor intercambiable (TRD); la app sigue funcionando en manual. |
+| Revolut y MyInvestor en Enable Banking | No verificados (Revolut España; MyInvestor tiene API PSD2 vía Redsys pero no figura en los listados públicos de Enable Banking). Comprobarlo al enlazar en su panel antes de empezar F3. |
+| Doble conteo (F3) | Lo manual y lo importado pueden duplicarse; responsabilidad del usuario. Mitigación: saldo del banco visible (FI-BK-07). |
 | Periodo financiero | Decidido: de nómina a nómina con fecha variable (§7.5). Riesgo: si un mes no se registra la nómina, el periodo se alarga; se mitiga con el recurrente de la nómina en modo "con confirmación" y un aviso. |
 
 ## 10. Glosario

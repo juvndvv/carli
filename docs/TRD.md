@@ -23,6 +23,7 @@
 | Contrato API | REST JSON `/api/v1`, OpenAPI generado con Scramble, tipos TS generados con `openapi-typescript` |
 | Despliegue | Docker Compose en VPS propio: Caddy (TLS + estáticos + proxy) · PHP-FPM · worker · scheduler · Postgres |
 | Calidad | Pest + Larastan + Pint · Vitest + Playwright + ESLint · GitHub Actions |
+| Open Banking (F3) | Enable Banking (AIS, modo restricted, gratis para cuentas propias) detrás de la interfaz `BankDataProvider`. Solo lectura |
 
 > Versiones a fecha de octubre 2026. Fijarlas en `composer.json` / `package.json` y actualizar con Renovate o Dependabot.
 
@@ -101,6 +102,11 @@ Reglas:
 - `Core` no conoce a los módulos: los descubre por `config/modules.php` (lista de service providers habilitados).
 - Controladores finos: validación en FormRequest, lógica en `Domain/Services`, salida en Resources.
 - Toda escritura que afecte a saldos (transferencias, splits, liquidaciones) dentro de `DB::transaction()`.
+
+**Sincronización bancaria (F3)** dentro de `Finance/BankSync/`:
+- `Contracts/BankDataProvider`: `listAspsps()`, `startAuth(aspsp, redirectUrl)`, `completeAuth(code)`, `listAccounts(session)`, `fetchTransactions(accountUid, from, to)`, `fetchBalance(accountUid)`, `revoke(session)`.
+- `Providers/EnableBankingProvider`: JWT RS256 firmado con la clave privada de la aplicación (TTL ≤ 24 h), cliente HTTP con reintentos y backoff.
+- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. No categoriza ni toca periodos.
 
 ### 4.2 Registro de módulos
 
@@ -233,7 +239,38 @@ debts (
   closed_at NULL, timestamps
 )
 -- pagos de deuda = transactions con debt_id
+
+-- F3 · Sincronización bancaria
+bank_connections (
+  id uuid PK, user_id uuid FK,
+  provider text DEFAULT 'enable_banking',
+  aspsp_name text, aspsp_country char(2),      -- 'BBVA','ES' / 'MyInvestor','ES' / 'Revolut','LT'
+  session_id text,                              -- cast encrypted en Laravel
+  valid_until timestamptz NOT NULL,
+  status text CHECK (status IN ('active','expired','revoked','error')),
+  last_synced_at timestamptz NULL, last_error text NULL,
+  timestamps
+)
+
+-- accounts añade:
+--   bank_connection_id uuid NULL FK bank_connections,
+--   external_account_uid text NULL,               -- uid de la cuenta en el proveedor
+--   sync_from_date date NULL,                     -- PRD FI-BK-02
+--   bank_balance_cents bigint NULL, bank_balance_at timestamptz NULL   -- PRD FI-BK-07
+
+-- transactions añade:
+--   source text CHECK (source IN ('manual','recurring','bank')) DEFAULT 'manual',
+--   external_id text NULL,                        -- entry_reference / transaction_id del banco
+--   raw jsonb NULL,                               -- payload original, para depurar
+--   UNIQUE (account_id, external_id)              -- idempotencia entre sincronizaciones
+--   índice parcial para la bandeja: WHERE category_id IS NULL AND kind IN ('expense','income')
 ```
+
+Reglas de importación (F3):
+- Los importados entran con `category_id NULL`.
+- Borrado de importados con `deleted_at`. El upsert ignora `external_id` ya existentes **incluidos los borrados**, así no reaparecen (PRD FI-BK-06).
+- Si el banco no da un id estable: `external_id = sha256(fecha|importe|concepto|n.º de ocurrencia ese día)`.
+- Signo según `credit_debit_indicator` (DBIT → negativo). Solo `status = BOOK`.
 
 ### 5.4 Reglas de cálculo
 
@@ -291,6 +328,16 @@ Prefijo `/api/v1`. JSON. Autenticación por cookie de sesión Sanctum. Errores c
 | CRUD | `/contacts` | `GET` incluye saldo |
 | POST | `/contacts/{id}/settle` | Liquida saldo, crea movimiento |
 | CRUD | `/debts` | |
+| GET | `/bank/aspsps?country=ES` | Bancos disponibles (F3) |
+| POST | `/bank/connections` | `{ aspsp_name, aspsp_country }` → `{ auth_url }` |
+| GET | `/bank/callback` | Vuelta del banco: valida `state`, crea sesión y redirige al front a vincular cuentas |
+| GET | `/bank/connections` | Estado, `valid_until`, último sync |
+| POST | `/bank/connections/{id}/accounts` | `[{ external_account_uid, account_id \| new, sync_from_date }]` |
+| POST | `/bank/connections/{id}/sync` | Sincronizar ahora (job en cola) |
+| POST | `/bank/connections/{id}/renew` | Nuevo `auth_url` conservando las vinculaciones |
+| DELETE | `/bank/connections/{id}` | Revoca y marca `revoked` |
+
+En F3, `GET /transactions` añade los filtros `source` y `uncategorized=1`.
 
 Ejemplo de movimiento:
 
@@ -388,6 +435,8 @@ export interface AppModuleManifest {
 | Listener `PayrollRegistered` | Evento | Si el ingreso es de una categoría `opens_period`, está confirmado y han pasado ≥ N días desde el inicio del periodo abierto: cierra el actual (`end_date = fecha − 1`), abre uno nuevo y copia presupuestos, todo en una transacción. Al editar o borrar esa nómina, `PeriodService::rebuild()` recalcula límites. |
 | `finance:payroll-overdue` | Diario 09:00 | Si hoy > `expected_end_date` + 1 y no hay periodo nuevo: push de aviso (PRD FI-PE-07) |
 | `finance:weekly-summary` | Lunes 09:00 | Opcional |
+| `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. |
+| `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
 
 Zona horaria de la app: `Europe/Madrid`; fechas de movimientos como `date` (sin hora).
@@ -401,6 +450,7 @@ Zona horaria de la app: `Europe/Madrid`; fechas de movimientos como `date` (sin 
 - Cabeceras en Caddy: HSTS, CSP estricta, `X-Content-Type-Options`, `Referrer-Policy`.
 - Postgres sin puerto expuesto fuera de la red Docker. SSH con clave, firewall (solo 22/80/443), actualizaciones automáticas de seguridad del SO.
 - Backups cifrados (restic) y **prueba de restauración** trimestral.
+- Open Banking (F3): clave privada de Enable Banking como **Docker secret** en `/run/secrets/enable_banking.pem`, nunca en el repo ni en la BD; `ENABLE_BANKING_APP_ID` en `.env`. `bank_connections.session_id` cifrado (cast `encrypted`). La redirect URL registrada en Enable Banking es `https://<dominio>/api/v1/finance/bank/callback`. `transactions.raw` puede contener IBAN y nombres de contrapartes: queda cubierto por los backups cifrados.
 
 ## 10. Despliegue
 
@@ -440,6 +490,7 @@ Desarrollo local: `compose.dev.yaml` con Postgres + Mailpit; `php artisan serve`
 6. **PWA + push** (instalación, suscripción, aviso de presupuesto).
 7. **Producción**: VPS, Caddy, backups. Empezar a usarla.
 8. **F2**: recurrentes → objetivos → compartidos → deudas → exportación.
+9. **F3**: crear app en Enable Banking y enlazar Revolut, BBVA y MyInvestor en su panel (verificar que Revolut y MyInvestor aparecen, si salen las tarjetas BBVA y el `maximum_consent_validity` de cada banco) → `BankDataProvider` + modelo → conexión y vinculación → job de sync → bandeja "Sin categorizar" → avisos de caducidad.
 
 ## 13. ADRs a registrar
 
@@ -450,3 +501,4 @@ Desarrollo local: `compose.dev.yaml` con Postgres + Mailpit; `php artisan serve`
 - ADR-005 Cola en base de datos, sin Redis.
 - ADR-006 Mismo origen SPA + API.
 - ADR-007 Periodo financiero de nómina a nómina, calculado por rangos de fecha (sin `period_id` en movimientos).
+- ADR-008 Open Banking vía agregador con licencia (Enable Banking, modo restricted) detrás de `BankDataProvider`. Descartados: acceso directo PSD2 (requiere licencia AISP + eIDAS), GoCardless Bank Account Data (sin altas nuevas en 2026) y Tink/Yapily/Salt Edge (de pago, contratación con ventas).
