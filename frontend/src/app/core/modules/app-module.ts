@@ -12,6 +12,7 @@ import {
 import { CanMatchFn, Route, Routes } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { apiUrl, unwrapData } from '../http/api';
+import { PendingTypeDescriptor } from '../pending/pending.models';
 
 export type AppModuleId = 'finance' | 'tasks' | 'health' | 'habits' | 'notes';
 
@@ -32,6 +33,8 @@ export interface AppModuleManifest {
   routes: () => Promise<Routes>;
   nav: AppModuleNavItem[];
   homeWidget?: () => Promise<Type<unknown>>;
+  pendingTypes?: Record<string, PendingTypeDescriptor>;
+  pendingActions?: Record<string, () => Promise<Type<unknown>>>;
   settings?: () => Promise<Type<unknown>>;
 }
 
