@@ -17,9 +17,6 @@ import { formatDateTime } from '../../data-access/finance-format';
 import { CategoryRulesCard } from '../rules/category-rules-card';
 import { ConnectBankDialog } from './connect-bank-dialog';
 
-export const SYNC_POLL_INTERVAL_MS = 3000;
-export const SYNC_POLL_ATTEMPTS = 10;
-
 export const BANK_SETTINGS_PATH = '/finanzas/ajustes/bancos';
 
 export function lastSyncLabel(connection: Pick<BankConnection, 'last_synced_at'>, now: Date = new Date()): string {
@@ -28,10 +25,6 @@ export function lastSyncLabel(connection: Pick<BankConnection, 'last_synced_at'>
 
 export function linkedAccountLabel(account: BankLinkedAccount): string {
   return account.sync_from_date ? `${account.name} · desde el ${formatShortDate(account.sync_from_date, true)}` : account.name;
-}
-
-function syncFinished(before: BankConnection, after: BankConnection): boolean {
-  return after.last_synced_at !== before.last_synced_at || after.status !== before.status || after.last_error !== before.last_error;
 }
 
 @Component({
@@ -54,7 +47,13 @@ function syncFinished(before: BankConnection, after: BankConnection): boolean {
     }
 
     <div class="stack">
-      @if (!bank.loaded()) {
+      @if (bank.error() && !bank.loaded()) {
+        <ui-card>
+          <ui-empty-state icon="circle-alert" heading="No se han podido cargar los bancos" description="Comprueba tu conexión e inténtalo de nuevo.">
+            <button ui-button type="button" size="sm" icon="refresh-cw" (click)="bank.reload()">Reintentar</button>
+          </ui-empty-state>
+        </ui-card>
+      } @else if (!bank.loaded()) {
         <ui-card><ui-skeleton height="120px" /></ui-card>
       } @else if (bank.connections().length === 0) {
         <ui-card>
@@ -266,14 +265,21 @@ export class BankConnectionsPage implements OnDestroy {
 
   protected async sync(connection: BankConnection): Promise<void> {
     this.syncing.set(connection.id);
+    let queued: boolean;
     try {
-      await this.bank.sync(connection.id);
-      this.toast.show(`Sincronizando ${connection.aspsp_name}…`);
-      await this.waitForSync(connection);
+      queued = (await this.bank.sync(connection.id)).queued;
     } catch (error) {
-      this.toast.error(firstValidationMessage(error, 'No se ha podido sincronizar el banco.'));
-    } finally {
       this.syncing.set(null);
+      this.toast.error(firstValidationMessage(error, 'No se ha podido sincronizar el banco.'));
+      return;
+    }
+    this.toast.show(queued ? `Sincronizando ${connection.aspsp_name}…` : `${connection.aspsp_name} ya se está sincronizando…`);
+    const current = await this.bank.awaitSync(connection, () => !this.destroyed);
+    this.syncing.set(null);
+    if (current?.status === 'error') {
+      this.toast.error(current.last_error ?? `No se ha podido sincronizar ${current.aspsp_name}.`);
+    } else if (current) {
+      this.toast.show(`${current.aspsp_name} sincronizado`);
     }
   }
 
@@ -309,20 +315,4 @@ export class BankConnectionsPage implements OnDestroy {
     }
   }
 
-  private async waitForSync(before: BankConnection): Promise<void> {
-    for (let attempt = 0; attempt < SYNC_POLL_ATTEMPTS && !this.destroyed; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, SYNC_POLL_INTERVAL_MS));
-      const current = await this.bank.get(before.id);
-      if (syncFinished(before, current)) {
-        this.bank.synced();
-        if (current.status === 'error') {
-          this.toast.error(current.last_error ?? `No se ha podido sincronizar ${current.aspsp_name}.`);
-        } else {
-          this.toast.show(`${current.aspsp_name} sincronizado`);
-        }
-        return;
-      }
-    }
-    this.bank.synced();
-  }
 }

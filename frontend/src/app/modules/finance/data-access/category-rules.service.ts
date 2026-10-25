@@ -20,6 +20,10 @@ export class CategoryRulesService {
   readonly loaded = computed(() => this.resource.hasValue());
   readonly error = this.resource.error;
 
+  reload(): void {
+    this.resource.reload();
+  }
+
   async remove(id: string): Promise<void> {
     await firstValueFrom(this.http.delete(financeUrl(`category-rules/${id}`)));
     this.changes.notify('rules');

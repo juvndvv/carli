@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { todayIso } from '@shared/dates/dates';
 import { NEW_ACCOUNT } from '../../data-access/bank.models';
+import { BankService } from '../../data-access/bank.service';
 import { aBankCandidate, aBankConnection, anAccount } from '../../testing/finance-fixtures';
 import { configureFinanceTesting, flushAll, tick } from '../../testing/finance-testing';
 import { BankLinkPage, candidateSubtitle, defaultNewAccountName, duplicateTargets } from './bank-link-page';
@@ -10,13 +11,17 @@ import { BankLinkPage, candidateSubtitle, defaultNewAccountName, duplicateTarget
 describe('BankLinkPage', () => {
   let http: HttpTestingController;
 
-  async function render(candidates = [aBankCandidate(), aBankCandidate({ external_account_uid: 'uid-card', name: null, type: 'CARD', suggested_account_type: 'credit_card', iban: null })], renovado: string | null = null) {
+  async function render(
+    candidates = [aBankCandidate(), aBankCandidate({ external_account_uid: 'uid-card', name: null, type: 'CARD', suggested_account_type: 'credit_card', iban: null })],
+    renovado: string | null = null,
+    connection = aBankConnection({ linked_accounts: [] }),
+  ) {
     http = configureFinanceTesting();
     const fixture = TestBed.createComponent(BankLinkPage);
     fixture.componentRef.setInput('id', 'connection-bbva');
     fixture.componentRef.setInput('renovado', renovado);
     TestBed.tick();
-    http.expectOne('/api/v1/finance/bank/connections/connection-bbva').flush({ data: aBankConnection({ linked_accounts: [] }) });
+    http.expectOne('/api/v1/finance/bank/connections/connection-bbva').flush({ data: connection });
     http.expectOne('/api/v1/finance/bank/connections/connection-bbva/accounts').flush({ data: candidates });
     flushAll(http, 'accounts', { data: [anAccount(), anAccount({ id: 'account-savings', name: 'Ahorro', type: 'savings' })], meta: { net_worth_cents: 0 } });
     await tick();
@@ -45,9 +50,27 @@ describe('BankLinkPage', () => {
     expect(component['renewed']()).toBe(true);
   });
 
+  it('keeps skipped bank accounts out when coming back to an already linked bank', async () => {
+    const linked = aBankCandidate({ linked_account: { id: 'account-checking', name: 'Cuenta corriente', type: 'checking', sync_from_date: '2026-09-01' } });
+    const skipped = aBankCandidate({ external_account_uid: 'uid-card', type: 'CARD', suggested_account_type: 'credit_card' });
+    const { component } = await render([linked, skipped], null, aBankConnection());
+    expect(component['rows'].getRawValue().map((row) => row.target)).toEqual(['account-checking', null]);
+  });
+
+  it('leaves accounts in other currencies out by default', async () => {
+    const { component } = await render([aBankCandidate(), aBankCandidate({ external_account_uid: 'uid-usd', currency: 'USD' })]);
+    expect(component['rows'].getRawValue().map((row) => row.target)).toEqual([NEW_ACCOUNT, null]);
+  });
+
+  it('does not propose new accounts after renewing the consent', async () => {
+    const { component } = await render(undefined, '1');
+    expect(component['rows'].getRawValue().map((row) => row.target)).toEqual([null, null]);
+  });
+
   it('links to existing, new or no account and returns to the bank list', async () => {
     const { fixture, element, component } = await render();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const awaitSync = vi.spyOn(TestBed.inject(BankService), 'awaitSync').mockResolvedValue(null);
     const rows = component['rows'].controls;
     rows[0].patchValue({ target: 'account-checking', from: '2026-10-01' });
     rows[1].patchValue({ target: null });
@@ -65,11 +88,13 @@ describe('BankLinkPage', () => {
     flushAll(http, 'bank/connections', { data: [] });
     flushAll(http, 'accounts', { data: [], meta: { net_worth_cents: 0 } });
     expect(navigate).toHaveBeenCalledWith('/finanzas/ajustes/bancos');
+    expect(awaitSync).toHaveBeenCalledWith(aBankConnection());
   });
 
   it('sends name and type for new accounts', async () => {
     const { component } = await render([aBankCandidate()]);
     vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(TestBed.inject(BankService), 'awaitSync').mockResolvedValue(null);
     component['rows'].controls[0].patchValue({ name: '  BBVA nómina ' });
     void component['save']();
     const request = http.expectOne({ method: 'POST', url: '/api/v1/finance/bank/connections/connection-bbva/accounts' });

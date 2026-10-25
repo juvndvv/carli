@@ -41,6 +41,10 @@ export function candidateSubtitle(candidate: BankAccountCandidate): string {
     .join(' · ');
 }
 
+export function isEuroAccount(candidate: Pick<BankAccountCandidate, 'currency'>): boolean {
+  return !candidate.currency || candidate.currency.toUpperCase() === 'EUR';
+}
+
 export function defaultNewAccountName(bank: string, candidate: BankAccountCandidate): string {
   const name = candidate.name?.trim();
   return name ? `${bank} ${name}` : `${bank} ${ACCOUNT_TYPE_LABELS[candidate.suggested_account_type].toLowerCase()}`;
@@ -288,6 +292,9 @@ export class BankLinkPage {
     try {
       const connection = await this.bank.link(this.id(), items);
       const linked = items.filter((item) => item.account_id !== null).length;
+      if (linked > 0) {
+        void this.bank.awaitSync(connection);
+      }
       this.toast.show(
         linked === 0
           ? `${connection.aspsp_name}: no se importará ninguna cuenta`
@@ -309,8 +316,9 @@ export class BankLinkPage {
       this.connection.set(connection);
       this.candidates.set(candidates);
       this.rows.clear({ emitEvent: false });
+      const unlinkedTarget = connection.linked_accounts.length === 0 && !this.renewed() ? NEW_ACCOUNT : null;
       for (const candidate of candidates) {
-        this.rows.push(this.rowFor(connection, candidate), { emitEvent: false });
+        this.rows.push(this.rowFor(connection, candidate, unlinkedTarget), { emitEvent: false });
       }
       this.targets.set(this.rows.controls.map((row) => row.controls.target.value));
     } catch (error) {
@@ -320,11 +328,11 @@ export class BankLinkPage {
     }
   }
 
-  private rowFor(connection: BankConnection, candidate: BankAccountCandidate): LinkRow {
+  private rowFor(connection: BankConnection, candidate: BankAccountCandidate, unlinkedTarget: LinkTarget): LinkRow {
     const linked = candidate.linked_account;
     return new FormGroup({
       externalUid: new FormControl(candidate.external_account_uid, { nonNullable: true }),
-      target: new FormControl<LinkTarget>(linked?.id ?? NEW_ACCOUNT),
+      target: new FormControl<LinkTarget>(linked?.id ?? (isEuroAccount(candidate) ? unlinkedTarget : null)),
       name: new FormControl(defaultNewAccountName(connection.aspsp_name, candidate), { nonNullable: true }),
       type: new FormControl<AccountType>(candidate.suggested_account_type, { nonNullable: true }),
       from: new FormControl(linked?.sync_from_date ?? this.today, { nonNullable: true }),

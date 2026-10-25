@@ -26,6 +26,24 @@ describe('CategoryRulesCard', () => {
     expect(text).toContain('Categoría eliminada · ingreso');
   });
 
+  it('offers to retry when the rules cannot be loaded', async () => {
+    http = configureFinanceTesting();
+    const fixture = TestBed.createComponent(CategoryRulesCard);
+    TestBed.tick();
+    http.expectOne('/api/v1/finance/category-rules').flush({}, { status: 500, statusText: 'Error' });
+    await tick();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('No se han podido cargar las reglas');
+
+    Array.from(element.querySelectorAll<HTMLButtonElement>('button')).find((item) => item.textContent?.trim() === 'Reintentar')!.click();
+    TestBed.tick();
+    http.expectOne('/api/v1/finance/category-rules').flush({ data: [aCategoryRule()] });
+    await tick();
+    await fixture.whenStable();
+    expect(element.textContent).toContain('MERCADONA');
+  });
+
   it('explains how rules are created when there are none', async () => {
     const { element } = await render([]);
     expect(element.textContent).toContain('Aún no hay reglas');

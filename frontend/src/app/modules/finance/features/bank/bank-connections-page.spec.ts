@@ -2,10 +2,10 @@ import { HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { DialogService } from '@ui/dialog/dialog.service';
 import { ToastService } from '@ui/toast/toast.service';
-import { BankRedirect } from '../../data-access/bank.service';
+import { BankRedirect, SYNC_POLL_INTERVAL_MS } from '../../data-access/bank.service';
 import { aBankConnection } from '../../testing/finance-fixtures';
 import { configureFinanceTesting, tick } from '../../testing/finance-testing';
-import { BankConnectionsPage, lastSyncLabel, linkedAccountLabel, SYNC_POLL_INTERVAL_MS } from './bank-connections-page';
+import { BankConnectionsPage, lastSyncLabel, linkedAccountLabel } from './bank-connections-page';
 
 describe('BankConnectionsPage', () => {
   let http: HttpTestingController;
@@ -55,6 +55,47 @@ describe('BankConnectionsPage', () => {
     expect(text).toContain('Caducada');
     expect(text).toContain('Cuenta corriente · desde el 1 oct 2026');
     expect(text).toContain('Ninguna cuenta vinculada');
+  });
+
+  it('offers to retry when the banks cannot be loaded', async () => {
+    http = configureFinanceTesting([], [{ provide: BankRedirect, useValue: { go } }]);
+    const fixture = TestBed.createComponent(BankConnectionsPage);
+    TestBed.tick();
+    http.match('/api/v1/finance/bank/connections').forEach((request) => request.flush({}, { status: 500, statusText: 'Error' }));
+    http.match('/api/v1/finance/category-rules').forEach((request) => request.flush({ data: [] }));
+    await tick();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('No se han podido cargar los bancos');
+
+    button(element, 'Reintentar').click();
+    TestBed.tick();
+    http.expectOne('/api/v1/finance/bank/connections').flush({ data: [] });
+    await tick();
+    await fixture.whenStable();
+    expect(element.textContent).toContain('Conecta tu banco');
+  });
+
+  it('keeps waiting for the sync when one status check fails', async () => {
+    const { fixture, element } = await render();
+    vi.useFakeTimers();
+    button(element, 'Sincronizar ahora').click();
+    http.expectOne({ method: 'POST', url: '/api/v1/finance/bank/connections/connection-bbva/sync' }).flush({ data: { queued: true } }, { status: 202, statusText: 'Accepted' });
+    await vi.advanceTimersByTimeAsync(SYNC_POLL_INTERVAL_MS);
+    http
+      .expectOne({ method: 'GET', url: '/api/v1/finance/bank/connections/connection-bbva' })
+      .error(new ProgressEvent('error'));
+    await vi.advanceTimersByTimeAsync(SYNC_POLL_INTERVAL_MS);
+    http
+      .expectOne({ method: 'GET', url: '/api/v1/finance/bank/connections/connection-bbva' })
+      .flush({ data: aBankConnection({ last_synced_at: '2026-10-25T13:30:00+00:00' }) });
+    await vi.advanceTimersByTimeAsync(0);
+    const toasts = TestBed.inject(ToastService).active();
+    expect(toasts[0].message).toBe('BBVA sincronizado');
+    expect(toasts[0].tone).toBe('default');
+    vi.useRealTimers();
+    http.match(() => true).forEach((request) => request.flush({ data: [] }));
+    await fixture.whenStable();
   });
 
   it('explains a failed bank callback', async () => {

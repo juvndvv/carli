@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { firstValidationMessage } from '@core/http/api';
 import { UiButton } from '@ui/button/button';
 import { UiCard } from '@ui/card/card';
+import { UiEmptyState } from '@ui/empty-state/empty-state';
 import { UiListItem } from '@ui/list-item/list-item';
 import { UiSearch } from '@ui/search/search';
 import { UiSkeleton } from '@ui/skeleton/skeleton';
@@ -20,14 +21,18 @@ export function ruleCategoryLabel(rule: CategoryRule): string {
 
 @Component({
   selector: 'fin-category-rules-card',
-  imports: [UiCard, UiListItem, UiButton, UiSearch, UiSkeleton],
+  imports: [UiCard, UiListItem, UiButton, UiSearch, UiSkeleton, UiEmptyState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-card heading="Reglas de categorización">
       <p class="small muted intro">
         Los movimientos importados cuyo comercio o concepto contiene el texto de una regla entran ya categorizados y no pasan por Pendientes.
       </p>
-      @if (!rules.loaded()) {
+      @if (rules.error() && !rules.loaded()) {
+        <ui-empty-state icon="circle-alert" heading="No se han podido cargar las reglas" description="Comprueba tu conexión e inténtalo de nuevo.">
+          <button ui-button type="button" size="sm" icon="refresh-cw" (click)="rules.reload()">Reintentar</button>
+        </ui-empty-state>
+      } @else if (!rules.loaded()) {
         <ui-skeleton height="44px" />
         <ui-skeleton height="44px" class="gap" />
       } @else if (rules.rules().length === 0) {

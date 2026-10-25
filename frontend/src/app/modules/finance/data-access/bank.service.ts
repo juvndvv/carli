@@ -7,6 +7,12 @@ import { FinanceChanges } from './finance-changes';
 import { Aspsp, BankAccountCandidate, BankAccountLinkInput, BankConnection } from './bank.models';
 
 export const HOME_COUNTRY = 'ES';
+export const SYNC_POLL_INTERVAL_MS = 3000;
+export const SYNC_POLL_ATTEMPTS = 10;
+
+export function syncFinished(before: BankConnection, after: BankConnection): boolean {
+  return after.last_synced_at !== before.last_synced_at || after.status !== before.status || after.last_error !== before.last_error;
+}
 
 export const EXTRA_ASPSPS: readonly { country: string; pattern: RegExp }[] = [{ country: 'LT', pattern: /revolut/i }];
 
@@ -89,8 +95,11 @@ export class BankService {
     return body.data;
   }
 
-  async sync(id: string): Promise<void> {
-    await firstValueFrom(this.http.post(financeUrl(`bank/connections/${id}/sync`), {}));
+  async sync(id: string): Promise<{ queued: boolean; already_running: boolean }> {
+    const body = await firstValueFrom(
+      this.http.post<{ data: { queued: boolean; already_running: boolean } }>(financeUrl(`bank/connections/${id}/sync`), {}),
+    );
+    return body.data;
   }
 
   async renew(id: string): Promise<string> {
@@ -103,6 +112,24 @@ export class BankService {
   async disconnect(id: string): Promise<void> {
     await firstValueFrom(this.http.delete(financeUrl(`bank/connections/${id}`)));
     this.changes.notify('bank', 'accounts', 'transactions');
+  }
+
+  async awaitSync(before: BankConnection, active: () => boolean = () => true): Promise<BankConnection | null> {
+    for (let attempt = 0; attempt < SYNC_POLL_ATTEMPTS && active(); attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, SYNC_POLL_INTERVAL_MS));
+      let current: BankConnection;
+      try {
+        current = await this.get(before.id);
+      } catch {
+        continue;
+      }
+      if (syncFinished(before, current)) {
+        this.synced();
+        return current;
+      }
+    }
+    this.synced();
+    return null;
   }
 
   synced(): void {
