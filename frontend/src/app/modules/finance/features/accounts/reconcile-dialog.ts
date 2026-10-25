@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValidationMessage } from '@core/http/api';
 import { todayIso } from '@shared/dates/dates';
+import { formatDateTime } from '../../data-access/finance-format';
 import { formatMoney } from '@shared/money/money';
 import { MoneyPipe } from '@shared/money/money.pipe';
 import { UiButton } from '@ui/button/button';
@@ -17,6 +18,10 @@ import { Account, ReconcileResult } from '../../data-access/finance.models';
 
 export interface ReconcileData {
   account: Account;
+}
+
+export function reconcileStartingBalance(account: Account): number {
+  return account.bank?.balance_cents ?? account.cleared_balance_cents;
 }
 
 @Component({
@@ -36,6 +41,9 @@ export interface ReconcileData {
         <div class="field">
           <label class="field-label" for="fin-reconcile-amount">Saldo real en el banco</label>
           <ui-money-input inputId="fin-reconcile-amount" ariaLabel="Saldo real en el banco" allowNegative [formControl]="actual" />
+          @if (bankBalance(); as bank) {
+            <span class="field-hint">Precargado con el saldo que informa {{ bank.name }}{{ bank.at ? ' (' + bank.at + ')' : '' }}.</span>
+          }
         </div>
         <ui-field label="Fecha" for="fin-reconcile-date">
           <input ui-input type="date" id="fin-reconcile-date" [formControl]="date" />
@@ -71,7 +79,14 @@ export class ReconcileDialog {
   private readonly accounts = inject(AccountsService);
   private readonly toast = inject(ToastService);
 
-  protected readonly actual = new FormControl<number | null>(this.account.cleared_balance_cents, Validators.required);
+  protected readonly actual = new FormControl<number | null>(reconcileStartingBalance(this.account), Validators.required);
+  protected readonly bankBalance = computed(() => {
+    const bank = this.account.bank;
+    if (!bank || bank.balance_cents === null) {
+      return null;
+    }
+    return { name: bank.aspsp_name, at: bank.balance_at ? formatDateTime(bank.balance_at) : null };
+  });
   protected readonly date = new FormControl(todayIso(), { nonNullable: true });
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);

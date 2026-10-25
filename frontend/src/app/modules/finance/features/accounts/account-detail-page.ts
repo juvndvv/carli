@@ -19,6 +19,7 @@ import { TransactionsService } from '../../data-access/transactions.service';
 import { FinTransactionRow } from '../../ui/transaction-row';
 import { groupByDay } from '../transactions/transactions-page';
 import { TransactionSheetLauncher } from '../transactions/transaction-sheet.launcher';
+import { FinBankBalance } from '../../ui/bank-balance';
 import { AccountActions } from './account-actions';
 import { cardSchedule } from './accounts-page';
 
@@ -59,6 +60,7 @@ export function balanceHistory(currentBalance: number, transactions: Transaction
     UiEmptyState,
     UiProgress,
     FinTransactionRow,
+    FinBankBalance,
     MoneyPipe,
     RelativeDatePipe,
   ],
@@ -100,6 +102,20 @@ export function balanceHistory(currentBalance: number, transactions: Transaction
           [delta]="current.include_in_net_worth ? 'Suma al patrimonio' : 'Fuera del patrimonio'"
         />
       </div>
+
+      @if (current.bank; as bank) {
+        <ui-card class="section">
+          <div class="row between bank-card">
+            <fin-bank-balance [link]="bank" detailed />
+            <span class="row bank-tools">
+              <a ui-button variant="ghost" size="sm" icon="settings" routerLink="/finanzas/ajustes/bancos">Banco</a>
+              @if (bank.difference_cents) {
+                <button ui-button type="button" variant="secondary" size="sm" icon="check-check" (click)="actions.reconcile(current)">Conciliar</button>
+              }
+            </span>
+          </div>
+        </ui-card>
+      }
 
       <ui-card class="section" heading="Evolución del saldo · 90 días">
         @if (loading()) {
@@ -161,6 +177,13 @@ export function balanceHistory(currentBalance: number, transactions: Transaction
   styles: `
     .section {
       margin-top: 16px;
+    }
+    .bank-card {
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .bank-tools {
+      gap: 4px;
     }
     .credit-head {
       margin: 8px 0;

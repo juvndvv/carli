@@ -12,6 +12,7 @@ import { UiProgress } from '@ui/progress/progress';
 import { UiSkeleton } from '@ui/skeleton/skeleton';
 import { AccountsService } from '../../data-access/accounts.service';
 import { Account, ACCOUNT_TYPE_ICONS, ACCOUNT_TYPE_LABELS } from '../../data-access/finance.models';
+import { FinBankBalance } from '../../ui/bank-balance';
 import { AccountActions } from './account-actions';
 
 export function cardSchedule(account: Account): string | null {
@@ -38,6 +39,7 @@ export function cardSchedule(account: Account): string | null {
     UiSkeleton,
     UiEmptyState,
     MoneyPipe,
+    FinBankBalance,
     CdkMenuTrigger,
     CdkMenu,
     CdkMenuItem,
@@ -124,6 +126,9 @@ export function cardSchedule(account: Account): string | null {
               <div class="small faint">Pendiente {{ account.pending_cents | money: 'signed' }} · confirmado {{ account.cleared_balance_cents | money }}</div>
             } @else {
               <div class="small faint">Todo confirmado</div>
+            }
+            @if (account.bank) {
+              <fin-bank-balance class="bank-line" [link]="account.bank" />
             }
             <div class="row card-actions">
               <a ui-button variant="secondary" size="sm" icon="list" routerLink="/finanzas/movimientos" [queryParams]="{ cuenta: account.id }">
@@ -223,6 +228,9 @@ export function cardSchedule(account: Account): string | null {
     }
     .credit-line {
       margin-top: 2px;
+    }
+    .bank-line {
+      margin-top: 6px;
     }
     .card-actions {
       margin-top: 14px;
