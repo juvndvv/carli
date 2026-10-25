@@ -7,6 +7,7 @@ use App\Modules\Finance\BankSync\Contracts\BankDataProvider;
 use App\Modules\Finance\BankSync\Data\Aspsp;
 use App\Modules\Finance\BankSync\Data\BankAccount;
 use App\Modules\Finance\BankSync\Data\BankSession;
+use App\Modules\Finance\BankSync\Data\PsuContext;
 use App\Modules\Finance\BankSync\Exceptions\BankProviderException;
 use App\Modules\Finance\BankSync\Exceptions\InvalidBankState;
 use App\Modules\Finance\Domain\Enums\BankConnectionStatus;
@@ -108,7 +109,7 @@ final class BankConnectionService
     /**
      * @param  list<array{external_account_uid: string, account_id: string|null, name?: string|null, type?: string|null, sync_from_date?: string|null}>  $items
      */
-    public function link(BankConnection $connection, array $items): BankConnection
+    public function link(BankConnection $connection, array $items, ?PsuContext $psu = null): BankConnection
     {
         if ($connection->status === BankConnectionStatus::Revoked) {
             throw ValidationException::withMessages(['connection' => 'Esta conexión está desconectada.']);
@@ -118,8 +119,11 @@ final class BankConnectionService
         $errors = [];
 
         foreach ($items as $index => $item) {
-            if ($connection->bankAccount($item['external_account_uid']) === null) {
+            $snapshot = $connection->bankAccount($item['external_account_uid']);
+            if ($snapshot === null) {
                 $errors["accounts.$index.external_account_uid"] = 'La cuenta no pertenece a esta conexión.';
+            } elseif ($item['account_id'] !== null && ! BankAccount::fromArray($snapshot)->isImportable()) {
+                $errors["accounts.$index.account_id"] = 'Solo se pueden importar cuentas en euros.';
             }
         }
 
@@ -179,7 +183,7 @@ final class BankConnectionService
         });
 
         if ($linked && $connection->status->isSyncable()) {
-            SyncBankConnection::dispatch($connection->id);
+            SyncBankConnection::dispatchUnlessRunning($connection->id, $psu);
         }
 
         return $connection->refresh();
@@ -187,12 +191,12 @@ final class BankConnectionService
 
     public function revoke(BankConnection $connection): void
     {
-        if ($connection->session_id !== null && $connection->status !== BankConnectionStatus::Revoked) {
+        if ($connection->session_id !== null && $connection->effectiveStatus()->isSyncable()) {
             try {
                 $this->provider->revoke($connection->session_id);
             } catch (BankProviderException $exception) {
                 if (! $exception->isSessionInvalid()) {
-                    throw $exception;
+                    Log::warning('Could not revoke the bank session on disconnect.', ['connection' => $connection->id, 'error' => $exception->getMessage()]);
                 }
             }
         }

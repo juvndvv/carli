@@ -100,6 +100,21 @@ describe('import', function () {
             ->and(Transaction::query()->withoutGlobalScopes()->whereNull('deleted_at')->where('external_id', 'ref-2')->exists())->toBeFalse();
     });
 
+    it('skips movements in other currencies and keeps the sign when the bank omits the indicator', function () {
+        EB::fakeAccountData([
+            EB::transaction('12.34', 'DBIT', '2026-10-21', 'ref-usd', 'AMAZON US', ['transaction_amount' => ['currency' => 'USD', 'amount' => '12.34']]),
+            EB::transaction('-7.50', 'DBIT', '2026-10-21', 'ref-signed', 'BAR PEPE', ['credit_debit_indicator' => null]),
+            EB::transaction('20.00', 'CRDT', '2026-10-22', 'ref-in', 'BIZUM', ['credit_debit_indicator' => null]),
+        ]);
+
+        runSync($this->connection);
+
+        expect(bankRows($this->account->id)->map(fn (Transaction $t) => [$t->external_id, $t->kind->value, $t->amount_cents])->all())->toBe([
+            ['ref-signed', 'expense', -750],
+            ['ref-in', 'income', 2000],
+        ]);
+    });
+
     it('builds a stable fallback id for repeated transactions without a bank id', function () {
         $coffee = EB::transaction('1.50', 'DBIT', '2026-10-22', null, 'CAFE');
         Http::fake([

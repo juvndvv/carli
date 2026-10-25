@@ -4,6 +4,7 @@ namespace App\Modules\Finance\BankSync\Services;
 
 use App\Models\User;
 use App\Modules\Finance\BankSync\Contracts\BankDataProvider;
+use App\Modules\Finance\BankSync\Data\BankAccount;
 use App\Modules\Finance\BankSync\Data\BankAmount;
 use App\Modules\Finance\BankSync\Data\PsuContext;
 use App\Modules\Finance\BankSync\Exceptions\BankProviderException;
@@ -160,7 +161,7 @@ final class BankSyncService
         $occurrences = [];
 
         foreach ($transactions as $transaction) {
-            if (($transaction['status'] ?? null) !== 'BOOK') {
+            if (($transaction['status'] ?? null) !== 'BOOK' || ! $this->inEuros($transaction)) {
                 continue;
             }
 
@@ -324,12 +325,27 @@ final class BankSyncService
         }
 
         try {
-            $cents = abs(BankAmount::toCents($amount));
+            $cents = BankAmount::toCents($amount);
         } catch (InvalidArgumentException) {
             return null;
         }
 
-        return ($transaction['credit_debit_indicator'] ?? null) === 'DBIT' ? -$cents : $cents;
+        return match ($transaction['credit_debit_indicator'] ?? null) {
+            'DBIT' => -abs($cents),
+            'CRDT' => abs($cents),
+            default => $cents,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $transaction
+     */
+    private function inEuros(array $transaction): bool
+    {
+        $money = $transaction['transaction_amount'] ?? null;
+        $currency = is_array($money) ? ($money['currency'] ?? null) : null;
+
+        return $currency === null || (is_string($currency) && strtoupper($currency) === BankAccount::CURRENCY);
     }
 
     /**

@@ -2283,6 +2283,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            queued: boolean;
+                            already_running: boolean;
+                        };
+                    };
+                };
+            };
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -2291,6 +2304,7 @@ export interface operations {
                     "application/json": {
                         data: {
                             queued: boolean;
+                            already_running: boolean;
                         };
                     };
                 };

@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Modules\Finance\BankSync\Data\BankAccount;
+use App\Modules\Finance\BankSync\Data\PsuContext;
 use App\Modules\Finance\BankSync\Services\BankConnectionService;
 use App\Modules\Finance\Domain\Enums\BankConnectionStatus;
 use App\Modules\Finance\Http\Requests\BankAspspsRequest;
@@ -97,7 +98,7 @@ final class BankConnectionController extends FinanceController
     {
         $this->authorizeOwner('update', $bankConnection);
 
-        return new BankConnectionResource($this->connections->link($bankConnection, $request->items()));
+        return new BankConnectionResource($this->connections->link($bankConnection, $request->items(), $this->psu($request)));
     }
 
     public function sync(Request $request, BankConnection $bankConnection): JsonResponse
@@ -108,9 +109,18 @@ final class BankConnectionController extends FinanceController
             throw ValidationException::withMessages(['connection' => 'La conexión no está activa. Renuévala para volver a sincronizar.']);
         }
 
-        SyncBankConnection::dispatch($bankConnection->id, $request->ip(), $request->userAgent());
+        if (! SyncBankConnection::dispatchUnlessRunning($bankConnection->id, $this->psu($request))) {
+            return response()->json(['data' => ['queued' => false, 'already_running' => true]]);
+        }
 
-        return response()->json(['data' => ['queued' => true]], 202);
+        return response()->json(['data' => ['queued' => true, 'already_running' => false]], 202);
+    }
+
+    private function psu(Request $request): ?PsuContext
+    {
+        $ip = $request->ip();
+
+        return $ip === null ? null : new PsuContext($ip, $request->userAgent());
     }
 
     public function renew(BankConnection $bankConnection): JsonResponse

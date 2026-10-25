@@ -721,10 +721,44 @@
                                             "properties": {
                                                 "queued": {
                                                     "type": "boolean"
+                                                },
+                                                "already_running": {
+                                                    "type": "boolean"
                                                 }
                                             },
                                             "required": [
-                                                "queued"
+                                                "queued",
+                                                "already_running"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "queued": {
+                                                    "type": "boolean"
+                                                },
+                                                "already_running": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "queued",
+                                                "already_running"
                                             ]
                                         }
                                     },

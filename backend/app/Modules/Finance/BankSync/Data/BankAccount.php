@@ -6,6 +6,8 @@ use App\Modules\Finance\Domain\Enums\AccountType;
 
 final readonly class BankAccount
 {
+    public const string CURRENCY = 'EUR';
+
     public function __construct(
         public string $uid,
         public ?string $identificationHash = null,
@@ -24,6 +26,11 @@ final readonly class BankAccount
         $compact = preg_replace('/\s+/', '', $iban) ?? $iban;
 
         return strlen($compact) <= 4 ? $compact : substr($compact, 0, 4).' •••• '.substr($compact, -4);
+    }
+
+    public function isImportable(): bool
+    {
+        return $this->currency === null || strtoupper($this->currency) === self::CURRENCY;
     }
 
     public function suggestedAccountType(): AccountType

@@ -151,7 +151,7 @@ describe('managing', function () {
             ->and($card->name)->toBe('Tarjeta')
             ->and($card->type->value)->toBe('credit_card')
             ->and($card->sync_from_date->toDateString())->toBe('2026-10-01');
-        Queue::assertPushed(SyncBankConnection::class, fn (SyncBankConnection $job) => $job->connectionId === $this->connection->id);
+        Queue::assertPushed(SyncBankConnection::class, fn (SyncBankConnection $job) => $job->connectionId === $this->connection->id && $job->psuIpAddress === '127.0.0.1');
 
         $this->getJson("/api/v1/finance/accounts/{$this->account->id}")
             ->assertJsonPath('data.bank.aspsp_name', 'BBVA')
@@ -175,6 +175,23 @@ describe('managing', function () {
         ]])->assertUnprocessable()->assertJsonValidationErrors(['accounts.0.sync_from_date']);
     });
 
+    it('only imports accounts in euros', function () {
+        $this->connection->forceFill(['accounts' => [
+            ['uid' => 'uid-1', 'identification_hash' => 'hash-1', 'name' => 'EUR', 'iban' => null, 'currency' => 'EUR', 'type' => 'CACC'],
+            ['uid' => 'uid-usd', 'identification_hash' => 'hash-usd', 'name' => 'USD', 'iban' => null, 'currency' => 'USD', 'type' => 'CACC'],
+        ]])->save();
+
+        $this->postJson("/api/v1/finance/bank/connections/{$this->connection->id}/accounts", ['accounts' => [
+            ['external_account_uid' => 'uid-1', 'account_id' => $this->account->id],
+            ['external_account_uid' => 'uid-usd', 'account_id' => 'new'],
+        ]])->assertUnprocessable()->assertJsonValidationErrors(['accounts.1.account_id' => 'Solo se pueden importar cuentas en euros.']);
+
+        $this->postJson("/api/v1/finance/bank/connections/{$this->connection->id}/accounts", ['accounts' => [
+            ['external_account_uid' => 'uid-1', 'account_id' => $this->account->id],
+            ['external_account_uid' => 'uid-usd', 'account_id' => null],
+        ]])->assertOk()->assertJsonCount(1, 'data.linked_accounts');
+    });
+
     it('shows the bank balance and the difference with the calculated one', function () {
         EB::link($this->account, $this->connection, '2026-10-20');
         $this->account->forceFill(['initial_balance_cents' => 50000, 'bank_balance_cents' => 48766, 'bank_balance_at' => now()])->save();
@@ -190,6 +207,18 @@ describe('managing', function () {
             ->assertStatus(202);
 
         Queue::assertPushed(SyncBankConnection::class, fn (SyncBankConnection $job) => $job->psuIpAddress === '127.0.0.1' && $job->psuUserAgent === 'Firefox');
+    });
+
+    it('tells when a sync for the connection is already running', function () {
+        $this->postJson("/api/v1/finance/bank/connections/{$this->connection->id}/sync")
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', true);
+
+        $this->postJson("/api/v1/finance/bank/connections/{$this->connection->id}/sync")
+            ->assertOk()
+            ->assertJson(['data' => ['queued' => false, 'already_running' => true]]);
+
+        Queue::assertPushed(SyncBankConnection::class, 1);
     });
 
     it('refuses to sync an expired connection', function () {
@@ -244,6 +273,26 @@ describe('managing', function () {
         $this->getJson("/api/v1/finance/transactions/{$imported->id}")
             ->assertJsonPath('data.source', 'bank')
             ->assertJsonPath('data.bank', ['aspsp_name' => null]);
+    });
+
+    it('disconnects even when the bank cannot revoke the session', function () {
+        EB::link($this->account, $this->connection, '2026-10-20');
+        Http::fake([EB::BASE.'/sessions/session-1' => Http::response(['message' => 'Bad request'], 400)]);
+
+        $this->deleteJson("/api/v1/finance/bank/connections/{$this->connection->id}")->assertNoContent();
+
+        expect($this->connection->refresh()->status->value)->toBe('revoked')
+            ->and($this->account->refresh()->bank_connection_id)->toBeNull();
+    });
+
+    it('disconnects an expired connection without calling the bank', function () {
+        $this->connection->forceFill(['valid_until' => now()->subDay()])->save();
+        Http::fake();
+
+        $this->deleteJson("/api/v1/finance/bank/connections/{$this->connection->id}")->assertNoContent();
+
+        Http::assertNothingSent();
+        expect($this->connection->refresh()->status->value)->toBe('revoked');
     });
 
     it('hides other users connections', function () {
