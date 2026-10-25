@@ -6,7 +6,7 @@ import { aCategory, anAccount, aTransaction, someSettings } from '../../testing/
 import { configureFinanceTesting, flushAll, tick } from '../../testing/finance-testing';
 import { FinanceSettings } from '../../data-access/finance.models';
 import { TransactionSheetData } from './transaction-form';
-import { TransactionSheet } from './transaction-sheet';
+import { bankOriginLabel, categorizedImport, TransactionSheet } from './transaction-sheet';
 
 describe('TransactionSheet', () => {
   let http: HttpTestingController;
@@ -170,5 +170,46 @@ describe('TransactionSheet', () => {
       .flush({ data: transaction, meta: { periods_changed: true } });
     await undo;
     expect(toasts.active()[0].message).toBe('Movimiento restaurado · periodos recalculados');
+  });
+
+  it('offers to categorize similar imports after categorizing a bank movement', async () => {
+    const transaction = aTransaction({
+      category_id: null,
+      category: null,
+      uncategorized: true,
+      source: 'bank',
+      bank: { aspsp_name: 'BBVA' },
+    });
+    const { element, component } = await open({ transaction });
+    expect(element.textContent).toContain('Importado de BBVA');
+    component['form'].controls.categoryId.setValue('category-super');
+    submit(element);
+    http
+      .expectOne({ method: 'PATCH', url: '/api/v1/finance/transactions/tx-1' })
+      .flush({ data: aTransaction({ category_id: 'category-super', source: 'bank' }), meta: { periods_changed: false } });
+    await tick();
+    http
+      .expectOne({ method: 'GET', url: '/api/v1/finance/transactions/tx-1/similar' })
+      .flush({ data: { count: 3, pattern: 'MERCADONA', transaction_ids: ['a', 'b', 'c'] } });
+    await tick();
+    const toast = TestBed.inject(ToastService).active()[0];
+    expect(toast.message).toBe('Hay 3 movimientos parecidos sin categoría');
+    expect(toast.action?.label).toBe('Aplicar a los 3 parecidos y recordar');
+  });
+});
+
+describe('transaction sheet helpers', () => {
+  it('detects a movement that just got its first category', () => {
+    const before = aTransaction({ category_id: null, category: null });
+    expect(categorizedImport(before, aTransaction())).toBe(true);
+    expect(categorizedImport(null, aTransaction())).toBe(false);
+    expect(categorizedImport(aTransaction(), aTransaction())).toBe(false);
+    expect(categorizedImport(before, aTransaction({ category_id: null }))).toBe(false);
+  });
+
+  it('labels the bank origin', () => {
+    expect(bankOriginLabel(aTransaction())).toBeNull();
+    expect(bankOriginLabel(aTransaction({ source: 'bank', bank: null }))).toBe('Importado del banco');
+    expect(bankOriginLabel(aTransaction({ source: 'bank', bank: { aspsp_name: 'Revolut' } }))).toBe('Importado de Revolut');
   });
 });

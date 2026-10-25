@@ -51,6 +51,7 @@ import { RecentCategories } from '../../data-access/recent-categories';
 import { TagsService } from '../../data-access/tags.service';
 import { TransactionsService } from '../../data-access/transactions.service';
 import { registerFinanceIcons } from '../../ui/finance-icons';
+import { SimilarCategorization } from '../rules/similar-categorization';
 import {
   EntryKind,
   parseTagInput,
@@ -78,6 +79,26 @@ type SplitGroup = FormGroup<{
 }>;
 
 let nextSheetId = 0;
+
+export function categorizedImport(original: Transaction | null, saved: Transaction): boolean {
+  return (
+    original !== null &&
+    original.category_id === null &&
+    original.splits.length === 0 &&
+    (original.kind === 'expense' || original.kind === 'income') &&
+    saved.kind === original.kind &&
+    saved.category_id !== null &&
+    saved.splits.length === 0
+  );
+}
+
+export function bankOriginLabel(transaction: Transaction | null): string | null {
+  if (transaction?.source !== 'bank') {
+    return null;
+  }
+  const bank = transaction.bank?.aspsp_name;
+  return bank ? `Importado de ${bank}` : 'Importado del banco';
+}
 
 function withPeriodsNotice(message: string, periodsChanged: boolean): string {
   return periodsChanged ? `${message} · periodos recalculados` : message;
@@ -132,6 +153,9 @@ function withPeriodsNotice(message: string, periodsChanged: boolean): string {
           </span>
       }
       <form class="stack" [formGroup]="form" (ngSubmit)="save()" novalidate>
+        @if (bankOrigin(); as origin) {
+          <p class="small faint origin-note"><ui-icon name="landmark" [size]="14" /> {{ origin }}. Si lo eliminas, no volverá en la siguiente sincronización.</p>
+        }
         <ui-segmented formControlName="kind" ariaLabel="Tipo de movimiento" [options]="kindOptions()" />
 
         <ui-money-input
@@ -490,6 +514,12 @@ function withPeriodsNotice(message: string, periodsChanged: boolean): string {
       min-width: 80px;
       text-align: right;
     }
+    .origin-note {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+    }
     .split-line {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 130px 32px;
@@ -509,6 +539,7 @@ export class TransactionSheet {
   private readonly tagsService = inject(TagsService);
   private readonly recents = inject(RecentCategories);
   private readonly toast = inject(ToastService);
+  private readonly similar = inject(SimilarCategorization);
   protected readonly contacts = inject(ContactOptionsService);
   private readonly amountInput = viewChild<UiMoneyInput>('amountInput');
 
@@ -529,6 +560,7 @@ export class TransactionSheet {
 
   protected readonly original = signal<Transaction | null>(this.data.transaction ?? null);
   protected readonly editing = computed(() => this.original() !== null);
+  protected readonly bankOrigin = computed(() => bankOriginLabel(this.original()));
   protected readonly saving = signal(false);
   protected readonly deleting = signal(false);
   protected readonly submitted = signal(false);
@@ -845,6 +877,9 @@ export class TransactionSheet {
       const saved = raw.kind === 'transfer' ? await this.saveTransfer() : await this.saveEntry();
       this.ref.close({ action: 'saved', transaction: saved.transaction });
       this.announce(saved.transaction, saved.periodsChanged, saved.created);
+      if (categorizedImport(this.original(), saved.transaction)) {
+        void this.similar.offer(saved.transaction.id, saved.transaction.category_id!);
+      }
     } catch (error) {
       this.error.set(firstValidationMessage(error, 'No se ha podido guardar el movimiento.'));
     } finally {
