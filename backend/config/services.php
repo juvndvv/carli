@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'enable_banking' => [
+        'base_url' => env('ENABLE_BANKING_BASE_URL', 'https://api.enablebanking.com'),
+        'app_id' => env('ENABLE_BANKING_APP_ID'),
+        'private_key_path' => env('ENABLE_BANKING_PRIVATE_KEY_PATH', '/run/secrets/enable_banking.pem'),
+        'redirect_url' => env('ENABLE_BANKING_REDIRECT_URL'),
+        'country' => env('ENABLE_BANKING_COUNTRY', 'ES'),
+        'jwt_ttl' => (int) env('ENABLE_BANKING_JWT_TTL', 3600),
+        'timeout' => (int) env('ENABLE_BANKING_TIMEOUT', 30),
+        'backoff_ms' => [500, 2000, 5000],
+    ],
+
 ];

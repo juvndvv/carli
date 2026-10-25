@@ -33,6 +33,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $recurring_rule_id
  * @property CarbonImmutable|null $recurring_date
  * @property string|null $debt_id
+ * @property string|null $external_id
+ * @property array<string, mixed>|null $raw
  * @property CarbonImmutable|null $deleted_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -53,6 +55,8 @@ class Transaction extends Model
 
     protected $guarded = ['id', 'user_id'];
 
+    protected $hidden = ['raw'];
+
     protected $attributes = [
         'status' => 'cleared',
         'source' => 'manual',
@@ -67,6 +71,7 @@ class Transaction extends Model
             'amount_cents' => 'integer',
             'date' => 'immutable_date',
             'recurring_date' => 'immutable_date',
+            'raw' => 'array',
             'deleted_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

@@ -13,8 +13,12 @@ final class FinanceBackup
     public const int VERSION = 1;
 
     private const array OWNED_TABLES = [
-        'settings', 'accounts', 'categories', 'tags', 'contacts', 'recurring_rules', 'debts',
+        'settings', 'accounts', 'categories', 'category_rules', 'tags', 'contacts', 'recurring_rules', 'debts',
         'transactions', 'periods', 'budgets', 'savings_goals',
+    ];
+
+    private const array BANK_CONNECTION_COLUMNS = [
+        'id', 'user_id', 'provider', 'aspsp_name', 'aspsp_country', 'valid_until', 'status', 'last_synced_at', 'last_error', 'created_at', 'updated_at',
     ];
 
     private const array TRANSACTION_CHILD_TABLES = ['transaction_splits', 'transaction_tag', 'shared_expense_shares'];
@@ -29,6 +33,11 @@ final class FinanceBackup
         foreach (self::OWNED_TABLES as $table) {
             $tables[$table] = $this->rows(DB::table("finance.{$table}")->where('user_id', $userId), 'id');
         }
+
+        $tables['bank_connections'] = $this->rows(
+            DB::table('finance.bank_connections')->where('user_id', $userId)->select(self::BANK_CONNECTION_COLUMNS),
+            'id',
+        );
 
         $transactionIds = DB::table('finance.transactions')->where('user_id', $userId)->select('id');
         foreach (self::TRANSACTION_CHILD_TABLES as $table) {

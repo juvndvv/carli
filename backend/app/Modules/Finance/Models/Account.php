@@ -8,6 +8,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
@@ -26,10 +27,17 @@ use Illuminate\Support\Facades\DB;
  * @property bool $include_in_net_worth
  * @property int $sort_order
  * @property CarbonImmutable|null $archived_at
+ * @property string|null $bank_connection_id
+ * @property string|null $external_account_uid
+ * @property string|null $external_account_hash
+ * @property CarbonImmutable|null $sync_from_date
+ * @property int|null $bank_balance_cents
+ * @property CarbonImmutable|null $bank_balance_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property int|null $transactions_sum_cents
  * @property int|null $pending_sum_cents
+ * @property-read BankConnection|null $bankConnection
  */
 class Account extends Model
 {
@@ -57,11 +65,27 @@ class Account extends Model
             'include_in_net_worth' => 'boolean',
             'sort_order' => 'integer',
             'archived_at' => 'immutable_datetime',
+            'sync_from_date' => 'immutable_date',
+            'bank_balance_cents' => 'integer',
+            'bank_balance_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
             'transactions_sum_cents' => 'integer',
             'pending_sum_cents' => 'integer',
         ];
+    }
+
+    /**
+     * @return BelongsTo<BankConnection, $this>
+     */
+    public function bankConnection(): BelongsTo
+    {
+        return $this->belongsTo(BankConnection::class)->withoutGlobalScopes();
+    }
+
+    public function isBankLinked(): bool
+    {
+        return $this->bank_connection_id !== null && $this->external_account_uid !== null;
     }
 
     /**
