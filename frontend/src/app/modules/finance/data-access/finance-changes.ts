@@ -9,7 +9,9 @@ export type FinanceChangeScope =
   | 'budgets'
   | 'periods'
   | 'settings'
-  | 'contacts';
+  | 'contacts'
+  | 'bank'
+  | 'rules';
 
 export const TRANSACTION_SIDE_EFFECTS: FinanceChangeScope[] = ['transactions', 'accounts', 'periods', 'budgets', 'tags', 'contacts'];
 

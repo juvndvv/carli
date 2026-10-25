@@ -77,10 +77,24 @@ export interface Account {
   icon: string | null;
   include_in_net_worth: boolean;
   sort_order: number;
+  bank: AccountBankLink | null;
   archived: boolean;
   archived_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+export type BankConnectionStatus = 'active' | 'expired' | 'revoked' | 'error';
+
+export interface AccountBankLink {
+  connection_id: string;
+  aspsp_name: string;
+  status: BankConnectionStatus;
+  sync_from_date: IsoDate | null;
+  last_synced_at: string | null;
+  balance_cents: Cents | null;
+  balance_at: string | null;
+  difference_cents: Cents | null;
 }
 
 export interface AccountInput {
@@ -174,6 +188,7 @@ export interface Transaction {
   debt_id: string | null;
   source: TransactionSource;
   uncategorized: boolean;
+  bank: { aspsp_name: string | null } | null;
   splits: TransactionSplit[];
   shares: TransactionShare[];
   deleted: boolean;

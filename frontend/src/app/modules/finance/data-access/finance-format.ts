@@ -1,5 +1,5 @@
 import { formatMoney, MINUS_SIGN } from '@shared/money/money';
-import { formatShortDate } from '@shared/dates/dates';
+import { addDays, APP_TIME_ZONE, formatShortDate, toIsoDate } from '@shared/dates/dates';
 import { BasisPoints, BudgetRow, BudgetStatus, Cents, ChartToken, Transaction } from './finance.models';
 
 const percentFormatter = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
@@ -115,4 +115,23 @@ export function daysLeftLabel(days: number): string {
 
 export function shortDate(value: string): string {
   return formatShortDate(value);
+}
+
+const timeFormatter = new Intl.DateTimeFormat('es-ES', { timeZone: APP_TIME_ZONE, hour: '2-digit', minute: '2-digit' });
+
+export function formatDateTime(value: string, now: Date = new Date()): string {
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) {
+    return value;
+  }
+  const day = toIsoDate(instant);
+  const time = timeFormatter.format(instant);
+  const today = toIsoDate(now);
+  if (day === today) {
+    return `hoy a las ${time}`;
+  }
+  if (day === addDays(today, -1)) {
+    return `ayer a las ${time}`;
+  }
+  return `${formatShortDate(day, day.slice(0, 4) !== today.slice(0, 4))}, ${time}`;
 }

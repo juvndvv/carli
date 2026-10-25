@@ -1,4 +1,5 @@
-import { Account, Category, FinanceSettings, Period, Transaction } from '../data-access/finance.models';
+import { BankAccountCandidate, BankConnection, CategoryRule } from '../data-access/bank.models';
+import { Account, AccountBankLink, Category, FinanceSettings, Period, Transaction } from '../data-access/finance.models';
 
 export function aPeriod(overrides: Partial<Period> = {}): Period {
   return {
@@ -40,6 +41,7 @@ export function anAccount(overrides: Partial<Account> = {}): Account {
     icon: 'landmark',
     include_in_net_worth: true,
     sort_order: 0,
+    bank: null,
     archived: false,
     archived_at: null,
     created_at: null,
@@ -94,6 +96,7 @@ export function aTransaction(overrides: Partial<Transaction> = {}): Transaction 
     debt_id: null,
     source: 'manual',
     uncategorized: false,
+    bank: null,
     splits: [],
     shares: [],
     deleted: false,
@@ -116,3 +119,70 @@ export function someSettings(overrides: Partial<FinanceSettings> = {}): FinanceS
 }
 
 export const emptyTotals = { count: 0, income_cents: 0, expense_cents: 0, own_expense_cents: 0, net_cents: 0 };
+
+export function aBankLink(overrides: Partial<AccountBankLink> = {}): AccountBankLink {
+  return {
+    connection_id: 'connection-bbva',
+    aspsp_name: 'BBVA',
+    status: 'active',
+    sync_from_date: '2026-10-01',
+    last_synced_at: '2026-10-25T11:00:00+00:00',
+    balance_cents: 343365,
+    balance_at: '2026-10-25T11:00:00+00:00',
+    difference_cents: 500,
+    ...overrides,
+  };
+}
+
+export function aBankConnection(overrides: Partial<BankConnection> = {}): BankConnection {
+  return {
+    id: 'connection-bbva',
+    provider: 'enable_banking',
+    aspsp_name: 'BBVA',
+    aspsp_country: 'ES',
+    status: 'active',
+    valid_until: '2027-01-20T10:00:00+00:00',
+    expires_in_days: 87,
+    last_synced_at: '2026-10-25T11:00:00+00:00',
+    last_error: null,
+    bank_accounts_count: 1,
+    linked_accounts: [{ id: 'account-checking', name: 'Cuenta corriente', external_account_uid: 'uid-1', sync_from_date: '2026-10-01' }],
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  };
+}
+
+export function aBankCandidate(overrides: Partial<BankAccountCandidate> = {}): BankAccountCandidate {
+  return {
+    external_account_uid: 'uid-1',
+    name: 'Cuenta Online',
+    iban: 'ES91 2100 0418 4502 0005 1332',
+    currency: 'EUR',
+    type: 'CACC',
+    suggested_account_type: 'checking',
+    linked_account: null,
+    ...overrides,
+  };
+}
+
+export function aCategoryRule(overrides: Partial<CategoryRule> = {}): CategoryRule {
+  return {
+    id: 'rule-mercadona',
+    pattern: 'MERCADONA',
+    kind: 'expense',
+    category_id: 'category-super',
+    category: {
+      id: 'category-super',
+      name: 'Supermercado',
+      parent: 'Alimentación',
+      parent_id: 'category-food',
+      icon: 'shopping-cart',
+      color: 'c2',
+      kind: 'expense',
+    },
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  };
+}

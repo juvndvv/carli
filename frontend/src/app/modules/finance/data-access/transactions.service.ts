@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { financeUrl, QueryValue, toHttpParams, toQueryString } from './finance-api';
+import { CategorizeSimilarResult, SimilarTransactions } from './bank.models';
 import { FinanceChanges } from './finance-changes';
 import {
   BulkUpdateInput,
@@ -12,6 +13,12 @@ import {
   TransferInput,
   TransferResult,
 } from './finance.models';
+
+export interface CategorizeSimilarInput {
+  category_id: string;
+  remember?: boolean;
+  pattern?: string | null;
+}
 
 export interface SavedTransaction {
   transaction: Transaction;
@@ -29,6 +36,20 @@ export class TransactionsService {
         params: toHttpParams({ ...query, per_page: perPage, cursor: cursor ?? null }),
       }),
     );
+  }
+
+  async similar(id: string): Promise<SimilarTransactions> {
+    const body = await firstValueFrom(this.http.get<{ data: SimilarTransactions }>(financeUrl(`transactions/${id}/similar`)));
+    return body.data;
+  }
+
+  async categorizeSimilar(id: string, input: CategorizeSimilarInput): Promise<CategorizeSimilarResult> {
+    const body = await firstValueFrom(
+      this.http.post<{ data: CategorizeSimilarResult }>(financeUrl(`transactions/${id}/categorize-similar`), input),
+    );
+    this.changes.notify('rules');
+    this.changes.notifyTransactions();
+    return body.data;
   }
 
   async get(id: string): Promise<Transaction> {
