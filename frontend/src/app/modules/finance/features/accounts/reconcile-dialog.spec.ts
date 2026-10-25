@@ -25,7 +25,7 @@ describe('ReconcileDialog', () => {
     flushAll(http, 'accounts', { data: [account], meta: { net_worth_cents: 0 } });
     await tick();
     await fixture.whenStable();
-    const text = (fixture.nativeElement as HTMLElement).textContent?.replace(/ /g, ' ') ?? '';
+    const text = (fixture.nativeElement as HTMLElement).textContent?.replace(/\u00a0/g, ' ') ?? '';
     expect(text).toContain('Precargado con el saldo que informa BBVA');
     expect(text).toContain('+5,00 €');
   });
