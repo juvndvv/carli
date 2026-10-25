@@ -78,6 +78,8 @@ El primer módulo es **Finanzas**: registrar manualmente ingresos y gastos, sabe
 | SH-09 | Bandeja de notificaciones dentro de la app (campana) con historial. | Should |
 | SH-10 | Búsqueda global (Ctrl/⌘ + K) que cada módulo alimenta. | Could |
 | SH-11 | Ajustes de perfil: nombre, email, contraseña, sesiones activas, cierre de sesión en otros dispositivos. | Must |
+| SH-12 | **Pendientes**: sección general del shell con todo lo que requiere una acción del usuario, aportado por cada módulo (en Finanzas: movimientos sin categoría y recurrentes por confirmar). Agrupada por módulo y tipo, con acción rápida en línea (p. ej. elegir categoría) sin salir de la lista. Contador en la navegación y tarjeta en Inicio cuando hay elementos. Llega en F2 con los recurrentes por confirmar; F3 añade los movimientos importados sin categoría. | Must |
+| SH-13 | Resumen diario por push (20:00) solo si hay pendientes: "Tienes 7 movimientos por categorizar". Uno al día como máximo, nunca uno por elemento ni por sincronización. Configurable en preferencias de notificaciones. | Should |
 
 ### 6.2 Contrato de un módulo (visión de producto)
 
@@ -201,12 +203,13 @@ Complementa la entrada manual, no la sustituye. Proveedor: Enable Banking (agreg
 | FI-BK-02 | Por cada cuenta vinculada, fecha **"importar desde"** (por defecto, el día de la conexión) para no duplicar el histórico ya apuntado a mano. | Must |
 | FI-BK-03 | Sincronización automática varias veces al día (máx. 4, límite PSD2) y botón "Sincronizar ahora". | Must |
 | FI-BK-04 | Solo se importan movimientos contabilizados. Entran con concepto, comercio, importe y fecha del banco, **sin categoría**, y marcados con origen "banco" (icono en el listado). | Must |
-| FI-BK-05 | Filtro/bandeja **"Sin categorizar"** en Movimientos y contador en el dashboard. | Must |
+| FI-BK-05 | Un ingreso o gasto **sin categoría no está terminado**: aparece en Pendientes (SH-12) hasta que se le asigna una, con marca "Por revisar" en el listado y filtro "Sin categoría" en Movimientos. Es un estado calculado (categoría vacía), no un campo aparte. Los movimientos manuales exigen categoría al crearlos, así que en la práctica solo los importados quedan por revisar. | Must |
 | FI-BK-06 | Un movimiento importado se puede editar (categoría, etiquetas, notas, compartido) y borrar. Si se borra, **no vuelve** en la siguiente sincronización. | Must |
 | FI-BK-07 | Mostrar en cada cuenta vinculada el **saldo que informa el banco** junto al calculado, y la diferencia. "Conciliar" (FI-AC-05) con ese saldo precargado. | Should |
 | FI-BK-08 | Estado de cada conexión: activa, caduca en N días, caducada, error. Push **7 días y 1 día antes** de que caduque el consentimiento (90 días en los bancos que van por Redsys, como BBVA y MyInvestor; hasta 180 en otros) y botón "Renovar". | Must |
 | FI-BK-09 | Desconectar un banco: revoca el consentimiento; los movimientos ya importados se conservan. | Must |
-| FI-BK-10 | Reglas de autocategorización por texto del comercio ("MERCADONA" → Supermercado). | Could |
+| FI-BK-10 | Reglas de autocategorización por texto del comercio ("MERCADONA" → Supermercado). Al categorizar un importado, ofrecer "Aplicar a los N parecidos y recordar". Los que casan con una regla entran ya categorizados y no pasan por Pendientes. | Should |
+| FI-BK-11 | Mientras haya gastos sin categoría en el periodo, Presupuestos y dashboard muestran **"X € sin categorizar"**, porque ese gasto aún no cuenta en ningún presupuesto. | Must |
 
 Notas:
 - Sin deduplicación automática: si un gasto se apunta a mano y luego llega del banco, cuenta dos veces hasta que el usuario borre uno. FI-BK-07 hace visible la diferencia.
@@ -216,7 +219,7 @@ Notas:
 ### 7.3 Flujos principales
 
 1. **Apuntar gasto en móvil**: abrir PWA → "+" → teclear importe → elegir categoría (cuadrícula de recientes) → Guardar. Cuenta y fecha por defecto.
-2. **Revisión semanal en escritorio**: Movimientos → filtrar "sin categoría" o "pendientes" → corregir → Conciliar cuentas.
+2. **Revisión de pendientes**: aviso diario o contador → Pendientes → elegir categoría en línea (y "aplicar a parecidos") → confirmar recurrentes → Conciliar cuentas.
 3. **Planificar el mes**: Presupuestos → "Copiar del mes anterior" → ajustar importes.
 4. **Recibir aviso de suscripción**: push "Netflix 13,99 € pasado mañana" → abrir → confirmar o cancelar suscripción.
 5. **Cena compartida**: gasto 80 € → "Compartir" → Ana 50 % → saldo Ana: te debe 40 €.
@@ -231,6 +234,7 @@ Notas:
 | Objetivo alcanzado | Al cruzar hitos | Off |
 | Recordatorio de deuda | Fecha de vencimiento | On |
 | Resumen semanal | Lunes 09:00 | Off |
+| Pendientes por revisar (SH-13) | Diario 20:00, solo si hay pendientes | On |
 
 ### 7.5 Periodo financiero (de nómina a nómina)
 

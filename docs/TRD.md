@@ -106,7 +106,26 @@ Reglas:
 **Sincronización bancaria (F3)** dentro de `Finance/BankSync/`:
 - `Contracts/BankDataProvider`: `listAspsps()`, `startAuth(aspsp, redirectUrl)`, `completeAuth(code)`, `listAccounts(session)`, `fetchTransactions(accountUid, from, to)`, `fetchBalance(accountUid)`, `revoke(session)`.
 - `Providers/EnableBankingProvider`: JWT RS256 firmado con la clave privada de la aplicación (TTL ≤ 24 h), cliente HTTP con reintentos y backoff.
-- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. No categoriza ni toca periodos.
+- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. Aplica las reglas de autocategorización (PRD FI-BK-10); lo que no casa entra sin categoría. No toca periodos.
+
+### 4.1.1 Pendientes (contrato de Core)
+
+`Core/Pending/PendingItemsProvider` es la interfaz que implementa cada módulo para aportar elementos a Pendientes (PRD SH-12):
+
+```php
+interface PendingItemsProvider {
+    public function moduleId(): string;                       // 'finance'
+    public function count(User $user): int;                   // para el contador
+    public function items(User $user, ?string $type, ?string $cursor): PendingPage;
+}
+// PendingItem: { module, type, id, title, subtitle, amount_cents?, date, route }
+// tipos de Finanzas: 'uncategorized_transaction', 'recurring_to_confirm'
+```
+
+- Los módulos registran su provider en su ServiceProvider (`PendingRegistry::register(...)`); Core no conoce a los módulos, igual que con `ModuleRegistry`.
+- **Pendiente es un estado calculado, no se guarda** (ADR-009). Finanzas: `category_id IS NULL AND kind IN ('expense','income') AND deleted_at IS NULL` (índice parcial de §5.3) y recurrentes con `status = 'pending'`. Un elemento sale de Pendientes en cuanto se resuelve, sin sincronizar nada.
+- No se reutiliza `transactions.status = 'pending'` para "sin categoría": ese estado ya significa "recurrente sin confirmar" y afecta al saldo.
+- Validación: `StoreTransactionRequest` exige `category_id` para `expense`/`income` salvo `source = 'bank'`.
 
 ### 4.2 Registro de módulos
 
@@ -302,6 +321,8 @@ Prefijo `/api/v1`. JSON. Autenticación por cookie de sesión Sanctum. Errores c
 | POST | `/api/v1/notifications/read` | Marcar leídas |
 | POST/DELETE | `/api/v1/push-subscriptions` | Alta/baja de suscripción push |
 | GET/PUT | `/api/v1/notification-preferences` | Preferencias |
+| GET | `/api/v1/pending/summary` | `{ total, by_module: [{ module, type, count }] }` para contador y tarjeta de Inicio |
+| GET | `/api/v1/pending?module=&type=&cursor=` | Lista paginada de `PendingItem` |
 
 ### 6.2 Finanzas (`/api/v1/finance`)
 
@@ -389,6 +410,7 @@ export interface AppModuleManifest {
   routes: () => Promise<Routes>;      // lazy
   nav: { label: string; path: string; icon: string }[];
   homeWidget?: () => Promise<Type<unknown>>;
+  pendingActions?: Record<string, () => Promise<Type<unknown>>>; // acción en línea por tipo de pendiente (p. ej. selector de categoría)
   settings?: () => Promise<Type<unknown>>;
 }
 ```
@@ -422,6 +444,7 @@ export interface AppModuleManifest {
 /finanzas/deudas
 /finanzas/compartidos[/:contactId]
 /finanzas/ajustes
+/pendientes               Pendientes de todos los módulos (?modulo=&tipo=)
 /ajustes                  perfil, seguridad, tema, notificaciones, módulos
 ```
 
@@ -436,6 +459,7 @@ export interface AppModuleManifest {
 | `finance:payroll-overdue` | Diario 09:00 | Si hoy > `expected_end_date` + 1 y no hay periodo nuevo: push de aviso (PRD FI-PE-07) |
 | `finance:weekly-summary` | Lunes 09:00 | Opcional |
 | `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. |
+| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry` suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
 
@@ -502,3 +526,4 @@ Desarrollo local: `compose.dev.yaml` con Postgres + Mailpit; `php artisan serve`
 - ADR-006 Mismo origen SPA + API.
 - ADR-007 Periodo financiero de nómina a nómina, calculado por rangos de fecha (sin `period_id` en movimientos).
 - ADR-008 Open Banking vía agregador con licencia (Enable Banking, modo restricted) detrás de `BankDataProvider`. Descartados: acceso directo PSD2 (requiere licencia AISP + eIDAS), GoCardless Bank Account Data (sin altas nuevas en 2026) y Tink/Yapily/Salt Edge (de pago, contratación con ventas).
+- ADR-009 Pendientes como estado calculado y contrato de Core (`PendingItemsProvider`), sin tabla propia ni flag en `transactions`.
