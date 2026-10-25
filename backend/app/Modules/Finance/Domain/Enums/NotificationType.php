@@ -18,6 +18,10 @@ enum NotificationType: string
 
     case WeeklySummary = 'weekly_summary';
 
+    case BankConsentExpiring = 'bank_consent_expiring';
+
+    case BankSyncFailed = 'bank_sync_failed';
+
     /**
      * @return list<string>
      */

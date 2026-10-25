@@ -49,5 +49,17 @@ return [
             'push' => false,
             'in_app' => false,
         ],
+        'bank_consent_expiring' => [
+            'label' => 'Conexión bancaria a punto de caducar',
+            'description' => '7 días y 1 día antes de que caduque el consentimiento del banco, a las 09:00.',
+            'push' => true,
+            'in_app' => true,
+        ],
+        'bank_sync_failed' => [
+            'label' => 'Error al sincronizar un banco',
+            'description' => 'Cuando una sincronización bancaria falla.',
+            'push' => false,
+            'in_app' => true,
+        ],
     ],
 ];
