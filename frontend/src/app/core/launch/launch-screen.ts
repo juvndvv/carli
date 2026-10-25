@@ -36,9 +36,7 @@ export class LaunchScreen {
   }
 
   private shouldAnimate(): boolean {
-    const installed = this.element?.dataset['installed'] !== undefined;
-    const reducedMotion = this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    return installed && !reducedMotion;
+    return !(this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   }
 
   private hide(): void {

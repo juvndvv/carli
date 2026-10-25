@@ -149,5 +149,5 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 - **Arranque**:
   - La pantalla de lanzamiento nativa (iOS y PWA) es la carita de 96 pt centrada sobre `--bg`, en claro y oscuro (`npm run splash`).
   - La web arranca con ese mismo fotograma (`#launch` en `index.html`), así que no hay salto.
-  - En la app instalada (PWA o Capacitor) la carita parpadea dos veces y aparece "carli" debajo; dura 1,5 s, se salta al tocar y se funde en 240 ms. La anima y la cierra `core/launch/launch-screen.ts` tras la primera navegación y, si el bloqueo con Face ID está activo, después de desbloquear: mientras se pide Face ID la carita queda quieta, y si falla se muestra directamente la pantalla de bloqueo.
-  - En una pestaña normal del navegador, o con `prefers-reduced-motion`, no hay animación y se cierra en cuanto la app está lista.
+  - En la app instalada y en el navegador la carita parpadea dos veces y aparece "carli" debajo; dura 1,5 s, se salta al tocar y se funde en 240 ms. La anima y la cierra `core/launch/launch-screen.ts` tras la primera navegación y, si el bloqueo con Face ID está activo, después de desbloquear: mientras se pide Face ID la carita queda quieta, y si falla se muestra directamente la pantalla de bloqueo.
+  - Con `prefers-reduced-motion` no hay animación y se cierra en cuanto la app está lista (los e2e lo activan para no esperar).

@@ -16,6 +16,7 @@ export default defineConfig({
     baseURL,
     locale: 'es-ES',
     timezoneId: 'Europe/Madrid',
+    reducedMotion: 'reduce',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
