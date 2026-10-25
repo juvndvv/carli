@@ -2,7 +2,10 @@
 
 namespace App\Modules\Finance\Http\Requests;
 
+use App\Modules\Finance\Domain\Enums\TransactionSource;
+use App\Modules\Finance\Models\Transaction;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 final class UpdateTransactionRequest extends StoreTransactionRequest
 {
@@ -16,6 +19,33 @@ final class UpdateTransactionRequest extends StoreTransactionRequest
         return [
             ...parent::rules(),
             'kind' => ['sometimes', Rule::in(['expense', 'income', 'adjustment', 'transfer'])],
+        ];
+    }
+
+    /**
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $transaction = $this->route('transaction');
+
+                if (! $transaction instanceof Transaction || ! $this->has('category_id') || $this->input('category_id') !== null) {
+                    return;
+                }
+
+                if ($transaction->source === TransactionSource::Bank || $transaction->settledShares()->exists()) {
+                    return;
+                }
+
+                $splits = $this->has('splits') ? $this->input('splits') : $transaction->splits()->pluck('id')->all();
+                $debtId = $this->has('debt_id') ? $this->input('debt_id') : $transaction->debt_id;
+
+                if ($this->requiresCategory($this->input('kind', $transaction->kind->value), $splits, $debtId)) {
+                    $validator->errors()->add('category_id', self::CATEGORY_REQUIRED);
+                }
+            },
         ];
     }
 }

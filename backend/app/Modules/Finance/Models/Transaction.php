@@ -3,9 +3,11 @@
 namespace App\Modules\Finance\Models;
 
 use App\Modules\Finance\Domain\Enums\TransactionKind;
+use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use App\Modules\Finance\Models\Concerns\BelongsToUser;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $description
  * @property string|null $notes
  * @property TransactionStatus $status
+ * @property TransactionSource $source
  * @property string|null $transfer_group_id
  * @property string|null $recurring_rule_id
  * @property CarbonImmutable|null $recurring_date
@@ -38,7 +41,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Collection<int, Tag> $tags
  * @property-read Collection<int, TransactionSplit> $splits
  * @property-read Collection<int, SharedExpenseShare> $shares
+ * @property-read Collection<int, SharedExpenseShare> $settledShares
  * @property-read Transaction|null $counterpart
+ * @property-read RecurringRule|null $recurringRule
  */
 class Transaction extends Model
 {
@@ -50,6 +55,7 @@ class Transaction extends Model
 
     protected $attributes = [
         'status' => 'cleared',
+        'source' => 'manual',
     ];
 
     protected function casts(): array
@@ -57,6 +63,7 @@ class Transaction extends Model
         return [
             'kind' => TransactionKind::class,
             'status' => TransactionStatus::class,
+            'source' => TransactionSource::class,
             'amount_cents' => 'integer',
             'date' => 'immutable_date',
             'recurring_date' => 'immutable_date',
@@ -107,6 +114,14 @@ class Transaction extends Model
     }
 
     /**
+     * @return HasMany<SharedExpenseShare, $this>
+     */
+    public function settledShares(): HasMany
+    {
+        return $this->hasMany(SharedExpenseShare::class, 'settlement_transaction_id');
+    }
+
+    /**
      * @return BelongsTo<RecurringRule, $this>
      */
     public function recurringRule(): BelongsTo
@@ -141,6 +156,29 @@ class Transaction extends Model
             ->where('transfer_group_id', $this->transfer_group_id)
             ->whereKeyNot($this->id)
             ->first();
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     */
+    public function scopeUncategorized(Builder $query): void
+    {
+        $query->whereNull($query->qualifyColumn('category_id'))
+            ->whereIn($query->qualifyColumn('kind'), [TransactionKind::Expense->value, TransactionKind::Income->value])
+            ->where($query->qualifyColumn('status'), TransactionStatus::Cleared->value)
+            ->whereNull($query->qualifyColumn('debt_id'))
+            ->whereDoesntHave('splits')
+            ->whereDoesntHave('settledShares');
+    }
+
+    public function isUncategorized(): bool
+    {
+        return $this->category_id === null
+            && in_array($this->kind, [TransactionKind::Expense, TransactionKind::Income], true)
+            && $this->status === TransactionStatus::Cleared
+            && $this->debt_id === null
+            && $this->splits->isEmpty()
+            && $this->settledShares->isEmpty();
     }
 
     public function isTransfer(): bool

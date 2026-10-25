@@ -3,11 +3,15 @@
 namespace App\Modules\Finance\Http\Requests;
 
 use App\Modules\Finance\Domain\Enums\ShareMode;
+use App\Modules\Finance\Domain\Enums\TransactionKind;
+use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use Illuminate\Validation\Rule;
 
 class StoreTransactionRequest extends FinanceRequest
 {
+    protected const string CATEGORY_REQUIRED = 'Elige una categoría.';
+
     protected bool $partial = false;
 
     /**
@@ -22,7 +26,10 @@ class StoreTransactionRequest extends FinanceRequest
             'kind' => [$required, Rule::in(['expense', 'income', 'adjustment'])],
             'amount_cents' => [$required, 'integer', 'not_in:0', 'between:-100000000000,100000000000'],
             'date' => [$required, 'date_format:Y-m-d'],
-            'category_id' => ['sometimes', ...$this->ownedId('categories')],
+            'category_id' => $this->partial
+                ? ['sometimes', ...$this->ownedId('categories')]
+                : [Rule::requiredIf(fn () => $this->requiresCategory($this->input('kind'), $this->input('splits'), $this->input('debt_id'))), ...$this->ownedId('categories')],
+            'source' => ['sometimes', Rule::in([TransactionSource::Manual->value])],
             'payee' => ['sometimes', 'nullable', 'string', 'max:160'],
             'description' => ['sometimes', 'nullable', 'string', 'max:255'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
@@ -41,6 +48,21 @@ class StoreTransactionRequest extends FinanceRequest
             'shares.items.*.percentage' => ['nullable', 'numeric', 'gt:0', 'max:100'],
             'shares.items.*.amount_cents' => ['nullable', 'integer', 'min:1'],
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return ['category_id.required' => self::CATEGORY_REQUIRED];
+    }
+
+    protected function requiresCategory(mixed $kind, mixed $splits, mixed $debtId): bool
+    {
+        return in_array($kind, [TransactionKind::Expense->value, TransactionKind::Income->value], true)
+            && (! is_array($splits) || $splits === [])
+            && ($debtId === null || $debtId === '');
     }
 
     /**

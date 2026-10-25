@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Http\Requests;
 
 use App\Modules\Finance\Domain\Enums\TransactionKind;
+use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use App\Modules\Finance\Queries\TransactionFilter;
 use Illuminate\Support\Str;
@@ -45,6 +46,8 @@ final class TransactionIndexRequest extends FinanceRequest
             'max' => ['nullable', 'integer', 'min:0'],
             'q' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::enum(TransactionStatus::class)],
+            'source' => ['nullable', Rule::enum(TransactionSource::class)],
+            'uncategorized' => ['nullable', 'boolean'],
             'debt_id' => ['nullable', 'uuid'],
             'recurring_rule_id' => ['nullable', 'uuid'],
             'contact_id' => ['nullable', 'uuid'],

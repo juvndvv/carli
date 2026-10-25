@@ -45,6 +45,7 @@ it('validates amount sign and category kind', function () {
         'kind' => 'expense',
         'amount_cents' => 4250,
         'date' => '2026-10-23',
+        'category_id' => F::category($this->user, 'Supermercado')->id,
     ])->assertUnprocessable()->assertJsonValidationErrors('amount_cents');
 
     $this->postJson('/api/v1/finance/transactions', [

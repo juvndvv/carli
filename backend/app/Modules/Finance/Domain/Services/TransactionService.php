@@ -5,6 +5,7 @@ namespace App\Modules\Finance\Domain\Services;
 use App\Models\User;
 use App\Modules\Finance\Domain\Enums\ShareMode;
 use App\Modules\Finance\Domain\Enums\TransactionKind;
+use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use App\Modules\Finance\Domain\Support\SpanishCalendar;
 use App\Modules\Finance\Events\PayrollRegistered;
@@ -36,15 +37,16 @@ final class TransactionService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function create(User|string $user, array $data, ?string $recurringRuleId = null, ?string $recurringDate = null): Transaction
+    public function create(User|string $user, array $data, ?string $recurringRuleId = null, ?string $recurringDate = null, ?TransactionSource $source = null): Transaction
     {
         $userId = $user instanceof User ? $user->id : $user;
         $before = $this->periods->signature($userId);
 
-        $transaction = DB::transaction(function () use ($userId, $data, $recurringRuleId, $recurringDate): Transaction {
+        $transaction = DB::transaction(function () use ($userId, $data, $recurringRuleId, $recurringDate, $source): Transaction {
             $transaction = new Transaction;
             $transaction->user_id = $userId;
             $transaction->fill(array_intersect_key($data, array_flip(self::EDITABLE)));
+            $transaction->source = $source ?? ($recurringRuleId === null ? TransactionSource::Manual : TransactionSource::Recurring);
             $transaction->recurring_rule_id = $recurringRuleId;
             $transaction->recurring_date = $recurringDate === null ? null : SpanishCalendar::date($recurringDate);
 

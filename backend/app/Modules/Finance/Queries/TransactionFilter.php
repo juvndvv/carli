@@ -90,6 +90,14 @@ final readonly class TransactionFilter
             $query->where('status', $filters['status']);
         }
 
+        if (isset($filters['source'])) {
+            $query->where('source', $filters['source']);
+        }
+
+        if (filter_var($filters['uncategorized'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            $query->uncategorized();
+        }
+
         if (isset($filters['debt_id'])) {
             $query->where('debt_id', $filters['debt_id']);
         }

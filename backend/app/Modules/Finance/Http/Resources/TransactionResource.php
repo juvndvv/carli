@@ -14,7 +14,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class TransactionResource extends JsonResource
 {
-    public const array RELATIONS = ['account', 'category.parent', 'tags', 'splits.category.parent', 'shares.contact', 'transferLegs'];
+    public const array RELATIONS = ['account', 'category.parent', 'tags', 'splits.category.parent', 'shares.contact', 'transferLegs', 'settledShares'];
 
     /**
      * @return array<string, mixed>
@@ -47,6 +47,8 @@ final class TransactionResource extends JsonResource
             'notes' => $transaction->notes,
             'tags' => $transaction->tags->map(fn (Tag $tag) => $tag->name)->values()->all(),
             'status' => $transaction->status->value,
+            'source' => $transaction->source->value,
+            'uncategorized' => $transaction->isUncategorized(),
             'transfer_group_id' => $transaction->transfer_group_id,
             'transfer_account_id' => $counterpart?->account_id,
             'recurring_rule_id' => $transaction->recurring_rule_id,
