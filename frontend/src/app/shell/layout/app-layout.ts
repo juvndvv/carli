@@ -1,15 +1,18 @@
 import { DialogRef } from '@angular/cdk/dialog';
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, OnInit, untracked } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '@core/auth/auth.service';
 import { ModuleRegistry } from '@core/modules/app-module';
 import { NotificationsStore } from '@core/notifications/notifications.store';
+import { PendingStore } from '@core/pending/pending.store';
 import { PushService } from '@core/push/push.service';
 import { QuickAddRegistry } from '@core/quick-add';
 import { SearchService } from '@core/search/search.service';
 import { DialogService } from '@ui/dialog/dialog.service';
 import { UiIcon } from '@ui/icon/icon';
+import { filter } from 'rxjs';
 import { AppGlobalSearch } from '../search/global-search';
 import { AppBottomNav } from './bottom-nav';
 import { AppSidebar } from './sidebar';
@@ -21,7 +24,7 @@ const NOTIFICATIONS_REFRESH_MS = 120_000;
   selector: 'app-layout',
   imports: [RouterOutlet, AppSidebar, AppTopbar, AppBottomNav, UiIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:keydown)': 'onGlobalKeydown($event)' },
+  host: { '(document:keydown)': 'onGlobalKeydown($event)', '(document:visibilitychange)': 'onVisibilityChange()' },
   template: `
     <a class="skip-link" href="#main-content">Saltar al contenido</a>
     <div class="app">
@@ -101,6 +104,7 @@ export class AppLayout implements OnInit {
   private readonly router = inject(Router);
   private readonly registry = inject(ModuleRegistry);
   private readonly notifications = inject(NotificationsStore);
+  private readonly pending = inject(PendingStore);
   private readonly dialogs = inject(DialogService);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
@@ -123,12 +127,26 @@ export class AppLayout implements OnInit {
       void this.registry.load();
     }
     void this.notifications.refresh();
+    void this.pending.refreshSummary();
     const timer = setInterval(() => {
       if (this.document.visibilityState === 'visible') {
         void this.notifications.refresh();
+        void this.pending.refreshSummary();
       }
     }, NOTIFICATIONS_REFRESH_MS);
     this.destroyRef.onDestroy(() => clearInterval(timer));
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => void this.pending.refreshSummaryIfStale());
+  }
+
+  protected onVisibilityChange(): void {
+    if (this.document.visibilityState === 'visible') {
+      void this.pending.refreshSummaryIfStale();
+    }
   }
 
   protected onGlobalKeydown(event: KeyboardEvent): void {

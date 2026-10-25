@@ -34,6 +34,10 @@ export const routes: Routes = [
         loadComponent: () => import('./shell/notifications/notifications-page').then((m) => m.NotificationsPage),
       },
       {
+        path: 'pendientes',
+        loadComponent: () => import('./shell/pending/pending-page').then((m) => m.PendingPage),
+      },
+      {
         path: 'mas',
         loadComponent: () => import('./shell/more/more-page').then((m) => m.MorePage),
       },

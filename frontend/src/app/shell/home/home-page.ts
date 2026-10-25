@@ -10,6 +10,7 @@ import { UiCard } from '@ui/card/card';
 import { UiIcon } from '@ui/icon/icon';
 import { UiPageHeader } from '@ui/page-header/page-header';
 import { AppNotificationList } from '../notifications/notification-list';
+import { AppPendingHomeCard } from '../pending/pending-home-card';
 import { AppModuleWidgetCard } from './module-widget-card';
 
 export function greetingFor(hour: number): string {
@@ -27,10 +28,11 @@ const madridHour = (): number =>
 
 @Component({
   selector: 'app-home-page',
-  imports: [UiPageHeader, UiCard, UiBadge, UiButton, UiIcon, RouterLink, AppModuleWidgetCard, AppNotificationList],
+  imports: [UiPageHeader, UiCard, UiBadge, UiButton, UiIcon, RouterLink, AppModuleWidgetCard, AppNotificationList, AppPendingHomeCard],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header [heading]="heading()" [crumb]="today" />
+    <app-pending-home-card class="pending" />
     <div class="grid-cards g-3">
       @for (module of registry.enabled(); track module.id) {
         <app-module-widget-card [module]="module" />
@@ -68,6 +70,9 @@ const madridHour = (): number =>
     }
     .notifications {
       margin-top: 16px;
+    }
+    .pending:not(:empty) {
+      margin-bottom: 16px;
     }
   `,
 })

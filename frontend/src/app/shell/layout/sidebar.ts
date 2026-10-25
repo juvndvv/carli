@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ModuleRegistry } from '@core/modules/app-module';
+import { PendingStore } from '@core/pending/pending.store';
 import { UiBadge } from '@ui/badge/badge';
 import { UiIcon } from '@ui/icon/icon';
 import { UiLogo } from '@ui/logo/logo';
@@ -24,6 +25,19 @@ import { UiLogo } from '@ui/logo/logo';
       >
         <ui-icon name="house" />
         Inicio
+      </a>
+      <a
+        class="nav-item"
+        routerLink="/pendientes"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        [attr.aria-label]="pending.total() > 0 ? 'Pendientes (' + pending.total() + ')' : null"
+      >
+        <ui-icon name="inbox" />
+        Pendientes
+        @if (pending.total() > 0) {
+          <ui-badge class="pill" tone="warning" aria-hidden="true">{{ pending.total() }}</ui-badge>
+        }
       </a>
       <div class="modules">
         <div class="nav-section caption">Módulos</div>
@@ -154,5 +168,6 @@ import { UiLogo } from '@ui/logo/logo';
 })
 export class AppSidebar {
   protected readonly registry = inject(ModuleRegistry);
+  protected readonly pending = inject(PendingStore);
   readonly logout = output<void>();
 }

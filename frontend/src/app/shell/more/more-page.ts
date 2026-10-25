@@ -2,6 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '@core/auth/auth.service';
 import { ModuleRegistry } from '@core/modules/app-module';
+import { pendingTotalLabel } from '@core/pending/pending.models';
+import { PendingStore } from '@core/pending/pending.store';
+import { UiBadge } from '@ui/badge/badge';
 import { UiCard } from '@ui/card/card';
 import { UiIcon } from '@ui/icon/icon';
 import { UiListItem } from '@ui/list-item/list-item';
@@ -9,11 +12,21 @@ import { UiPageHeader } from '@ui/page-header/page-header';
 
 @Component({
   selector: 'app-more-page',
-  imports: [UiPageHeader, UiCard, UiListItem, UiIcon, RouterLink],
+  imports: [UiPageHeader, UiCard, UiListItem, UiIcon, UiBadge, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header heading="Más" crumb="Secciones" />
     <div class="stack">
+      <ui-card padding="list">
+        <a ui-list-item routerLink="/pendientes" heading="Pendientes" icon="inbox" iconSoft [subtitle]="pendingSubtitle()">
+          <span trailing class="row trailing">
+            @if (pending.total() > 0) {
+              <ui-badge tone="warning">{{ pending.total() }}</ui-badge>
+            }
+            <ui-icon name="chevron-right" class="faint" />
+          </span>
+        </a>
+      </ui-card>
       @for (group of groups(); track group.id) {
         <ui-card padding="list" [heading]="group.name">
           @for (item of group.items; track item.path) {
@@ -37,11 +50,18 @@ import { UiPageHeader } from '@ui/page-header/page-header';
       </ui-card>
     </div>
   `,
+  styles: `
+    .trailing {
+      gap: 8px;
+    }
+  `,
 })
 export class MorePage {
   private readonly registry = inject(ModuleRegistry);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  protected readonly pending = inject(PendingStore);
+  protected readonly pendingSubtitle = computed(() => pendingTotalLabel(this.pending.total()));
 
   protected readonly groups = computed(() =>
     this.registry

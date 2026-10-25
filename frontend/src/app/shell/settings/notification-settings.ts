@@ -18,6 +18,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   goal_reached: 'Objetivo alcanzado',
   weekly_summary: 'Resumen semanal (lunes 09:00)',
   payroll_overdue: 'Nómina pendiente de registrar',
+  pending_digest: 'Pendientes por revisar (diario 20:00)',
 };
 
 export function notificationTypeLabel(preference: NotificationPreference): string {
