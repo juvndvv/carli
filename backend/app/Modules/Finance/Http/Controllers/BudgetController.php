@@ -9,6 +9,7 @@ use App\Modules\Finance\Http\Requests\PeriodQueryRequest;
 use App\Modules\Finance\Http\Requests\UpsertBudgetsRequest;
 use App\Modules\Finance\Http\Resources\PeriodResource;
 use App\Modules\Finance\Models\Period;
+use App\Modules\Finance\Queries\SpendingQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,6 +18,7 @@ final class BudgetController extends FinanceController
     public function __construct(
         private readonly BudgetService $budgets,
         private readonly PeriodService $periods,
+        private readonly SpendingQuery $spending,
     ) {}
 
     public function index(PeriodQueryRequest $request): JsonResponse
@@ -61,6 +63,7 @@ final class BudgetController extends FinanceController
                 'period' => PeriodResource::present($period),
                 'previous_period' => $previous === null ? null : PeriodResource::present($previous),
                 'totals' => $this->budgets->totals($rows),
+                'uncategorized' => $this->spending->uncategorizedExpenses($period->user_id, $period->start_date, $period->effectiveEndDate()),
                 ...$meta,
             ],
         ]);

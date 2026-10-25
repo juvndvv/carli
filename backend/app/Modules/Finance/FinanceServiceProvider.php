@@ -2,6 +2,7 @@
 
 namespace App\Modules\Finance;
 
+use App\Core\Pending\PendingRegistry;
 use App\Core\Search\ModuleSearcher;
 use App\Modules\Finance\Console\MaterializeRecurringCommand;
 use App\Modules\Finance\Console\PayrollOverdueCommand;
@@ -39,6 +40,7 @@ use App\Modules\Finance\Models\RecurringRule;
 use App\Modules\Finance\Models\SavingsGoal;
 use App\Modules\Finance\Models\Tag;
 use App\Modules\Finance\Models\Transaction;
+use App\Modules\Finance\Pending\FinancePendingItems;
 use App\Modules\Finance\Policies\OwnedByUserPolicy;
 use App\Modules\Finance\Search\FinanceSearcher;
 use Illuminate\Console\Scheduling\Schedule;
@@ -88,6 +90,8 @@ class FinanceServiceProvider extends ServiceProvider
         if (interface_exists(ModuleSearcher::class)) {
             $this->app->tag([FinanceSearcher::class], ModuleSearcher::TAG);
         }
+
+        $this->callAfterResolving(PendingRegistry::class, fn (PendingRegistry $pending) => $pending->register(FinancePendingItems::class));
     }
 
     public function boot(): void

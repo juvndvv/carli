@@ -2,6 +2,8 @@
 
 namespace App\Modules\Finance\Queries;
 
+use App\Modules\Finance\Domain\Enums\TransactionKind;
+use App\Modules\Finance\Models\Transaction;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -56,6 +58,28 @@ final class SpendingQuery
             ->whereBetween('t.date', [$from->toDateString(), $to->toDateString()])
             ->whereNotExists(fn ($query) => $query->from('finance.shared_expense_shares as s')->whereColumn('s.settlement_transaction_id', 't.id'))
             ->sum('t.amount_cents');
+    }
+
+    /**
+     * @return array{expense_cents: int, count: int}
+     */
+    public function uncategorizedExpenses(string $userId, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $row = Transaction::query()->ownedBy($userId)
+            ->uncategorized()
+            ->where('kind', TransactionKind::Expense->value)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->toBase()
+            ->selectRaw(<<<'SQL'
+                count(*) AS count,
+                coalesce(sum(-amount_cents - coalesce((SELECT sum(s.amount_cents) FROM finance.shared_expense_shares s WHERE s.transaction_id = finance.transactions.id), 0)), 0)::bigint AS expense_cents
+            SQL)
+            ->first();
+
+        return [
+            'expense_cents' => (int) ($row->expense_cents ?? 0),
+            'count' => (int) ($row->count ?? 0),
+        ];
     }
 
     /**

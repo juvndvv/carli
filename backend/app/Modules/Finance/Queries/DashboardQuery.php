@@ -75,6 +75,7 @@ final readonly class DashboardQuery
                 'expense' => Money::ofCents($current['expense_cents'] - $before['expense_cents'])->ratioBasisPoints($before['expense_cents']),
                 'savings' => Money::ofCents($current['savings_cents'] - $before['savings_cents'])->ratioBasisPoints(abs($before['savings_cents'])),
             ],
+            'uncategorized' => $this->spending->uncategorizedExpenses($userId, $period->start_date, $period->effectiveEndDate()),
             'by_category' => $this->byCategory($period),
             'history' => $this->history($period),
             'budgets' => [
