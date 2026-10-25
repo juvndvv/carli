@@ -2,6 +2,7 @@
 
 namespace App\Modules\Finance\Http\Resources;
 
+use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Models\SharedExpenseShare;
 use App\Modules\Finance\Models\Tag;
 use App\Modules\Finance\Models\Transaction;
@@ -14,7 +15,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class TransactionResource extends JsonResource
 {
-    public const array RELATIONS = ['account', 'category.parent', 'tags', 'splits.category.parent', 'shares.contact', 'transferLegs', 'settledShares'];
+    public const array RELATIONS = ['account.bankConnection', 'category.parent', 'tags', 'splits.category.parent', 'shares.contact', 'transferLegs', 'settledShares'];
 
     /**
      * @return array<string, mixed>
@@ -48,6 +49,9 @@ final class TransactionResource extends JsonResource
             'tags' => $transaction->tags->map(fn (Tag $tag) => $tag->name)->values()->all(),
             'status' => $transaction->status->value,
             'source' => $transaction->source->value,
+            'bank' => $transaction->source === TransactionSource::Bank ? [
+                'aspsp_name' => $transaction->account->bankConnection?->aspsp_name,
+            ] : null,
             'uncategorized' => $transaction->isUncategorized(),
             'transfer_group_id' => $transaction->transfer_group_id,
             'transfer_account_id' => $counterpart?->account_id,

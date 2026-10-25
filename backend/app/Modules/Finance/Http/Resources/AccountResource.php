@@ -22,6 +22,7 @@ final class AccountResource extends JsonResource
         $balance = $account->balanceCents();
         $pending = $account->pendingCents();
         $isCreditCard = $account->type === AccountType::CreditCard;
+        $connection = $account->isBankLinked() ? $account->bankConnection : null;
 
         return [
             'id' => $account->id,
@@ -41,6 +42,16 @@ final class AccountResource extends JsonResource
             'icon' => $account->icon,
             'include_in_net_worth' => $account->include_in_net_worth,
             'sort_order' => $account->sort_order,
+            'bank' => $connection === null ? null : [
+                'connection_id' => $connection->id,
+                'aspsp_name' => $connection->aspsp_name,
+                'status' => $connection->effectiveStatus()->value,
+                'sync_from_date' => $account->sync_from_date?->toDateString(),
+                'last_synced_at' => $connection->last_synced_at?->toIso8601String(),
+                'balance_cents' => $account->bank_balance_cents,
+                'balance_at' => $account->bank_balance_at?->toIso8601String(),
+                'difference_cents' => $account->bank_balance_cents === null ? null : $account->bank_balance_cents - ($balance - $pending),
+            ],
             'archived' => $account->archived_at !== null,
             'archived_at' => $account->archived_at?->toIso8601String(),
             'created_at' => $account->created_at?->toIso8601String(),

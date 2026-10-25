@@ -24,6 +24,7 @@ final class AccountController extends FinanceController
         $user = $this->user($request);
         $accounts = Account::query()->ownedBy($user)
             ->withBalance()
+            ->with('bankConnection')
             ->when(! $request->boolean('include_archived'), fn ($query) => $query->whereNull('archived_at'))
             ->orderBy('sort_order')
             ->orderBy('name')

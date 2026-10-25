@@ -2,8 +2,10 @@
 
 use App\Modules\Finance\Http\Controllers\AccountController;
 use App\Modules\Finance\Http\Controllers\BackupController;
+use App\Modules\Finance\Http\Controllers\BankConnectionController;
 use App\Modules\Finance\Http\Controllers\BudgetController;
 use App\Modules\Finance\Http\Controllers\CategoryController;
+use App\Modules\Finance\Http\Controllers\CategoryRuleController;
 use App\Modules\Finance\Http\Controllers\ContactController;
 use App\Modules\Finance\Http\Controllers\DashboardController;
 use App\Modules\Finance\Http\Controllers\DebtController;
@@ -12,6 +14,7 @@ use App\Modules\Finance\Http\Controllers\PayeeController;
 use App\Modules\Finance\Http\Controllers\PeriodController;
 use App\Modules\Finance\Http\Controllers\RecurringRuleController;
 use App\Modules\Finance\Http\Controllers\SettingsController;
+use App\Modules\Finance\Http\Controllers\SimilarTransactionsController;
 use App\Modules\Finance\Http\Controllers\SummaryController;
 use App\Modules\Finance\Http\Controllers\TagController;
 use App\Modules\Finance\Http\Controllers\TransactionController;
@@ -31,6 +34,8 @@ Route::where([
     'contribution' => $uuid,
     'contact' => $uuid,
     'debt' => $uuid,
+    'bank_connection' => $uuid,
+    'category_rule' => $uuid,
 ])->name('finance.')->group(function (): void {
     Route::get('summary', SummaryController::class)->name('summary');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -45,6 +50,8 @@ Route::where([
 
     Route::patch('transactions/bulk', [TransactionController::class, 'bulk'])->name('transactions.bulk');
     Route::get('transactions/export.csv', [TransactionController::class, 'export'])->name('transactions.export');
+    Route::get('transactions/{transaction}/similar', [SimilarTransactionsController::class, 'count'])->name('transactions.similar');
+    Route::post('transactions/{transaction}/categorize-similar', [SimilarTransactionsController::class, 'categorize'])->name('transactions.categorize-similar');
     Route::post('transactions/{transaction}/restore', [TransactionController::class, 'restore'])->withTrashed()->name('transactions.restore');
     Route::apiResource('transactions', TransactionController::class);
 
@@ -53,6 +60,7 @@ Route::where([
 
     Route::get('categories/suggest', [PayeeController::class, 'suggestCategory'])->name('categories.suggest');
     Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('category-rules', CategoryRuleController::class);
     Route::post('tags/{tag}/merge', [TagController::class, 'merge'])->name('tags.merge');
     Route::apiResource('tags', TagController::class);
 
@@ -74,6 +82,18 @@ Route::where([
     Route::get('debts/{debt}/payments', [DebtController::class, 'payments'])->name('debts.payments.index');
     Route::post('debts/{debt}/payments', [DebtController::class, 'storePayment'])->name('debts.payments.store');
     Route::apiResource('debts', DebtController::class);
+
+    Route::prefix('bank')->name('bank.')->group(function (): void {
+        Route::get('aspsps', [BankConnectionController::class, 'aspsps'])->name('aspsps');
+        Route::get('connections', [BankConnectionController::class, 'index'])->name('connections.index');
+        Route::post('connections', [BankConnectionController::class, 'store'])->middleware('throttle:20,1')->name('connections.store');
+        Route::get('connections/{bank_connection}', [BankConnectionController::class, 'show'])->name('connections.show');
+        Route::get('connections/{bank_connection}/accounts', [BankConnectionController::class, 'accounts'])->name('connections.accounts.index');
+        Route::post('connections/{bank_connection}/accounts', [BankConnectionController::class, 'link'])->name('connections.accounts.link');
+        Route::post('connections/{bank_connection}/sync', [BankConnectionController::class, 'sync'])->middleware('throttle:10,1')->name('connections.sync');
+        Route::post('connections/{bank_connection}/renew', [BankConnectionController::class, 'renew'])->middleware('throttle:20,1')->name('connections.renew');
+        Route::delete('connections/{bank_connection}', [BankConnectionController::class, 'destroy'])->name('connections.destroy');
+    });
 
     Route::get('settings', [SettingsController::class, 'show'])->name('settings.show');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');

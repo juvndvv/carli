@@ -95,7 +95,7 @@ final class AccountService
 
     public function reload(Account $account): Account
     {
-        return Account::query()->withoutGlobalScopes()->withBalance()->whereKey($account->id)->firstOrFail();
+        return Account::query()->withoutGlobalScopes()->withBalance()->with('bankConnection')->whereKey($account->id)->firstOrFail();
     }
 
     /**
