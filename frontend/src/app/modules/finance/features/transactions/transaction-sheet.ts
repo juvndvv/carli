@@ -34,7 +34,7 @@ import { UiTextarea } from '@ui/textarea/textarea';
 import { ToastService } from '@ui/toast/toast.service';
 import { map } from 'rxjs';
 import { AccountsService } from '../../data-access/accounts.service';
-import { CategoriesService, CategoryEntry } from '../../data-access/categories.service';
+import { CategoriesService } from '../../data-access/categories.service';
 import { ContactOptionsService } from '../../data-access/contact-options.service';
 import { FinanceSettingsService } from '../../data-access/finance-settings.service';
 import {
@@ -46,6 +46,7 @@ import {
   TransactionInput,
 } from '../../data-access/finance.models';
 import { PayeesService } from '../../data-access/payees.service';
+import { quickCategoryEntries, toCategoryOption } from '../../data-access/quick-categories';
 import { RecentCategories } from '../../data-access/recent-categories';
 import { TagsService } from '../../data-access/tags.service';
 import { TransactionsService } from '../../data-access/transactions.service';
@@ -620,24 +621,14 @@ export class TransactionSheet {
   protected readonly categoryOptions = computed<UiCategoryOption[]>(() => {
     const entries = this.selectableCategories();
     if (this.showAllCategories() || !this.hasMoreCategories()) {
-      return entries.map(toPickerOption);
+      return entries.map(toCategoryOption);
     }
-    const byId = new Map(entries.map((entry) => [entry.category.id, entry]));
-    const chosen: CategoryEntry[] = [];
-    const push = (entry: CategoryEntry | undefined) => {
-      if (entry && !chosen.includes(entry)) {
-        chosen.push(entry);
-      }
-    };
-    this.recents.ids(this.categoryKind()).forEach((id) => push(byId.get(id)));
-    entries.filter((entry) => entry.parent === null).forEach(push);
-    entries.forEach(push);
-    const quick = chosen.slice(0, QUICK_CATEGORY_COUNT + 1);
-    const selected = byId.get(this.value().categoryId ?? '');
-    if (selected && !quick.includes(selected)) {
-      quick[quick.length - 1] = selected;
-    }
-    return quick.map(toPickerOption);
+    return quickCategoryEntries(
+      entries,
+      this.recents.ids(this.categoryKind()),
+      QUICK_CATEGORY_COUNT + 1,
+      this.value().categoryId,
+    ).map(toCategoryOption);
   });
   protected readonly allCategoryOptions = computed<UiSelectOption<string>[]>(() =>
     this.selectableCategories().map((entry) => ({ value: entry.category.id, label: entry.label, icon: entry.icon })),
@@ -1053,6 +1044,3 @@ function shareGroup(contactId: string, percentage: number | null, amount: number
   });
 }
 
-function toPickerOption(entry: CategoryEntry): UiCategoryOption {
-  return { id: entry.category.id, name: entry.category.name, icon: entry.icon };
-}

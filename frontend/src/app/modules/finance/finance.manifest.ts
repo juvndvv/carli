@@ -5,6 +5,11 @@ import { TransactionSheetLauncher } from './features/transactions/transaction-sh
 
 export const FINANCE_BASE_PATH = '/finanzas';
 
+export const FINANCE_PENDING = {
+  uncategorized: 'uncategorized_transaction',
+  recurring: 'recurring_to_confirm',
+} as const;
+
 export const financeManifest: AppModuleManifest = {
   id: 'finance',
   name: 'Finanzas',
@@ -25,6 +30,24 @@ export const financeManifest: AppModuleManifest = {
     { label: 'Ajustes', path: `${FINANCE_BASE_PATH}/ajustes`, icon: 'settings' },
   ],
   homeWidget: () => import('./features/home-widget/finance-home-widget').then((m) => m.FinanceHomeWidget),
+  pendingTypes: {
+    [FINANCE_PENDING.uncategorized]: {
+      label: 'Movimientos por categorizar',
+      icon: 'circle-dashed',
+      countLabel: (count) => (count === 1 ? '1 movimiento por categorizar' : `${count} movimientos por categorizar`),
+    },
+    [FINANCE_PENDING.recurring]: {
+      label: 'Recurrentes por confirmar',
+      icon: 'repeat',
+      countLabel: (count) => (count === 1 ? '1 recurrente por confirmar' : `${count} recurrentes por confirmar`),
+    },
+  },
+  pendingActions: {
+    [FINANCE_PENDING.uncategorized]: () =>
+      import('./features/pending/categorize-pending-action').then((m) => m.CategorizePendingAction),
+    [FINANCE_PENDING.recurring]: () =>
+      import('./features/pending/confirm-recurring-pending-action').then((m) => m.ConfirmRecurringPendingAction),
+  },
   settings: () => import('./features/settings/finance-settings-panel').then((m) => m.FinanceSettingsPanel),
 };
 

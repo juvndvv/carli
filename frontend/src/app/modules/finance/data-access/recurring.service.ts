@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { apiUrl, firstValidationMessage } from '@core/http/api';
 import { firstValueFrom, map } from 'rxjs';
+import { FinanceChanges } from './finance-changes';
 import {
   ConfirmRecurringPayload,
   ConfirmRecurringResult,
@@ -42,6 +43,7 @@ interface RecurringIndexResponse {
 @Injectable({ providedIn: 'root' })
 export class RecurringService {
   private readonly http = inject(HttpClient);
+  private readonly changes = inject(FinanceChanges);
 
   readonly rules = signal<RecurringRule[]>([]);
   readonly meta = signal<RecurringRulesMeta | null>(null);
@@ -113,7 +115,13 @@ export class RecurringService {
       this.http.post<{ data: ConfirmRecurringResult }>(financeApiUrl(`recurring-rules/${id}/confirm`), payload),
     );
     this.replace(response.data.rule);
+    this.changes.notifyTransactions();
     void this.load();
+    return response.data;
+  }
+
+  async get(id: string): Promise<RecurringRule> {
+    const response = await firstValueFrom(this.http.get<{ data: RecurringRule }>(financeApiUrl(`recurring-rules/${id}`)));
     return response.data;
   }
 
