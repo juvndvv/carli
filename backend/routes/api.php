@@ -4,6 +4,7 @@ use App\Core\Http\Controllers\MeController;
 use App\Core\Http\Controllers\ModuleController;
 use App\Core\Http\Controllers\NotificationController;
 use App\Core\Http\Controllers\NotificationPreferenceController;
+use App\Core\Http\Controllers\PendingController;
 use App\Core\Http\Controllers\PushSubscriptionController;
 use App\Core\Http\Controllers\SearchController;
 use App\Core\Http\Controllers\SessionController;
@@ -34,6 +35,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::get('push/public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.public-key');
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+
+    Route::get('pending/summary', [PendingController::class, 'summary'])->name('pending.summary');
+    Route::get('pending', [PendingController::class, 'index'])->name('pending.index');
 
     Route::get('search', SearchController::class)->name('search');
 });

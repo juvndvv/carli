@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Pending\SendPendingDigests;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Schedule;
 
@@ -11,3 +12,9 @@ Schedule::call(fn () => DatabaseNotification::query()
     ->delete())
     ->name('notifications:prune-read')
     ->dailyAt('04:00');
+
+Schedule::command('core:pending-digest')
+    ->dailyAt('20:00')
+    ->timezone(SendPendingDigests::TIMEZONE)
+    ->withoutOverlapping()
+    ->onOneServer();

@@ -17,7 +17,7 @@ final class NotificationChannels
      */
     public static function for(User $user, string $moduleId, string $type): array
     {
-        if (! app(ModuleRegistry::class)->isEnabledFor($user, $moduleId)) {
+        if ($moduleId !== CoreNotificationTypes::MODULE && ! app(ModuleRegistry::class)->isEnabledFor($user, $moduleId)) {
             return [];
         }
 
