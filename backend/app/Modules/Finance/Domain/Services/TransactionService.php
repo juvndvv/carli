@@ -184,7 +184,7 @@ final class TransactionService
                     }
                 }
 
-                if (array_key_exists('account_id', $changes) && ! $transaction->isTransfer()) {
+                if (array_key_exists('account_id', $changes) && ! $transaction->isTransfer() && $transaction->source !== TransactionSource::Bank) {
                     $data['account_id'] = $changes['account_id'];
                 }
 

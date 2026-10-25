@@ -235,6 +235,27 @@ describe('transaction source', function () {
         $this->patchJson("/api/v1/finance/transactions/{$bank->id}", ['notes' => 'Revisar', 'category_id' => null])->assertOk();
     });
 
+    it('keeps the bank data of imported transactions untouchable', function () {
+        $bank = bankExpense($this, 1250, '2026-10-10', 'MERCADONA');
+        $other = F::account($this->user, ['name' => 'Efectivo']);
+
+        $this->patchJson("/api/v1/finance/transactions/{$bank->id}", [
+            'account_id' => $other->id, 'kind' => 'income', 'amount_cents' => 1250, 'date' => '2026-12-01',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['account_id', 'kind', 'amount_cents', 'date']);
+
+        $this->patchJson("/api/v1/finance/transactions/{$bank->id}", [
+            'account_id' => $this->account->id, 'kind' => 'expense', 'amount_cents' => -1250, 'date' => '2026-10-10',
+            'category_id' => F::category($this->user, 'Supermercado')->id, 'notes' => 'Compra semanal',
+        ])->assertOk()->assertJsonPath('data.notes', 'Compra semanal');
+
+        $manual = F::expense($this->user, $this->account, 500, '2026-10-21');
+        $this->patchJson('/api/v1/finance/transactions/bulk', ['ids' => [$bank->id, $manual->id], 'account_id' => $other->id])
+            ->assertOk()->assertJsonPath('data.updated', 2);
+
+        expect($bank->refresh()->account_id)->toBe($this->account->id)
+            ->and($manual->refresh()->account_id)->toBe($other->id);
+    });
+
     it('filters transactions by source and by missing category', function () {
         Notification::fake();
         F::expense($this->user, $this->account, 500, '2026-10-21');

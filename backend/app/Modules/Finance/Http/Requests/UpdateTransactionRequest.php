@@ -9,6 +9,8 @@ use Illuminate\Validation\Validator;
 
 final class UpdateTransactionRequest extends StoreTransactionRequest
 {
+    private const string BANK_LOCKED = 'Este dato viene del banco y no se puede cambiar.';
+
     protected bool $partial = true;
 
     /**
@@ -28,6 +30,26 @@ final class UpdateTransactionRequest extends StoreTransactionRequest
     public function after(): array
     {
         return [
+            function (Validator $validator): void {
+                $transaction = $this->route('transaction');
+
+                if (! $transaction instanceof Transaction || $transaction->source !== TransactionSource::Bank) {
+                    return;
+                }
+
+                $current = [
+                    'account_id' => $transaction->account_id,
+                    'kind' => $transaction->kind->value,
+                    'amount_cents' => $transaction->amount_cents,
+                    'date' => $transaction->date->toDateString(),
+                ];
+
+                foreach ($current as $field => $value) {
+                    if ($this->has($field) && (string) $this->input($field) !== (string) $value) {
+                        $validator->errors()->add($field, self::BANK_LOCKED);
+                    }
+                }
+            },
             function (Validator $validator): void {
                 $transaction = $this->route('transaction');
 

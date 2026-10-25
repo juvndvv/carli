@@ -182,10 +182,19 @@ describe('TransactionSheet', () => {
     });
     const { element, component } = await open({ transaction });
     expect(element.textContent).toContain('Importado de BBVA');
+    const { kind, amount, accountId, date } = component['form'].controls;
+    expect([kind, amount, accountId, date].every((control) => control.disabled)).toBe(true);
     component['form'].controls.categoryId.setValue('category-super');
     submit(element);
-    http
-      .expectOne({ method: 'PATCH', url: '/api/v1/finance/transactions/tx-1' })
+    const update = http.expectOne({ method: 'PATCH', url: '/api/v1/finance/transactions/tx-1' });
+    expect(update.request.body).toMatchObject({
+      account_id: transaction.account_id,
+      kind: transaction.kind,
+      amount_cents: transaction.amount_cents,
+      date: transaction.date,
+      category_id: 'category-super',
+    });
+    update
       .flush({ data: aTransaction({ category_id: 'category-super', source: 'bank' }), meta: { periods_changed: false } });
     await tick();
     http

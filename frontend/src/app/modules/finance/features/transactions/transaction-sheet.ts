@@ -154,7 +154,7 @@ function withPeriodsNotice(message: string, periodsChanged: boolean): string {
       }
       <form class="stack" [formGroup]="form" (ngSubmit)="save()" novalidate>
         @if (bankOrigin(); as origin) {
-          <p class="small faint origin-note"><ui-icon name="landmark" [size]="14" /> {{ origin }}. Si lo eliminas, no volverá en la siguiente sincronización.</p>
+          <p class="small faint origin-note"><ui-icon name="landmark" [size]="14" /> {{ origin }}. Importe, fecha y cuenta vienen del banco. Si lo eliminas, no volverá en la siguiente sincronización.</p>
         }
         <ui-segmented formControlName="kind" ariaLabel="Tipo de movimiento" [options]="kindOptions()" />
 
@@ -1059,6 +1059,10 @@ export class TransactionSheet {
     if (this.data.transaction && isTransfer) {
       this.form.controls.accountId.disable({ emitEvent: false });
       this.form.controls.toAccountId.disable({ emitEvent: false });
+    }
+    if (this.data.transaction?.source === 'bank') {
+      const { kind, amount, accountId, date } = this.form.controls;
+      [kind, amount, accountId, date].forEach((control) => control.disable({ emitEvent: false }));
     }
     if (this.data.duplicateOf) {
       this.original.set(null);
