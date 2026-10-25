@@ -52,6 +52,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/finance/export.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.backup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.bank.callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/aspsps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.bank.aspsps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.bank.connections.index"];
+        put?: never;
+        post: operations["finance.bank.connections.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/connections/{bankConnection}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.bank.connections.show"];
+        put?: never;
+        post?: never;
+        delete: operations["finance.bank.connections.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/connections/{bankConnection}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.bank.connections.accounts.index"];
+        put?: never;
+        post: operations["finance.bank.connections.accounts.link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/connections/{bankConnection}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["finance.bank.connections.sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/bank/connections/{bankConnection}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["finance.bank.connections.renew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/finance/budgets": {
         parameters: {
             query?: never;
@@ -111,6 +239,38 @@ export interface paths {
         put: operations["finance.categories.update"];
         post?: never;
         delete: operations["finance.categories.destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/category-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.category-rules.index"];
+        put?: never;
+        post: operations["finance.category-rules.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/category-rules/{categoryRule}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.category-rules.show"];
+        put: operations["finance.category-rules.update"];
+        post?: never;
+        delete: operations["finance.category-rules.destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -452,6 +612,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/finance/categories/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.categories.suggest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pending/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["pending.summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["pending.index"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/finance/periods": {
         parameters: {
             query?: never;
@@ -644,6 +852,38 @@ export interface paths {
         patch: operations["finance.settings.patch"];
         trace?: never;
     };
+    "/v1/finance/transactions/{transaction}/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["finance.transactions.similar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finance/transactions/{transaction}/categorize-similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["finance.transactions.categorize-similar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/finance/summary": {
         parameters: {
             query?: never;
@@ -827,6 +1067,16 @@ export interface components {
             icon: string | null;
             include_in_net_worth: boolean;
             sort_order: number;
+            bank: {
+                connection_id: string;
+                aspsp_name: string;
+                status: string;
+                sync_from_date: string | null;
+                last_synced_at: string | null;
+                balance_cents: number | null;
+                balance_at: string | null;
+                difference_cents: number | null;
+            } | null;
             archived: boolean;
             archived_at: string | null;
             created_at: string | null;
@@ -837,6 +1087,27 @@ export interface components {
          * @enum {string}
          */
         AccountType: "checking" | "savings" | "credit_card" | "cash";
+        /** BankConnectionResource */
+        BankConnectionResource: {
+            id: string;
+            provider: string;
+            aspsp_name: string;
+            aspsp_country: string;
+            status: string;
+            valid_until: string;
+            expires_in_days: unknown;
+            last_synced_at: string | null;
+            last_error: string | null;
+            bank_accounts_count: number;
+            linked_accounts: {
+                id: string;
+                name: string;
+                external_account_uid: string | null;
+                sync_from_date: string | null;
+            }[];
+            created_at: string | null;
+            updated_at: string | null;
+        };
         /** BulkUpdateTransactionsRequest */
         BulkUpdateTransactionsRequest: {
             ids: string[];
@@ -847,6 +1118,13 @@ export interface components {
             tags?: string[];
             add_tags?: string[];
             remove_tags?: string[];
+        };
+        /** CategorizeSimilarRequest */
+        CategorizeSimilarRequest: {
+            /** Format: uuid */
+            category_id: string;
+            remember?: boolean;
+            pattern?: string | null;
         };
         /**
          * CategoryKind
@@ -865,6 +1143,24 @@ export interface components {
             opens_period: boolean;
             archived: boolean;
             children?: unknown[];
+        };
+        /** CategoryRuleResource */
+        CategoryRuleResource: {
+            id: string;
+            pattern: string;
+            kind: string;
+            category_id: string;
+            category: {
+                id: string;
+                name: string;
+                parent: string | null;
+                parent_id: string | null;
+                icon: string | null;
+                color: string | null;
+                kind: string;
+            } | null;
+            created_at: string | null;
+            updated_at: string | null;
         };
         /** ConfirmRecurringRuleRequest */
         ConfirmRecurringRuleRequest: {
@@ -970,6 +1266,17 @@ export interface components {
             updated_at: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** LinkBankAccountsRequest */
+        LinkBankAccountsRequest: {
+            accounts: {
+                external_account_uid: string;
+                account_id: string | null;
+                name?: string | null;
+                type?: components["schemas"]["AccountType"] | null;
+                /** Format: date */
+                sync_from_date?: string | null;
+            }[];
         };
         /** LogoutOtherSessionsRequest */
         LogoutOtherSessionsRequest: {
@@ -1140,6 +1447,11 @@ export interface components {
             include_in_net_worth?: boolean;
             sort_order?: number;
         };
+        /** StoreBankConnectionRequest */
+        StoreBankConnectionRequest: {
+            aspsp_name: string;
+            aspsp_country: string;
+        };
         /** StoreCategoryRequest */
         StoreCategoryRequest: {
             name: string;
@@ -1149,6 +1461,12 @@ export interface components {
             color?: string | null;
             sort_order?: number;
             opens_period?: boolean;
+        };
+        /** StoreCategoryRuleRequest */
+        StoreCategoryRuleRequest: {
+            pattern?: string;
+            /** Format: uuid */
+            category_id?: string;
         };
         /** StoreContactRequest */
         StoreContactRequest: {
@@ -1262,6 +1580,8 @@ export interface components {
             /** Format: date */
             date: string;
             category_id?: string;
+            /** @enum {string} */
+            source?: "manual";
             payee?: string | null;
             description?: string | null;
             notes?: string | null;
@@ -1338,6 +1658,11 @@ export interface components {
             notes: string | null;
             tags: string[];
             status: string;
+            source: string;
+            bank: {
+                aspsp_name: string | null;
+            } | null;
+            uncategorized: boolean;
             transfer_group_id: string | null;
             transfer_account_id: string | null;
             recurring_rule_id: string | null;
@@ -1372,6 +1697,11 @@ export interface components {
             created_at: string | null;
             updated_at: string | null;
         };
+        /**
+         * TransactionSource
+         * @enum {string}
+         */
+        TransactionSource: "manual" | "recurring" | "bank";
         /**
          * TransactionStatus
          * @enum {string}
@@ -1705,6 +2035,298 @@ export interface operations {
             404: components["responses"]["ModelNotFoundException"];
         };
     };
+    "finance.backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        format: "personal-app/finance-backup";
+                        /** @constant */
+                        version: 1;
+                        exported_at: string;
+                        tables: string;
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "finance.bank.callback": {
+        parameters: {
+            query?: {
+                state?: string;
+                code?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            302: {
+                headers: {
+                    Location: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "finance.bank.aspsps": {
+        parameters: {
+            query?: {
+                country?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: unknown[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.bank.connections.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `BankConnectionResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["BankConnectionResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "finance.bank.connections.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreBankConnectionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            auth_url: string;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.bank.connections.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The bank connection ID */
+                bankConnection: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `BankConnectionResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["BankConnectionResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "finance.bank.connections.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The bank connection ID */
+                bankConnection: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "finance.bank.connections.accounts.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The bank connection ID */
+                bankConnection: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: unknown[];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "finance.bank.connections.accounts.link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The bank connection ID */
+                bankConnection: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkBankAccountsRequest"];
+            };
+        };
+        responses: {
+            /** @description `BankConnectionResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["BankConnectionResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.bank.connections.sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The bank connection ID */
+                bankConnection: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            queued: boolean;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "finance.bank.connections.renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The bank connection ID */
+                bankConnection: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            auth_url: string;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
     "finance.budgets.index": {
         parameters: {
             query?: {
@@ -1787,6 +2409,10 @@ export interface operations {
                                 remaining_cents: number;
                                 percent_bp: number | null;
                                 projected_cents: number;
+                            } | unknown;
+                            uncategorized: {
+                                expense_cents: number;
+                                count: number;
                             } | unknown;
                         } & {
                             [key: string]: unknown;
@@ -1884,6 +2510,10 @@ export interface operations {
                                 percent_bp: number | null;
                                 projected_cents: number;
                             } | unknown;
+                            uncategorized: {
+                                expense_cents: number;
+                                count: number;
+                            } | unknown;
                         } & {
                             [key: string]: unknown;
                         };
@@ -1979,6 +2609,10 @@ export interface operations {
                                 remaining_cents: number;
                                 percent_bp: number | null;
                                 projected_cents: number;
+                            };
+                            uncategorized: {
+                                expense_cents: number;
+                                count: number;
                             };
                             /** @constant */
                             copied: 0;
@@ -2131,6 +2765,141 @@ export interface operations {
             403: components["responses"]["AuthorizationException"];
             404: components["responses"]["ModelNotFoundException"];
             422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.category-rules.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of `CategoryRuleResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CategoryRuleResource"][];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "finance.category-rules.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StoreCategoryRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description `CategoryRuleResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CategoryRuleResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.category-rules.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The category rule ID */
+                categoryRule: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `CategoryRuleResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CategoryRuleResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
+        };
+    };
+    "finance.category-rules.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The category rule ID */
+                categoryRule: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["StoreCategoryRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description `CategoryRuleResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["CategoryRuleResource"];
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.category-rules.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The category rule ID */
+                categoryRule: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["AuthenticationException"];
+            404: components["responses"]["ModelNotFoundException"];
         };
     };
     "finance.contacts.settle": {
@@ -2379,6 +3148,10 @@ export interface operations {
                                 expense: number | null;
                                 savings: number | null;
                             } | null;
+                            uncategorized: {
+                                expense_cents: number;
+                                count: number;
+                            };
                             by_category: unknown[];
                             history: {
                                 period_id: string;
@@ -3108,7 +3881,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: {
+                        data: ({
+                            /** @constant */
+                            module: "core";
+                            /** @constant */
+                            name: "General";
+                            /** @constant */
+                            icon: "inbox";
+                            enabled: boolean;
+                            types: {
+                                type: string;
+                                label: string;
+                                description: string;
+                                push: string;
+                                in_app: string;
+                                default_push: string;
+                                default_in_app: string;
+                            }[];
+                        } | {
                             module: string;
                             name: string;
                             icon: string;
@@ -3122,7 +3912,7 @@ export interface operations {
                                 default_push: string;
                                 default_in_app: string;
                             }[];
-                        }[];
+                        })[];
                         push_configured: boolean;
                     };
                 };
@@ -3149,7 +3939,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: {
+                        data: ({
+                            /** @constant */
+                            module: "core";
+                            /** @constant */
+                            name: "General";
+                            /** @constant */
+                            icon: "inbox";
+                            enabled: boolean;
+                            types: {
+                                type: string;
+                                label: string;
+                                description: string;
+                                push: string;
+                                in_app: string;
+                                default_push: string;
+                                default_in_app: string;
+                            }[];
+                        } | {
                             module: string;
                             name: string;
                             icon: string;
@@ -3163,7 +3970,7 @@ export interface operations {
                                 default_push: string;
                                 default_in_app: string;
                             }[];
-                        }[];
+                        })[];
                         push_configured: boolean;
                     };
                 };
@@ -3212,6 +4019,110 @@ export interface operations {
             };
             401: components["responses"]["AuthenticationException"];
             403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.categories.suggest": {
+        parameters: {
+            query?: {
+                payee?: string | null;
+                description?: string | null;
+                kind?: "expense" | "income" | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            category: null;
+                            source: null;
+                        } | {
+                            category: {
+                                id: string;
+                                name: string;
+                                parent: string | null;
+                                parent_id: string | null;
+                                icon: string | null;
+                                color: string | null;
+                                kind: string;
+                            } | null;
+                            source: string;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "pending.summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** @constant */
+                            total: 0;
+                            by_module: {
+                                module: string;
+                                module_name: string;
+                                type: string;
+                                count: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+        };
+    };
+    "pending.index": {
+        parameters: {
+            query?: {
+                module?: string | null;
+                type?: string | null;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: unknown[];
+                        meta: {
+                            has_more: boolean;
+                            next_cursor: string | null;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
             422: components["responses"]["ValidationException"];
         };
     };
@@ -3751,6 +4662,77 @@ export interface operations {
             422: components["responses"]["ValidationException"];
         };
     };
+    "finance.transactions.similar": {
+        parameters: {
+            query?: {
+                pattern?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description The transaction ID */
+                transaction: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            count: number;
+                            pattern: string;
+                            transaction_ids: unknown[];
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
+    "finance.transactions.categorize-similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The transaction ID */
+                transaction: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategorizeSimilarRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** @constant */
+                            updated: 0;
+                            transaction: unknown[];
+                            rule: unknown[] | null;
+                        };
+                    };
+                };
+            };
+            401: components["responses"]["AuthenticationException"];
+            403: components["responses"]["AuthorizationException"];
+            404: components["responses"]["ModelNotFoundException"];
+            422: components["responses"]["ValidationException"];
+        };
+    };
     "finance.summary": {
         parameters: {
             query?: never;
@@ -4017,6 +4999,8 @@ export interface operations {
                 max?: number | null;
                 q?: string | null;
                 status?: components["schemas"]["TransactionStatus"] | null;
+                source?: components["schemas"]["TransactionSource"] | null;
+                uncategorized?: boolean | null;
                 debt_id?: string | null;
                 recurring_rule_id?: string | null;
                 contact_id?: string | null;
@@ -4087,6 +5071,8 @@ export interface operations {
                 max?: number | null;
                 q?: string | null;
                 status?: components["schemas"]["TransactionStatus"] | null;
+                source?: components["schemas"]["TransactionSource"] | null;
+                uncategorized?: boolean | null;
                 debt_id?: string | null;
                 recurring_rule_id?: string | null;
                 contact_id?: string | null;

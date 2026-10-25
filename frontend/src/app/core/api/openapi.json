@@ -290,6 +290,514 @@
                 }
             }
         },
+        "/v1/finance/export.json": {
+            "get": {
+                "operationId": "finance.backup",
+                "tags": [
+                    "Backup"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "format": {
+                                            "type": "string",
+                                            "const": "personal-app/finance-backup"
+                                        },
+                                        "version": {
+                                            "type": "integer",
+                                            "const": 1
+                                        },
+                                        "exported_at": {
+                                            "type": "string"
+                                        },
+                                        "tables": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "format",
+                                        "version",
+                                        "exported_at",
+                                        "tables"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/callback": {
+            "get": {
+                "operationId": "finance.bank.callback",
+                "tags": [
+                    "BankCallback"
+                ],
+                "parameters": [
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "",
+                        "headers": {
+                            "Location": {
+                                "required": true,
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/aspsps": {
+            "get": {
+                "operationId": "finance.bank.aspsps",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "country",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/connections": {
+            "get": {
+                "operationId": "finance.bank.connections.index",
+                "tags": [
+                    "BankConnection"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `BankConnectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/BankConnectionResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "finance.bank.connections.store",
+                "tags": [
+                    "BankConnection"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreBankConnectionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "auth_url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "auth_url"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/connections/{bankConnection}": {
+            "get": {
+                "operationId": "finance.bank.connections.show",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "bankConnection",
+                        "in": "path",
+                        "required": true,
+                        "description": "The bank connection ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`BankConnectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/BankConnectionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "finance.bank.connections.destroy",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "bankConnection",
+                        "in": "path",
+                        "required": true,
+                        "description": "The bank connection ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/connections/{bankConnection}/accounts": {
+            "get": {
+                "operationId": "finance.bank.connections.accounts.index",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "bankConnection",
+                        "in": "path",
+                        "required": true,
+                        "description": "The bank connection ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "finance.bank.connections.accounts.link",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "bankConnection",
+                        "in": "path",
+                        "required": true,
+                        "description": "The bank connection ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LinkBankAccountsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`BankConnectionResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/BankConnectionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/connections/{bankConnection}/sync": {
+            "post": {
+                "operationId": "finance.bank.connections.sync",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "bankConnection",
+                        "in": "path",
+                        "required": true,
+                        "description": "The bank connection ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "queued": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "queued"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/bank/connections/{bankConnection}/renew": {
+            "post": {
+                "operationId": "finance.bank.connections.renew",
+                "tags": [
+                    "BankConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "bankConnection",
+                        "in": "path",
+                        "required": true,
+                        "description": "The bank connection ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "auth_url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "auth_url"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/v1/finance/budgets": {
             "get": {
                 "operationId": "finance.budgets.index",
@@ -628,12 +1136,33 @@
                                                         },
                                                         {}
                                                     ]
+                                                },
+                                                "uncategorized": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "expense_cents": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "count": {
+                                                                    "type": "integer"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "expense_cents",
+                                                                "count"
+                                                            ]
+                                                        },
+                                                        {}
+                                                    ]
                                                 }
                                             },
                                             "required": [
                                                 "period",
                                                 "previous_period",
-                                                "totals"
+                                                "totals",
+                                                "uncategorized"
                                             ],
                                             "additionalProperties": {}
                                         }
@@ -995,12 +1524,33 @@
                                                         },
                                                         {}
                                                     ]
+                                                },
+                                                "uncategorized": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "expense_cents": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "count": {
+                                                                    "type": "integer"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "expense_cents",
+                                                                "count"
+                                                            ]
+                                                        },
+                                                        {}
+                                                    ]
                                                 }
                                             },
                                             "required": [
                                                 "period",
                                                 "previous_period",
-                                                "totals"
+                                                "totals",
+                                                "uncategorized"
                                             ],
                                             "additionalProperties": {}
                                         }
@@ -1349,6 +1899,21 @@
                                                         "projected_cents"
                                                     ]
                                                 },
+                                                "uncategorized": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "expense_cents": {
+                                                            "type": "integer"
+                                                        },
+                                                        "count": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "expense_cents",
+                                                        "count"
+                                                    ]
+                                                },
                                                 "copied": {
                                                     "type": "integer",
                                                     "const": 0
@@ -1358,6 +1923,7 @@
                                                 "period",
                                                 "previous_period",
                                                 "totals",
+                                                "uncategorized",
                                                 "copied"
                                             ]
                                         }
@@ -1617,6 +2183,218 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/category-rules": {
+            "get": {
+                "operationId": "finance.category-rules.index",
+                "tags": [
+                    "CategoryRule"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `CategoryRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CategoryRuleResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "finance.category-rules.store",
+                "tags": [
+                    "CategoryRule"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreCategoryRuleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`CategoryRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CategoryRuleResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/category-rules/{categoryRule}": {
+            "get": {
+                "operationId": "finance.category-rules.show",
+                "tags": [
+                    "CategoryRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "categoryRule",
+                        "in": "path",
+                        "required": true,
+                        "description": "The category rule ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`CategoryRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CategoryRuleResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "finance.category-rules.update",
+                "tags": [
+                    "CategoryRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "categoryRule",
+                        "in": "path",
+                        "required": true,
+                        "description": "The category rule ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreCategoryRuleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`CategoryRuleResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/CategoryRuleResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "finance.category-rules.destroy",
+                "tags": [
+                    "CategoryRule"
+                ],
+                "parameters": [
+                    {
+                        "name": "categoryRule",
+                        "in": "path",
+                        "required": true,
+                        "description": "The category rule ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }
@@ -2206,6 +2984,21 @@
                                                         "savings"
                                                     ]
                                                 },
+                                                "uncategorized": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "expense_cents": {
+                                                            "type": "integer"
+                                                        },
+                                                        "count": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "expense_cents",
+                                                        "count"
+                                                    ]
+                                                },
                                                 "by_category": {
                                                     "type": "array",
                                                     "items": {}
@@ -2319,6 +3112,7 @@
                                                 "savings_rate_bp",
                                                 "previous",
                                                 "deltas_bp",
+                                                "uncategorized",
                                                 "by_category",
                                                 "history",
                                                 "budgets",
@@ -3590,65 +4384,134 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "module": {
-                                                        "type": "string"
-                                                    },
-                                                    "name": {
-                                                        "type": "string"
-                                                    },
-                                                    "icon": {
-                                                        "type": "string"
-                                                    },
-                                                    "enabled": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "types": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "object",
-                                                            "properties": {
-                                                                "type": {
-                                                                    "type": "string"
-                                                                },
-                                                                "label": {
-                                                                    "type": "string"
-                                                                },
-                                                                "description": {
-                                                                    "type": "string"
-                                                                },
-                                                                "push": {
-                                                                    "type": "string"
-                                                                },
-                                                                "in_app": {
-                                                                    "type": "string"
-                                                                },
-                                                                "default_push": {
-                                                                    "type": "string"
-                                                                },
-                                                                "default_in_app": {
-                                                                    "type": "string"
-                                                                }
+                                                "anyOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "module": {
+                                                                "type": "string",
+                                                                "const": "core"
                                                             },
-                                                            "required": [
-                                                                "type",
-                                                                "label",
-                                                                "description",
-                                                                "push",
-                                                                "in_app",
-                                                                "default_push",
-                                                                "default_in_app"
-                                                            ]
-                                                        }
+                                                            "name": {
+                                                                "type": "string",
+                                                                "const": "General"
+                                                            },
+                                                            "icon": {
+                                                                "type": "string",
+                                                                "const": "inbox"
+                                                            },
+                                                            "enabled": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "types": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "type": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "label": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "description": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "in_app": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_in_app": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "type",
+                                                                        "label",
+                                                                        "description",
+                                                                        "push",
+                                                                        "in_app",
+                                                                        "default_push",
+                                                                        "default_in_app"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "module",
+                                                            "name",
+                                                            "icon",
+                                                            "enabled",
+                                                            "types"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "module": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "icon": {
+                                                                "type": "string"
+                                                            },
+                                                            "enabled": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "types": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "type": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "label": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "description": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "in_app": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_in_app": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "type",
+                                                                        "label",
+                                                                        "description",
+                                                                        "push",
+                                                                        "in_app",
+                                                                        "default_push",
+                                                                        "default_in_app"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "module",
+                                                            "name",
+                                                            "icon",
+                                                            "enabled",
+                                                            "types"
+                                                        ]
                                                     }
-                                                },
-                                                "required": [
-                                                    "module",
-                                                    "name",
-                                                    "icon",
-                                                    "enabled",
-                                                    "types"
                                                 ]
                                             }
                                         },
@@ -3695,65 +4558,134 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "module": {
-                                                        "type": "string"
-                                                    },
-                                                    "name": {
-                                                        "type": "string"
-                                                    },
-                                                    "icon": {
-                                                        "type": "string"
-                                                    },
-                                                    "enabled": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "types": {
-                                                        "type": "array",
-                                                        "items": {
-                                                            "type": "object",
-                                                            "properties": {
-                                                                "type": {
-                                                                    "type": "string"
-                                                                },
-                                                                "label": {
-                                                                    "type": "string"
-                                                                },
-                                                                "description": {
-                                                                    "type": "string"
-                                                                },
-                                                                "push": {
-                                                                    "type": "string"
-                                                                },
-                                                                "in_app": {
-                                                                    "type": "string"
-                                                                },
-                                                                "default_push": {
-                                                                    "type": "string"
-                                                                },
-                                                                "default_in_app": {
-                                                                    "type": "string"
-                                                                }
+                                                "anyOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "module": {
+                                                                "type": "string",
+                                                                "const": "core"
                                                             },
-                                                            "required": [
-                                                                "type",
-                                                                "label",
-                                                                "description",
-                                                                "push",
-                                                                "in_app",
-                                                                "default_push",
-                                                                "default_in_app"
-                                                            ]
-                                                        }
+                                                            "name": {
+                                                                "type": "string",
+                                                                "const": "General"
+                                                            },
+                                                            "icon": {
+                                                                "type": "string",
+                                                                "const": "inbox"
+                                                            },
+                                                            "enabled": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "types": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "type": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "label": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "description": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "in_app": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_in_app": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "type",
+                                                                        "label",
+                                                                        "description",
+                                                                        "push",
+                                                                        "in_app",
+                                                                        "default_push",
+                                                                        "default_in_app"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "module",
+                                                            "name",
+                                                            "icon",
+                                                            "enabled",
+                                                            "types"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "module": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "icon": {
+                                                                "type": "string"
+                                                            },
+                                                            "enabled": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "types": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "type": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "label": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "description": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "in_app": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_push": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "default_in_app": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "type",
+                                                                        "label",
+                                                                        "description",
+                                                                        "push",
+                                                                        "in_app",
+                                                                        "default_push",
+                                                                        "default_in_app"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "module",
+                                                            "name",
+                                                            "icon",
+                                                            "enabled",
+                                                            "types"
+                                                        ]
                                                     }
-                                                },
-                                                "required": [
-                                                    "module",
-                                                    "name",
-                                                    "icon",
-                                                    "enabled",
-                                                    "types"
                                                 ]
                                             }
                                         },
@@ -3929,6 +4861,316 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/categories/suggest": {
+            "get": {
+                "operationId": "finance.categories.suggest",
+                "tags": [
+                    "Payee"
+                ],
+                "parameters": [
+                    {
+                        "name": "payee",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 120
+                        }
+                    },
+                    {
+                        "name": "description",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "kind",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "expense",
+                                "income",
+                                null
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "category": {
+                                                            "type": "null"
+                                                        },
+                                                        "source": {
+                                                            "type": "null"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "category",
+                                                        "source"
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "category": {
+                                                            "type": [
+                                                                "object",
+                                                                "null"
+                                                            ],
+                                                            "properties": {
+                                                                "id": {
+                                                                    "type": "string"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "parent": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "parent_id": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "icon": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "color": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "kind": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "id",
+                                                                "name",
+                                                                "parent",
+                                                                "parent_id",
+                                                                "icon",
+                                                                "color",
+                                                                "kind"
+                                                            ]
+                                                        },
+                                                        "source": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "category",
+                                                        "source"
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/pending/summary": {
+            "get": {
+                "operationId": "pending.summary",
+                "tags": [
+                    "Pending"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer",
+                                                    "const": 0
+                                                },
+                                                "by_module": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "module": {
+                                                                "type": "string"
+                                                            },
+                                                            "module_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "type": {
+                                                                "type": "string"
+                                                            },
+                                                            "count": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "module",
+                                                            "module_name",
+                                                            "type",
+                                                            "count"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "total",
+                                                "by_module"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/pending": {
+            "get": {
+                "operationId": "pending.index",
+                "tags": [
+                    "Pending"
+                ],
+                "parameters": [
+                    {
+                        "name": "module",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 2048
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "has_more": {
+                                                    "type": "boolean"
+                                                },
+                                                "next_cursor": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "has_more",
+                                                "next_cursor"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -4880,6 +6122,172 @@
                 }
             }
         },
+        "/v1/finance/transactions/{transaction}/similar": {
+            "get": {
+                "operationId": "finance.transactions.similar",
+                "tags": [
+                    "SimilarTransactions"
+                ],
+                "parameters": [
+                    {
+                        "name": "transaction",
+                        "in": "path",
+                        "required": true,
+                        "description": "The transaction ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "pattern",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "minLength": 2,
+                            "maxLength": 120
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "count": {
+                                                    "type": "integer",
+                                                    "minimum": 0
+                                                },
+                                                "pattern": {
+                                                    "type": "string"
+                                                },
+                                                "transaction_ids": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "count",
+                                                "pattern",
+                                                "transaction_ids"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/finance/transactions/{transaction}/categorize-similar": {
+            "post": {
+                "operationId": "finance.transactions.categorize-similar",
+                "tags": [
+                    "SimilarTransactions"
+                ],
+                "parameters": [
+                    {
+                        "name": "transaction",
+                        "in": "path",
+                        "required": true,
+                        "description": "The transaction ID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategorizeSimilarRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "updated": {
+                                                    "type": "integer",
+                                                    "const": 0
+                                                },
+                                                "transaction": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                "rule": {
+                                                    "type": [
+                                                        "array",
+                                                        "null"
+                                                    ],
+                                                    "items": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "updated",
+                                                "transaction",
+                                                "rule"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
         "/v1/finance/summary": {
             "get": {
                 "operationId": "finance.summary",
@@ -5510,6 +6918,30 @@
                         }
                     },
                     {
+                        "name": "source",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/TransactionSource"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "uncategorized",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
                         "name": "debt_id",
                         "in": "query",
                         "schema": {
@@ -5785,6 +7217,30 @@
                                 {
                                     "type": "null"
                                 }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "source",
+                        "in": "query",
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/TransactionSource"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "uncategorized",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "boolean",
+                                "null"
                             ]
                         }
                     },
@@ -6299,6 +7755,63 @@
                     "sort_order": {
                         "type": "integer"
                     },
+                    "bank": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "connection_id": {
+                                "type": "string"
+                            },
+                            "aspsp_name": {
+                                "type": "string"
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "sync_from_date": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "last_synced_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "balance_cents": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "balance_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "difference_cents": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "connection_id",
+                            "aspsp_name",
+                            "status",
+                            "sync_from_date",
+                            "last_synced_at",
+                            "balance_cents",
+                            "balance_at",
+                            "difference_cents"
+                        ]
+                    },
                     "archived": {
                         "type": "boolean"
                     },
@@ -6339,6 +7852,7 @@
                     "icon",
                     "include_in_net_worth",
                     "sort_order",
+                    "bank",
                     "archived",
                     "archived_at",
                     "created_at",
@@ -6355,6 +7869,105 @@
                     "cash"
                 ],
                 "title": "AccountType"
+            },
+            "BankConnectionResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "aspsp_name": {
+                        "type": "string"
+                    },
+                    "aspsp_country": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "valid_until": {
+                        "type": "string"
+                    },
+                    "expires_in_days": {},
+                    "last_synced_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_error": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "bank_accounts_count": {
+                        "type": "integer"
+                    },
+                    "linked_accounts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "external_account_uid": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "sync_from_date": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name",
+                                "external_account_uid",
+                                "sync_from_date"
+                            ]
+                        }
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "provider",
+                    "aspsp_name",
+                    "aspsp_country",
+                    "status",
+                    "valid_until",
+                    "expires_in_days",
+                    "last_synced_at",
+                    "last_error",
+                    "bank_accounts_count",
+                    "linked_accounts",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "BankConnectionResource"
             },
             "BulkUpdateTransactionsRequest": {
                 "type": "object",
@@ -6404,6 +8017,30 @@
                     "ids"
                 ],
                 "title": "BulkUpdateTransactionsRequest"
+            },
+            "CategorizeSimilarRequest": {
+                "type": "object",
+                "properties": {
+                    "category_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "remember": {
+                        "type": "boolean"
+                    },
+                    "pattern": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "minLength": 2,
+                        "maxLength": 120
+                    }
+                },
+                "required": [
+                    "category_id"
+                ],
+                "title": "CategorizeSimilarRequest"
             },
             "CategoryKind": {
                 "type": "string",
@@ -6469,6 +8106,95 @@
                     "archived"
                 ],
                 "title": "CategoryResource"
+            },
+            "CategoryRuleResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "pattern": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "category_id": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "parent": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "parent_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "icon": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "kind": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "parent",
+                            "parent_id",
+                            "icon",
+                            "color",
+                            "kind"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "pattern",
+                    "kind",
+                    "category_id",
+                    "category",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "CategoryRuleResource"
             },
             "ConfirmRecurringRuleRequest": {
                 "type": "object",
@@ -7015,6 +8741,65 @@
                 ],
                 "additionalProperties": {},
                 "title": "GoalResource"
+            },
+            "LinkBankAccountsRequest": {
+                "type": "object",
+                "properties": {
+                    "accounts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "external_account_uid": {
+                                    "type": "string",
+                                    "maxLength": 255
+                                },
+                                "account_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 64
+                                },
+                                "name": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 120
+                                },
+                                "type": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/components/schemas/AccountType"
+                                        },
+                                        {
+                                            "type": "null"
+                                        }
+                                    ]
+                                },
+                                "sync_from_date": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "date"
+                                }
+                            },
+                            "required": [
+                                "external_account_uid",
+                                "account_id"
+                            ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "uniqueItems": true
+                    }
+                },
+                "required": [
+                    "accounts"
+                ],
+                "title": "LinkBankAccountsRequest"
             },
             "LogoutOtherSessionsRequest": {
                 "type": "object",
@@ -7686,6 +9471,25 @@
                 ],
                 "title": "StoreAccountRequest"
             },
+            "StoreBankConnectionRequest": {
+                "type": "object",
+                "properties": {
+                    "aspsp_name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "aspsp_country": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 2
+                    }
+                },
+                "required": [
+                    "aspsp_name",
+                    "aspsp_country"
+                ],
+                "title": "StoreBankConnectionRequest"
+            },
             "StoreCategoryRequest": {
                 "type": "object",
                 "properties": {
@@ -7725,6 +9529,21 @@
                     "name"
                 ],
                 "title": "StoreCategoryRequest"
+            },
+            "StoreCategoryRuleRequest": {
+                "type": "object",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 120
+                    },
+                    "category_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "title": "StoreCategoryRuleRequest"
             },
             "StoreContactRequest": {
                 "type": "object",
@@ -8139,6 +9958,12 @@
                     "category_id": {
                         "type": "string"
                     },
+                    "source": {
+                        "type": "string",
+                        "enum": [
+                            "manual"
+                        ]
+                    },
                     "payee": {
                         "type": [
                             "string",
@@ -8469,6 +10294,29 @@
                     "status": {
                         "type": "string"
                     },
+                    "source": {
+                        "type": "string"
+                    },
+                    "bank": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "aspsp_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "aspsp_name"
+                        ]
+                    },
+                    "uncategorized": {
+                        "type": "boolean"
+                    },
                     "transfer_group_id": {
                         "type": [
                             "string",
@@ -8656,6 +10504,9 @@
                     "notes",
                     "tags",
                     "status",
+                    "source",
+                    "bank",
+                    "uncategorized",
                     "transfer_group_id",
                     "transfer_account_id",
                     "recurring_rule_id",
@@ -8667,6 +10518,15 @@
                     "updated_at"
                 ],
                 "title": "TransactionResource"
+            },
+            "TransactionSource": {
+                "type": "string",
+                "enum": [
+                    "manual",
+                    "recurring",
+                    "bank"
+                ],
+                "title": "TransactionSource"
             },
             "TransactionStatus": {
                 "type": "string",
