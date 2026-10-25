@@ -26,6 +26,7 @@ import { BudgetOverview, BudgetRow, BudgetStatus } from '../../data-access/finan
 import { PeriodsService } from '../../data-access/periods.service';
 import { FinBudgetLine } from '../../ui/budget-line';
 import { FinPeriodSelector } from '../../ui/period-selector';
+import { FinUncategorizedNotice } from '../../ui/uncategorized-notice';
 import { BudgetEditorData, BudgetEditorDialog } from './budget-editor-dialog';
 
 const STATUS_BADGES: Record<BudgetStatus, { tone: 'positive' | 'warning' | 'negative'; icon: string }> = {
@@ -36,7 +37,7 @@ const STATUS_BADGES: Record<BudgetStatus, { tone: 'positive' | 'warning' | 'nega
 
 @Component({
   selector: 'app-finance-budgets-page',
-  imports: [UiPageHeader, UiCard, UiStat, UiButton, UiBadge, UiIcon, UiSkeleton, UiEmptyState, FinPeriodSelector, FinBudgetLine],
+  imports: [UiPageHeader, UiCard, UiStat, UiButton, UiBadge, UiIcon, UiSkeleton, UiEmptyState, FinPeriodSelector, FinBudgetLine, FinUncategorizedNotice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-page-header heading="Presupuestos" crumb="Finanzas">
@@ -65,6 +66,12 @@ const STATUS_BADGES: Record<BudgetStatus, { tone: 'positive' | 'warning' | 'nega
           />
         }
       </div>
+
+      <fin-uncategorized-notice
+        class="section"
+        [summary]="data.meta.uncategorized"
+        [periodId]="data.meta.period.is_current ? null : data.meta.period.id"
+      />
 
       <ui-card class="section" heading="Por categoría">
         <div card-actions class="row actions">

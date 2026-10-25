@@ -7,6 +7,13 @@ export type ChartToken = 'c1' | 'c2' | 'c3' | 'c4' | 'c5' | 'c6' | 'c7' | 'c8';
 export type AccountType = 'checking' | 'savings' | 'credit_card' | 'cash';
 export type TransactionKind = 'expense' | 'income' | 'transfer' | 'adjustment';
 export type TransactionStatus = 'pending' | 'cleared';
+
+export type TransactionSource = 'manual' | 'recurring' | 'bank';
+
+export interface UncategorizedSummary {
+  expense_cents: Cents;
+  count: number;
+}
 export type CategoryKind = 'expense' | 'income';
 export type PeriodOpenedBy = 'payroll' | 'manual' | 'calendar';
 export type PeriodMode = 'payroll' | 'calendar';
@@ -165,6 +172,8 @@ export interface Transaction {
   transfer_account_id: string | null;
   recurring_rule_id: string | null;
   debt_id: string | null;
+  source: TransactionSource;
+  uncategorized: boolean;
   splits: TransactionSplit[];
   shares: TransactionShare[];
   deleted: boolean;
@@ -304,6 +313,7 @@ export interface BudgetOverview {
     period: Period;
     previous_period: Period | null;
     totals: BudgetTotals;
+    uncategorized?: UncategorizedSummary;
     copied?: number;
   };
 }
@@ -366,6 +376,7 @@ export interface Dashboard extends PeriodKpis {
   budgets: { top: BudgetRow[]; totals: BudgetTotals };
   upcoming: UpcomingCharge[];
   recent_transactions: Transaction[];
+  uncategorized?: UncategorizedSummary;
 }
 
 export interface FinanceSummary {

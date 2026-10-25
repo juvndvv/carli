@@ -17,6 +17,7 @@ export interface TransactionFilters {
   max: Cents | null;
   q: string;
   status: TransactionStatus | null;
+  uncategorized: boolean;
   debtId: string | null;
   recurringRuleId: string | null;
   contactId: string | null;
@@ -36,6 +37,7 @@ export const EMPTY_FILTERS: TransactionFilters = {
   max: null,
   q: '',
   status: null,
+  uncategorized: false,
   debtId: null,
   recurringRuleId: null,
   contactId: null,
@@ -53,6 +55,7 @@ const QUERY_KEYS = {
   max: 'max',
   q: 'q',
   status: 'estado',
+  uncategorized: 'sin_categoria',
   debtId: 'deuda',
   recurringRuleId: 'recurrente',
   contactId: 'contacto',
@@ -90,6 +93,8 @@ const STATUS_TO_PARAM: Record<TransactionStatus, string> = { pending: 'pendiente
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
+const TRUTHY = new Set(['1', 'true', 'si', 'sí']);
+
 function list(value: unknown): string[] {
   const raw = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
   return raw
@@ -109,6 +114,11 @@ function cents(value: unknown): Cents | null {
     return null;
   }
   return Number(text);
+}
+
+function flag(value: unknown): boolean {
+  const text = single(value);
+  return text !== null && TRUTHY.has(text.toLowerCase());
 }
 
 function date(value: unknown): IsoDate | null {
@@ -144,6 +154,7 @@ export function filtersFromParams(params: Params): TransactionFilters {
     max: cents(params[QUERY_KEYS.max]),
     q,
     status: STATUS_PARAMS[single(params[QUERY_KEYS.status]) ?? ''] ?? null,
+    uncategorized: flag(params[QUERY_KEYS.uncategorized]),
     debtId: single(params[QUERY_KEYS.debtId]),
     recurringRuleId: single(params[QUERY_KEYS.recurringRuleId]),
     contactId: single(params[QUERY_KEYS.contactId]),
@@ -172,6 +183,7 @@ export function filtersToParams(filters: TransactionFilters): Params {
     [QUERY_KEYS.max]: filters.max,
     [QUERY_KEYS.q]: filters.q !== '' ? filters.q : null,
     [QUERY_KEYS.status]: filters.status ? STATUS_TO_PARAM[filters.status] : null,
+    [QUERY_KEYS.uncategorized]: filters.uncategorized ? '1' : null,
     [QUERY_KEYS.debtId]: filters.debtId,
     [QUERY_KEYS.recurringRuleId]: filters.recurringRuleId,
     [QUERY_KEYS.contactId]: filters.contactId,
@@ -193,6 +205,7 @@ export function filtersToApiQuery(filters: TransactionFilters, currentPeriodId: 
     max: filters.max,
     q: filters.q.trim() || null,
     status: filters.status,
+    uncategorized: filters.uncategorized ? 1 : null,
     debt_id: filters.debtId,
     recurring_rule_id: filters.recurringRuleId,
     contact_id: filters.contactId,
@@ -207,6 +220,7 @@ export function activeFilterCount(filters: TransactionFilters): number {
     filters.kinds.length > 0,
     filters.min !== null || filters.max !== null,
     filters.status !== null,
+    filters.uncategorized,
     filters.from !== null || filters.to !== null,
     filters.debtId !== null || filters.recurringRuleId !== null || filters.contactId !== null,
   ].filter(Boolean).length;

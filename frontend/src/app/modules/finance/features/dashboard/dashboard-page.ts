@@ -21,6 +21,7 @@ import { PeriodsService } from '../../data-access/periods.service';
 import { FinBudgetLine } from '../../ui/budget-line';
 import { FinPeriodSelector } from '../../ui/period-selector';
 import { FinTransactionRow } from '../../ui/transaction-row';
+import { FinUncategorizedNotice } from '../../ui/uncategorized-notice';
 import { TransactionSheetLauncher } from '../transactions/transaction-sheet.launcher';
 
 export interface DonutSlice {
@@ -91,6 +92,7 @@ function deltaIcon(value: BasisPoints | null | undefined): string {
     FinPeriodSelector,
     FinBudgetLine,
     FinTransactionRow,
+    FinUncategorizedNotice,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -144,6 +146,8 @@ function deltaIcon(value: BasisPoints | null | undefined): string {
             [delta]="savingsRate()"
           />
         </div>
+
+        <fin-uncategorized-notice class="section" [summary]="data.uncategorized" [periodId]="pastPeriodId()" />
 
         <div class="grid-cards g-main section">
           <ui-card heading="Ingresos y gastos">
@@ -361,6 +365,10 @@ export class DashboardPage {
   protected readonly selectedPeriodId = computed(() => this.dashboard()?.period.id ?? this.requestedPeriod());
   protected readonly noAccounts = computed(() => this.accounts.loaded() && this.accounts.all().length === 0);
   protected readonly warnAt = computed(() => (this.settings.settings()?.budget_warning_threshold ?? 80) / 100);
+  protected readonly pastPeriodId = computed(() => {
+    const period = this.dashboard()?.period;
+    return period && !period.is_current ? period.id : null;
+  });
   protected readonly periodQuery = computed(() => {
     const period = this.dashboard()?.period;
     return period && !period.is_current ? { periodo: period.id } : {};

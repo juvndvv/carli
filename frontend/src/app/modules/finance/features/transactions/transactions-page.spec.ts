@@ -90,4 +90,51 @@ describe('TransactionsPage', () => {
     harness.detectChanges();
     expect(harness.routeNativeElement!.textContent).toContain('Aún no hay movimientos');
   });
+
+  it('opens Sin categoría from the Pendientes link and marks rows to review', async () => {
+    const harness = await render('/finanzas/movimientos?sin_categoria=1&periodo=todos');
+    const requests = http.match((req) => req.url === '/api/v1/finance/transactions');
+    const main = requests.filter((req) => req.request.params.get('per_page') === '50').at(-1)!;
+    expect(main.request.params.get('uncategorized')).toBe('1');
+    expect(main.request.params.has('period_id')).toBe(false);
+    main.flush(
+      page([
+        aTransaction({ id: 'bank', category_id: null, category: null, source: 'bank', uncategorized: true, payee: 'MERCADONA 123' }),
+      ]),
+    );
+    requests.filter((req) => req !== main).forEach((req) => req.flush(page([])));
+    await tick();
+    harness.detectChanges();
+
+    const element = harness.routeNativeElement as HTMLElement;
+    const chip = Array.from(element.querySelectorAll<HTMLButtonElement>('button[ui-chip]')).find((button) =>
+      button.textContent!.includes('Sin categoría'),
+    )!;
+    expect(chip.getAttribute('aria-pressed')).toBe('true');
+    const row = element.querySelector('fin-transaction-row')!;
+    expect(row.textContent).toContain('Por revisar');
+    expect(row.querySelector('ui-badge[title="Importado del banco"]')).not.toBeNull();
+
+    chip.click();
+    await tick();
+    expect(TestBed.inject(Router).url).toBe('/finanzas/movimientos?periodo=todos');
+  });
+
+  it('shows an all-done state when nothing is left uncategorized', async () => {
+    const harness = await render('/finanzas/movimientos?sin_categoria=1');
+    http.match((req) => req.url === '/api/v1/finance/transactions').forEach((req) => req.flush(page([])));
+    await tick();
+    harness.detectChanges();
+    expect(harness.routeNativeElement!.textContent).toContain('Todo categorizado');
+  });
+
+  it('does not flag categorised manual rows', async () => {
+    const harness = await render();
+    http.match((req) => req.url === '/api/v1/finance/transactions').forEach((req) => req.flush(page([aTransaction()])));
+    await tick();
+    harness.detectChanges();
+    const row = harness.routeNativeElement!.querySelector('fin-transaction-row')!;
+    expect(row.textContent).not.toContain('Por revisar');
+    expect(row.querySelector('ui-badge[title="Importado del banco"]')).toBeNull();
+  });
 });

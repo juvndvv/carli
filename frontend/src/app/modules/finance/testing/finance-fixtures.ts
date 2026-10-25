@@ -92,6 +92,8 @@ export function aTransaction(overrides: Partial<Transaction> = {}): Transaction 
     transfer_account_id: null,
     recurring_rule_id: null,
     debt_id: null,
+    source: 'manual',
+    uncategorized: false,
     splits: [],
     shares: [],
     deleted: false,

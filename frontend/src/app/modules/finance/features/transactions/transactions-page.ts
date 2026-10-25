@@ -157,6 +157,9 @@ export function groupByDay(transactions: Transaction[], hideIncomingTransfers: b
         <button ui-chip type="button" icon="clock" [selected]="filters().status === 'pending'" (click)="togglePending()">
           Pendientes{{ pendingCount() !== null ? ' (' + pendingCount() + ')' : '' }}
         </button>
+        <button ui-chip type="button" icon="circle-dashed" [selected]="filters().uncategorized" (click)="toggleUncategorized()">
+          Sin categoría
+        </button>
         <button ui-chip type="button" icon="sliders-horizontal" [selected]="moreFiltersActive()" [pressable]="false" (click)="pickMore()">
           Más filtros
         </button>
@@ -237,7 +240,11 @@ export function groupByDay(transactions: Transaction[], hideIncomingTransfers: b
         </ui-card>
       } @else if (groups().length === 0) {
         <ui-card>
-          @if (activeCount() > 0 || filters().q) {
+          @if (onlyUncategorized()) {
+            <ui-empty-state icon="circle-check" heading="Todo categorizado" description="No quedan movimientos sin categoría en lo que estás viendo.">
+              <button ui-button type="button" variant="secondary" (click)="toggleUncategorized()">Ver todos los movimientos</button>
+            </ui-empty-state>
+          } @else if (activeCount() > 0 || filters().q) {
             <ui-empty-state icon="search" heading="Nada coincide con los filtros" description="Prueba con otro periodo o quita algún filtro.">
               <button ui-button type="button" variant="secondary" (click)="clearFilters()">Quitar filtros</button>
             </ui-empty-state>
@@ -378,6 +385,7 @@ export class TransactionsPage {
   protected readonly selected = signal<ReadonlySet<string>>(new Set());
 
   protected readonly activeCount = computed(() => activeFilterCount(this.filters()));
+  protected readonly onlyUncategorized = computed(() => this.filters().uncategorized && this.activeCount() === 1 && !this.filters().q);
   protected readonly moreFiltersActive = computed(() => {
     const filters = this.filters();
     return filters.min !== null || filters.max !== null || filters.from !== null || filters.to !== null || filters.status === 'cleared';
@@ -515,6 +523,10 @@ export class TransactionsPage {
 
   protected togglePending(): void {
     this.updateFilters({ status: this.filters().status === 'pending' ? null : 'pending' });
+  }
+
+  protected toggleUncategorized(): void {
+    this.updateFilters({ uncategorized: !this.filters().uncategorized });
   }
 
   protected clearFilters(): void {

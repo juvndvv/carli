@@ -57,6 +57,14 @@ export function transactionIcon(transaction: Transaction): string {
       </span>
       @if (hasBadges()) {
         <span badges class="badges">
+            @if (transaction().uncategorized) {
+              <ui-badge tone="warning" icon="circle-dashed">Por revisar</ui-badge>
+            }
+            @if (transaction().source === 'bank') {
+              <ui-badge icon="landmark" class="origin" title="Importado del banco">
+                <span class="sr-only">Importado del banco</span>
+              </ui-badge>
+            }
             @if (transaction().status === 'pending') {
               <ui-badge tone="warning" icon="clock">Pendiente</ui-badge>
             }
@@ -108,6 +116,9 @@ export function transactionIcon(transaction: Transaction): string {
     .badges {
       display: contents;
     }
+    .origin {
+      padding: 0 6px;
+    }
   `,
 })
 export class FinTransactionRow {
@@ -130,6 +141,8 @@ export class FinTransactionRow {
   protected readonly hasBadges = computed(() => {
     const transaction = this.transaction();
     return (
+      transaction.uncategorized ||
+      transaction.source === 'bank' ||
       transaction.status === 'pending' ||
       transaction.shares.length > 0 ||
       transaction.splits.length > 0 ||

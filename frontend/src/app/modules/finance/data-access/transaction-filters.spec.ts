@@ -57,4 +57,15 @@ describe('transaction filters', () => {
     expect(filtersToApiQuery({ ...EMPTY_FILTERS, period: 'all' }, 'period-current')['period_id']).toBeNull();
     expect(filtersToApiQuery({ ...EMPTY_FILTERS, from: '2026-01-01' }, 'period-current')['period_id']).toBeNull();
   });
+
+  it('maps the Sin categoría filter between query params and the API', () => {
+    const filters = filtersFromParams({ sin_categoria: '1', periodo: 'todos' });
+    expect(filters.uncategorized).toBe(true);
+    expect(filters.period).toBe('all');
+    expect(activeFilterCount(filters)).toBe(1);
+    expect(filtersToParams(filters)['sin_categoria']).toBe('1');
+    expect(filtersToApiQuery(filters, 'period-current')['uncategorized']).toBe(1);
+    expect(filtersToApiQuery(EMPTY_FILTERS, 'period-current')['uncategorized']).toBeNull();
+    expect(filtersFromParams({ sin_categoria: '0' }).uncategorized).toBe(false);
+  });
 });
