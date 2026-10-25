@@ -72,6 +72,14 @@ export const financeRoutes: Routes = [
         path: 'ajustes',
         loadComponent: () => import('./features/settings/finance-settings-page').then((m) => m.FinanceSettingsPage),
       },
+      {
+        path: 'ajustes/bancos',
+        loadComponent: () => import('./features/bank/bank-connections-page').then((m) => m.BankConnectionsPage),
+      },
+      {
+        path: 'ajustes/bancos/:id/vincular',
+        loadComponent: () => import('./features/bank/bank-link-page').then((m) => m.BankLinkPage),
+      },
     ],
   },
 ];

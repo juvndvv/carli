@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { firstValidationMessage } from '@core/http/api';
 import { UiBadge } from '@ui/badge/badge';
 import { UiButton } from '@ui/button/button';
@@ -33,6 +34,7 @@ const OPENED_BY_LABELS: Record<PeriodOpenedBy, string> = {
   selector: 'fin-settings-panel',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     UiCard,
     UiField,
     UiInput,
@@ -109,6 +111,11 @@ const OPENED_BY_LABELS: Record<PeriodOpenedBy, string> = {
       </ui-card>
 
       <div class="stack">
+        <ui-card heading="Bancos">
+          <p class="small muted intro">Importa movimientos de Revolut, BBVA o MyInvestor y gestiona las reglas de categorización.</p>
+          <a ui-button variant="secondary" size="sm" icon="landmark" routerLink="/finanzas/ajustes/bancos">Bancos y reglas</a>
+        </ui-card>
+
         <ui-card heading="Categorías que abren periodo">
           <p class="small muted intro">Al registrar un ingreso de estas categorías empieza un periodo nuevo.</p>
           <div class="ui-list">
