@@ -1,6 +1,8 @@
-export const INK = [13, 13, 13];
+export const INK = [20, 20, 19];
+export const SUN = [255, 201, 51];
+export const SUN_NIGHT = [255, 210, 77];
 export const PAPER = [255, 255, 255];
-export const NIGHT = [33, 33, 33];
+export const NIGHT = [28, 27, 25];
 
 const FACE = { x0: 12, y0: 12, x1: 88, y1: 88, radius: 28 };
 const EYES = [
@@ -24,7 +26,7 @@ export const markAt = (x, y) => {
 
 export const mix = (from, to, ratio) => from.map((value, index) => Math.round(value * (1 - ratio) + to[index] * ratio));
 
-export const markSvg = ({ face = '#0D0D0D', eyes = '#FFFFFF', background } = {}) => {
+export const markSvg = ({ face = '#FFC933', eyes = '#141413', background } = {}) => {
   const backdrop = background ? `<rect width="100" height="100" fill="${background}"/>` : '';
   const eyeShapes = EYES.map(({ cx, cy, rx, ry }) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${eyes}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${backdrop}<rect x="${FACE.x0}" y="${FACE.y0}" width="${FACE_SIZE}" height="${FACE_SIZE}" rx="${FACE.radius}" fill="${face}"/>${eyeShapes}</svg>\n`;

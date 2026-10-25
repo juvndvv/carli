@@ -9,7 +9,7 @@ export const THEME_STORAGE_KEY = 'pa-theme';
 
 const THEME_ORDER: ThemePreference[] = ['light', 'dark', 'system'];
 
-const THEME_COLORS: Record<EffectiveTheme, string> = { light: '#FFFFFF', dark: '#212121' };
+const THEME_COLORS: Record<EffectiveTheme, string> = { light: '#FFFFFF', dark: '#1C1B19' };
 
 export const isThemePreference = (value: unknown): value is ThemePreference =>
   value === 'system' || value === 'light' || value === 'dark';

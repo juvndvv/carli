@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="description" content="Tu asistente personal: finanzas y más módulos.">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#212121" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#1C1B19" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="carli">
@@ -57,7 +57,9 @@
   <style>
     .launch {
       --launch-bg: #FFFFFF;
-      --launch-face: #0D0D0D;
+      --launch-face: #FFC933;
+      --launch-eye: #141413;
+      --launch-word: #141413;
       position: fixed;
       inset: 0;
       z-index: 1001;
@@ -65,9 +67,9 @@
       transition: opacity 240ms ease-out;
     }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .launch { --launch-bg: #212121; --launch-face: #FFFFFF; }
+      :root:not([data-theme="light"]) .launch { --launch-bg: #1C1B19; --launch-face: #FFD24D; --launch-word: #EDEBE6; }
     }
-    :root[data-theme="dark"] .launch { --launch-bg: #212121; --launch-face: #FFFFFF; }
+    :root[data-theme="dark"] .launch { --launch-bg: #1C1B19; --launch-face: #FFD24D; --launch-word: #EDEBE6; }
     .launch-mark {
       position: absolute;
       top: 50%;
@@ -78,14 +80,14 @@
     }
     .launch-mark svg { display: block; width: 100%; height: 100%; }
     .launch-face { fill: var(--launch-face); }
-    .launch-eye { fill: var(--launch-bg); transform-box: fill-box; transform-origin: center; }
+    .launch-eye { fill: var(--launch-eye); transform-box: fill-box; transform-origin: center; }
     .launch-word {
       position: absolute;
       top: calc(50% + 64px);
       left: 0;
       right: 0;
       text-align: center;
-      color: var(--launch-face);
+      color: var(--launch-word);
       font: 650 26px/32px ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
       letter-spacing: -0.03em;
       opacity: 0;

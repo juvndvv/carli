@@ -56,7 +56,7 @@ const STATE_LABELS: Record<ProgressState, string> = { ok: 'En margen', warn: 'Ce
       transition: width var(--motion-enter) ease-out;
     }
     :host(.tone-primary) .fill {
-      background: var(--primary);
+      background: var(--primary-strong);
     }
     :host(.tone-status.state-warn) .fill {
       background: var(--warning);
