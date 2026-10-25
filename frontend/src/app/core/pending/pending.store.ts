@@ -108,6 +108,10 @@ export class PendingStore {
     }
   }
 
+  reloadList(): Promise<void> {
+    return this.listLoadedState() ? this.load(this.filterState()) : Promise.resolve();
+  }
+
   async loadMore(): Promise<void> {
     const cursor = this.cursorState();
     if (!cursor || this.listLoadingState()) {

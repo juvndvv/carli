@@ -95,6 +95,27 @@ describe('PendingStore', () => {
     http.expectOne('/api/v1/pending/summary').flush({ data: aSummary(0, 1) });
   });
 
+  it('reloads the list only once it has been loaded', async () => {
+    await store.reloadList();
+    http.expectNone((request) => request.url === '/api/v1/pending');
+
+    const load = store.load();
+    http
+      .expectOne((request) => request.url === '/api/v1/pending')
+      .flush({ data: [aPendingItem(), aPendingItem({ id: 'tx-2' })], meta: { has_more: false, next_cursor: null } });
+    http.expectOne('/api/v1/pending/summary').flush({ data: aSummary() });
+    await load;
+
+    const reload = store.reloadList();
+    http
+      .expectOne((request) => request.url === '/api/v1/pending')
+      .flush({ data: [aPendingItem({ id: 'tx-2' })], meta: { has_more: false, next_cursor: null } });
+    http.expectOne('/api/v1/pending/summary').flush({ data: aSummary(1, 1) });
+    await reload;
+
+    expect(store.items().map((item) => item.id)).toEqual(['tx-2']);
+  });
+
   it('only refreshes on invalidation after the summary has been loaded', async () => {
     vi.useFakeTimers();
     store.invalidate();

@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { firstValidationMessage } from '@core/http/api';
+import { PendingStore } from '@core/pending/pending.store';
 import { ToastService } from '@ui/toast/toast.service';
 import { CategoriesService } from '../../data-access/categories.service';
 import { TransactionsService } from '../../data-access/transactions.service';
@@ -24,6 +25,7 @@ export class SimilarCategorization {
   private readonly transactions = inject(TransactionsService);
   private readonly categories = inject(CategoriesService);
   private readonly toast = inject(ToastService);
+  private readonly pending = inject(PendingStore);
 
   async offer(transactionId: string, categoryId: string): Promise<boolean> {
     let count: number;
@@ -35,7 +37,7 @@ export class SimilarCategorization {
     if (count === 0) {
       return false;
     }
-    this.toast.show({
+    this.toast.enqueue({
       message: similarMessage(count),
       duration: SIMILAR_OFFER_DURATION,
       action: { label: applySimilarLabel(count), handler: () => this.apply(transactionId, categoryId) },
@@ -46,6 +48,7 @@ export class SimilarCategorization {
   async apply(transactionId: string, categoryId: string): Promise<void> {
     try {
       const result = await this.transactions.categorizeSimilar(transactionId, { category_id: categoryId, remember: true });
+      void this.pending.reloadList();
       const category = this.categories.find(categoryId)?.label ?? 'la categoría elegida';
       this.toast.show(appliedMessage(result.updated, result.rule?.pattern ?? null, category));
     } catch (error) {
