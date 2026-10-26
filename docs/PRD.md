@@ -214,6 +214,7 @@ Complementa la entrada manual, no la sustituye. Proveedor: Enable Banking (agreg
 | FI-BK-13 | Las parejas dudosas (solo importe y fecha, varios candidatos o algún movimiento ya categorizado) aparecen en Pendientes como **"¿Es una transferencia entre BBVA y Revolut?"** con *Confirmar* y *No es transferencia* (que se recuerda). Mientras un movimiento esté propuesto como transferencia no aparece además como "sin categoría" en Pendientes. | Must |
 | FI-BK-15 | Movimiento a o desde una cuenta que el banco no expone (p. ej. la Cuenta Remunerada de Revolut): si el importado no tiene contraparte importada ni externa y su concepto es «To/From X», donde X es el nombre de **una sola** cuenta manual («Revolut · Cuenta Remunerada»), se enlaza solo con esa cuenta como en FI-BK-14. Deshacer lo devuelve a gasto o ingreso y no se vuelve a enlazar. | Should |
 | FI-BK-14 | Transferencia con una cuenta **sin conexión** (p. ej. MyInvestor manual): en el detalle de un gasto o ingreso importado, "Es una transferencia a/desde…" eligiendo una cuenta manual. El importado pasa a ser una pata y se crea la otra en la cuenta manual. Deshacer borra la pata creada. Importe, fecha y cuenta del importado siguen sin poder cambiarse. | Should |
+| FI-BK-16 | **Recurrentes en cuentas conectadas**: el previsto entra como pendiente y espera al banco. Al importar, un movimiento de la misma cuenta y tipo a ±5 días de la fecha prevista lo sustituye si el importe coincide exacto, o si el comercio del recurrente aparece en el del banco y el importe difiere un 50 % o menos. Se queda con el comercio y la categoría del recurrente y con importe y fecha del banco. Si el cargo llega antes de generarse el previsto, se enlaza con esa ocurrencia y el recurrente avanza. Si pasan 5 días sin que entre, aparece en Pendientes como «No ha entrado en el banco» y se avisa al día siguiente. | Must |
 
 Notas:
 - Sin deduplicación automática: si un gasto se apunta a mano y luego llega del banco, cuenta dos veces hasta que el usuario borre uno. FI-BK-07 hace visible la diferencia.
@@ -234,7 +235,7 @@ Notas:
 |---|---|---|
 | Presupuesto al 80 % / 100 % | Al guardar un movimiento que cruza el umbral | On |
 | Cargo recurrente próximo | X días antes, a las 09:00 | On |
-| Recurrente pendiente de confirmar | Día del cargo, 09:00 | On |
+| Recurrente pendiente de confirmar | Día del cargo, 09:00; en cuentas conectadas, 6 días después si no ha entrado | On |
 | Objetivo alcanzado | Al cruzar hitos | Off |
 | Recordatorio de deuda | Fecha de vencimiento | On |
 | Resumen semanal | Lunes 09:00 | Off |

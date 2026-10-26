@@ -109,7 +109,7 @@ Reglas:
 - `Contracts/BankDataProvider`: `listAspsps()`, `startAuth(aspsp, redirectUrl)`, `completeAuth(code)`, `listAccounts(session)`, `fetchTransactions(accountUid, from, to)`, `fetchBalance(accountUid)`, `revoke(session)`.
 - Nombre de cuenta: Enable Banking pone el titular en `name` y el nombre de la cuenta en `details` o `product`. `BankAccount::suggestedName()` propone «Banco · details|product» o, sin ellos, «Banco · Compartida» (titulares con « & »), «· Tarjeta», «· Ahorro» o «· Principal».
 - `Providers/EnableBankingProvider`: JWT RS256 firmado con la clave privada de la aplicación (TTL ≤ 24 h), cliente HTTP con reintentos y backoff.
-- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. Aplica las reglas de autocategorización (PRD FI-BK-10); lo que no casa entra sin categoría. Al final llama a `TransferDetector` (§4.1.2). No toca periodos.
+- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. Aplica las reglas de autocategorización (PRD FI-BK-10); lo que no casa entra sin categoría. Antes, `RecurringBankMatcher` busca un recurrente de la misma cuenta y tipo (previsto pendiente o `next_occurrence` a ±5 días; importe exacto, o comercio contenido con `MerchantText` y diferencia ≤ 50 %); si lo hay, el previsto pasa a `source = 'bank'` con importe y fecha del banco vía `TransactionService::update` (respeta periodos), o se crea el movimiento enlazado a esa ocurrencia y se avanza la regla (PRD FI-BK-16). Al final llama a `TransferDetector` (§4.1.2). No toca periodos.
 
 ### 4.1.1 Pendientes (contrato de Core)
 
@@ -546,7 +546,7 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 
 | Tarea | Frecuencia | Qué hace |
 |---|---|---|
-| `finance:materialize-recurring` | Diario 06:00 | Crea movimientos de reglas con `next_occurrence <= hoy` (confirmados si `auto`, pendientes si `confirm`) y avanza `next_occurrence`. Idempotente (clave única regla + fecha). |
+| `finance:materialize-recurring` | Diario 06:00 | Crea movimientos de reglas con `next_occurrence <= hoy` (confirmados si `auto`, pendientes si `confirm` o si la cuenta está conectada al banco) y avanza `next_occurrence`. Idempotente (clave única regla + fecha). |
 | `finance:upcoming-charges` | Diario 09:00 | Push de cargos en `remind_days_before` días |
 | Listener `TransactionSaved` | Evento | Recalcula consumo del presupuesto y notifica al cruzar 80/100 % (guardar umbral notificado por mes para no repetir) |
 | Listener `PayrollRegistered` | Evento | Si el ingreso es de una categoría `opens_period`, está confirmado y han pasado ≥ N días desde el inicio del periodo abierto: cierra el actual (`end_date = fecha − 1`), abre uno nuevo y copia presupuestos, todo en una transacción. Al editar o borrar esa nómina, `PeriodService::rebuild()` recalcula límites. |
