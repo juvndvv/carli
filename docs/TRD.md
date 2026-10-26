@@ -543,7 +543,7 @@ Pipeline (GitHub Actions): tests → build imagen → push a GHCR → SSH al VPS
 
 Alternativa más simple a valorar: FrankenPHP (Caddy + PHP en una imagen) reduce un contenedor.
 
-App iOS: se compila con Flutter/Xcode y se instala en el dispositivo; `API_URL` (`--dart-define`) fija el backend en tiempo de compilación (por defecto `http://192.168.0.20:8180/api`, red local). `NSLocalNetworkUsageDescription` y `NSFaceIDUsageDescription` están en `Info.plist`.
+App iOS: se compila con Flutter/Xcode y se instala en el dispositivo; `API_URL` (`--dart-define`) fija el backend en tiempo de compilación (por defecto `http://MacBook-Pro-van-Yurest.local:8180/api`, red local). `NSLocalNetworkUsageDescription` y `NSFaceIDUsageDescription` están en `Info.plist`.
 
 Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -d <simulador> --dart-define=API_URL=http://127.0.0.1:8180/api` para la app.
 

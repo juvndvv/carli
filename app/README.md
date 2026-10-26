@@ -8,7 +8,7 @@ Native iOS client for carli, built with Flutter. It talks to the Laravel API in 
 flutter run --dart-define=API_URL=http://<host>:8180/api
 ```
 
-`API_URL` defaults to `http://192.168.0.20:8180/api`. Debug builds include a component catalog at `/dev/catalogo`, linked from the login and "Más" screens.
+`API_URL` defaults to `http://MacBook-Pro-van-Yurest.local:8180/api`. Debug builds include a component catalog at `/dev/catalogo`, linked from the login and "Más" screens.
 
 ## Checks
 
