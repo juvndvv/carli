@@ -56,6 +56,19 @@ class AuthController extends Notifier<AuthState> {
     return result;
   }
 
+  void updateUser(CurrentUser user) {
+    if (state is SignedIn) state = SignedIn(user);
+  }
+
+  Future<void> refreshUser() async {
+    if (state is! SignedIn) return;
+    try {
+      state = SignedIn(await _repository.me());
+    } on DioException {
+      return;
+    }
+  }
+
   Future<void> logout() async {
     await _repository.logout();
     state = const SignedOut();

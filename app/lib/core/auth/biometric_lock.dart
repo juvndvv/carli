@@ -52,6 +52,7 @@ class BiometricLock extends Notifier<BiometricLockState> {
   Future<void> _restore() async {
     if (await _storage.read(key: _enabledKey) != 'true') {
       state = state.copyWith(ready: true);
+      state = state.copyWith(label: await _label());
       return;
     }
     state = state.copyWith(enabled: true, locked: true, label: await _label());
@@ -94,7 +95,7 @@ class BiometricLock extends Notifier<BiometricLockState> {
     try {
       final types = await _auth.getAvailableBiometrics();
       if (types.contains(BiometricType.fingerprint)) return 'Touch ID';
-    } on LocalAuthException {
+    } on Exception {
       return 'Face ID';
     }
     return 'Face ID';
