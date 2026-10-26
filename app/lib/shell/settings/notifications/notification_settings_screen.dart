@@ -279,7 +279,7 @@ class _PreferenceGroupCard extends ConsumerWidget {
     try {
       await ref.read(notificationPreferencesProvider.notifier).toggle(preference, channel, value);
     } on Object {
-      ref.read(toastControllerProvider.notifier).error('No se han podido guardar las preferencias');
+      ref.read(toastControllerProvider.notifier).error('No se han podido guardar los ajustes de avisos');
     }
   }
 

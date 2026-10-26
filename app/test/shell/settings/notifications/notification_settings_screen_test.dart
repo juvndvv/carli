@@ -120,7 +120,7 @@ void main() {
     await settle(tester);
 
     expect(switchFor(tester, label).value, isTrue);
-    expect(find.text('No se han podido guardar las preferencias'), findsOneWidget);
+    expect(find.text('No se han podido guardar los ajustes de avisos'), findsOneWidget);
     await tester.pump(defaultToastDuration);
   });
 

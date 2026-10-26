@@ -16,6 +16,7 @@ import '../../modules/finance/ui/finance_home_card.dart';
 import '../../ui/button.dart';
 import '../../ui/icon_names.dart';
 import '../../ui/page.dart';
+import '../../ui/settings_avatar_button.dart';
 import '../notifications/notifications_home_card.dart';
 import '../notifications/unread_dot.dart';
 import '../pending/pending_home_card.dart';
@@ -51,6 +52,7 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () => context.push(Routes.search),
           ),
           const NotificationsBellButton(),
+          const SettingsAvatarButton(),
         ],
       ),
       onRefresh: () async {

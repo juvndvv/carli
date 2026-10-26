@@ -2,20 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/auth/auth_controller.dart';
 import '../../../core/format/money.dart';
 import '../../../core/router/router.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../ui/async_view.dart';
-import '../../../ui/avatar.dart';
 import '../../../ui/card.dart';
 import '../../../ui/chart.dart';
 import '../../../ui/empty_state.dart';
 import '../../../ui/icon_names.dart';
 import '../../../ui/list_item.dart';
 import '../../../ui/page.dart';
-import '../../../ui/pressable.dart';
+import '../../../ui/settings_avatar_button.dart';
 import '../../../ui/skeleton.dart';
 import '../../../ui/metric_card.dart';
 import '../../../ui/stat.dart';
@@ -94,7 +92,7 @@ class SummaryScreen extends ConsumerWidget {
 
     return CarliPage(
       title: 'Resumen',
-      trailing: const _ProfileButton(),
+      trailing: const SettingsAvatarButton(),
       onRefresh: () async {
         ref.read(financeChangesProvider.notifier).refreshAll();
         await ref.read(dashboardProvider(periodId).future).then((_) {}, onError: (_) {});
@@ -430,28 +428,6 @@ class _Section extends StatelessWidget {
             child: child,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Avatar at the top right, as in Fitness: opens Ajustes.
-class _ProfileButton extends ConsumerWidget {
-  const _ProfileButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final name = switch (ref.watch(authControllerProvider)) {
-      SignedIn(:final user?) => user.name,
-      _ => '',
-    };
-    return Semantics(
-      button: true,
-      label: 'Ajustes',
-      excludeSemantics: true,
-      child: Pressable(
-        onTap: () => context.push(Routes.settings),
-        child: CarliAvatar(name: name, size: 32),
       ),
     );
   }

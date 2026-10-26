@@ -195,6 +195,22 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('opens Ajustes from the avatar on Inicio', (tester) async {
+    await pumpApp(
+      tester,
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+
+    await tester.tap(find.bySemanticsLabel('Ajustes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ajustes'), findsWidgets);
+    expect(find.text('Perfil'), findsOneWidget);
+  });
+
   testWidgets('leaves the modules the user turned off out of the home tabs', (tester) async {
     await pumpApp(
       tester,

@@ -118,7 +118,7 @@ Solo iPhone, una columna, gutter 16 pt.
 
   La activa lleva una píldora `text` al 8 % e icono y texto en `brandInk`.
 - **Botón "+"** redondo de 62 pt en `primary`, a la derecha de la cápsula, solo dentro de Finanzas: nuevo movimiento. En Inicio la cápsula ocupa todo el ancho.
-- **Avatar** arriba a la derecha en el Resumen: abre Ajustes.
+- **Avatar** (`SettingsAvatarButton`) arriba a la derecha en Inicio y en el Resumen: abre Ajustes.
 - **Páginas** (`CarliPage`): `CupertinoSliverNavigationBar` con título grande `h1` que se compacta a `h2`; fondo `bg` al 85 % y borde inferior de 0,5 pt; pull-to-refresh nativo.
 - Altas y edición en sheets inferiores (`showCarliSheet`) o a altura completa (`showFullSheet` con `FullSheetHeader`: "Cancelar" a la izquierda, título y "Guardar" a la derecha).
 

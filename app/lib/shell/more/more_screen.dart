@@ -32,7 +32,7 @@ const financeEntries = [
   MoreEntry('Objetivos', 'target', Routes.goals),
   MoreEntry('Deudas', 'hand-coins', Routes.debts),
   MoreEntry('Compartidos', 'users', Routes.shared),
-  MoreEntry('Ajustes de finanzas', 'settings', Routes.financeSettings),
+  MoreEntry('Ajustes de Finanzas', 'settings', Routes.financeSettings),
 ];
 
 class MoreScreen extends ConsumerWidget {
