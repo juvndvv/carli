@@ -13,16 +13,21 @@ import '../core/theme/tokens.dart';
 import '../core/theme/typography.dart';
 import '../core/pending/pending_providers.dart';
 import '../modules/finance/screens/transaction_sheet.dart';
+import '../modules/tasks/screens/new_task_sheet.dart';
+import '../modules/tasks/ui/tasks_routes.dart';
 import '../ui/icon.dart';
 import '../ui/icon_names.dart';
 import '../ui/pressable.dart';
 import 'pending/pending_badge.dart';
 
 /// Which set of tabs the bar shows: carli's general home lists the modules, a module lists its own screens.
-enum ShellContext { home, finance }
+enum ShellContext { home, finance, tasks }
 
-ShellContext shellContextFor(String location) =>
-    location == Routes.home || _homeChildren.any(location.startsWith) ? ShellContext.home : ShellContext.finance;
+ShellContext shellContextFor(String location) => switch (location) {
+  _ when location == Routes.home || _homeChildren.any(location.startsWith) => ShellContext.home,
+  _ when location.startsWith(TasksRoutes.root) => ShellContext.tasks,
+  _ => ShellContext.finance,
+};
 
 const _homeChildren = [Routes.pending, Routes.notifications, Routes.search, Routes.comingSoon];
 
@@ -62,6 +67,13 @@ const financeDestinations = [
   ShellDestination('Más', HugeIconsStrokeRounded.menu01, 4, showsPending: true),
 ];
 
+const tasksDestinations = [
+  ShellDestination('Hoy', HugeIconsStrokeRounded.checkmarkCircle02, 5),
+  ShellDestination('Próximas', HugeIconsStrokeRounded.calendar03, 6),
+  ShellDestination('Listas', HugeIconsStrokeRounded.leftToRightListBullet, 7),
+  ShellDestination('Plantillas', HugeIconsStrokeRounded.repeat, 8),
+];
+
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell, required this.location});
 
@@ -82,8 +94,8 @@ class AppShell extends ConsumerWidget {
     );
     final tabs = switch (shellContext) {
       ShellContext.home => _moduleTabs(context, ref.watch(modulesProvider).value),
-      ShellContext.finance => [
-        for (final destination in financeDestinations)
+      ShellContext.finance || ShellContext.tasks => [
+        for (final destination in shellContext == ShellContext.tasks ? tasksDestinations : financeDestinations)
           ShellTab(
             label: destination.label,
             icon: destination.icon,
@@ -100,7 +112,12 @@ class AppShell extends ConsumerWidget {
       bottomNavigationBar: CarliBottomNav(
         home: home,
         tabs: tabs,
-        onAdd: atHome ? null : () => showTransactionSheet(context),
+        onAdd: switch (shellContext) {
+          ShellContext.home => null,
+          ShellContext.finance => () => showTransactionSheet(context),
+          ShellContext.tasks => () => showNewTaskSheet(context),
+        },
+        addLabel: shellContext == ShellContext.tasks ? 'Nueva tarea' : 'Nuevo movimiento',
       ),
     );
   }
@@ -141,11 +158,18 @@ class AppShell extends ConsumerWidget {
 /// Floating tab bar: a translucent capsule with Inicio pinned at the left, the context's tabs scrolling
 /// beside it and, inside a module, the round "+" button.
 class CarliBottomNav extends StatelessWidget {
-  const CarliBottomNav({super.key, required this.home, required this.tabs, this.onAdd});
+  const CarliBottomNav({
+    super.key,
+    required this.home,
+    required this.tabs,
+    this.onAdd,
+    this.addLabel = 'Nuevo movimiento',
+  });
 
   final ShellTab home;
   final List<ShellTab> tabs;
   final VoidCallback? onAdd;
+  final String addLabel;
 
   static const height = 62.0;
 
@@ -197,7 +221,7 @@ class CarliBottomNav extends StatelessWidget {
             if (onAdd case final onAdd?)
               Semantics(
                 button: true,
-                label: 'Nuevo movimiento',
+                label: addLabel,
                 excludeSemantics: true,
                 child: Pressable(
                   onTap: onAdd,

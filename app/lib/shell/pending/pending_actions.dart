@@ -6,6 +6,7 @@ import '../../core/pending/pending_models.dart';
 import '../../core/pending/pending_types.dart';
 import '../../core/router/router.dart';
 import '../../modules/finance/data/transaction_filters.dart';
+import '../../modules/tasks/ui/tasks_pending.dart';
 import 'finance_pending_actions.dart';
 
 typedef PendingActionBuilder = Widget Function(PendingItem item, ValueChanged<PendingItem> onResolved);
@@ -65,6 +66,17 @@ final financePendingActions = PendingModuleActions(
   open: openFinancePendingRoute,
 );
 
+final tasksPendingActions = PendingModuleActions(
+  actions: {
+    TasksPendingTypes.overdue: (item, onResolved) =>
+        OverdueTaskPendingAction(key: ValueKey(item.key), item: item, onResolved: onResolved),
+  },
+  open: openTasksPendingRoute,
+);
+
 final pendingActionRegistryProvider = Provider<PendingActionRegistry>(
-  (ref) => PendingActionRegistry({FinancePendingTypes.module: financePendingActions}),
+  (ref) => PendingActionRegistry({
+    FinancePendingTypes.module: financePendingActions,
+    TasksPendingTypes.module: tasksPendingActions,
+  }),
 );

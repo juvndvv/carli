@@ -20,6 +20,15 @@ import '../../modules/finance/screens/shared/contact_detail_screen.dart';
 import '../../modules/finance/screens/shared/shared_screen.dart';
 import '../../modules/finance/screens/summary_screen.dart';
 import '../../modules/finance/screens/transactions_screen.dart';
+import '../../modules/tasks/screens/list_detail_screen.dart';
+import '../../modules/tasks/screens/lists_screen.dart';
+import '../../modules/tasks/screens/task_detail_screen.dart';
+import '../../modules/tasks/screens/tasks_settings_screen.dart';
+import '../../modules/tasks/screens/template_editor_screen.dart';
+import '../../modules/tasks/screens/templates_screen.dart';
+import '../../modules/tasks/screens/today_screen.dart';
+import '../../modules/tasks/screens/upcoming_screen.dart';
+import '../../modules/tasks/ui/tasks_routes.dart';
 import '../../shell/app_shell.dart';
 import '../../shell/home/coming_soon_module_screen.dart';
 import '../../shell/home/home_screen.dart';
@@ -95,6 +104,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.launch, builder: (context, state) => const LaunchScreen()),
       GoRoute(path: Routes.login, builder: (context, state) => const LoginScreen()),
       if (kDebugMode) GoRoute(path: Routes.catalog, builder: (context, state) => const CatalogScreen()),
+      GoRoute(path: TasksRoutes.root, redirect: (context, state) => TasksRoutes.today),
+      GoRoute(path: TasksRoutes.settings, builder: (context, state) => const TasksSettingsScreen()),
+      GoRoute(
+        path: '/tareas/tarea/:id',
+        builder: (context, state) => TaskDetailScreen(taskId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: TasksRoutes.newTemplate,
+        builder: (context, state) => TemplateEditorScreen(
+          seed: state.extra is TemplateSeed ? state.extra! as TemplateSeed : const TemplateSeed(),
+        ),
+      ),
+      GoRoute(
+        path: '${TasksRoutes.templates}/:id',
+        builder: (context, state) => TemplateEditorScreen(templateId: state.pathParameters['id']),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell, location: state.uri.path),
@@ -229,6 +254,23 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          _branch(TasksRoutes.today, const TodayScreen()),
+          _branch(TasksRoutes.upcoming, const UpcomingScreen()),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: TasksRoutes.lists,
+                builder: (context, state) => const ListsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => ListDetailScreen(listId: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          _branch(TasksRoutes.templates, const TemplatesScreen()),
         ],
       ),
     ],

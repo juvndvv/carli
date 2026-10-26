@@ -85,6 +85,7 @@ const carliIconNames = <String, CarliIconData>{
   'film': HugeIconsStrokeRounded.film01,
   'filter': HugeIconsStrokeRounded.funnel,
   'fingerprint': HugeIconsStrokeRounded.fingerPrint,
+  'flag': HugeIconsStrokeRounded.flag02,
   'flame': HugeIconsStrokeRounded.flame,
   'fuel': HugeIconsStrokeRounded.fuel,
   'funnel': HugeIconsStrokeRounded.funnel,

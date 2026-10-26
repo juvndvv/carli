@@ -36,4 +36,10 @@ class ModulesController extends AsyncNotifier<List<AppModule>> {
       rethrow;
     }
   }
+
+  Future<void> updateSettings(String id, Map<String, Object?> settings) async {
+    final updated = await _repository.updateSettings(id, settings);
+    final current = state.value ?? const [];
+    state = AsyncData([for (final module in current) module.id == id ? updated : module]);
+  }
 }

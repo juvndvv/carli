@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../modules/tasks/ui/tasks_pending.dart';
+
 const fallbackPendingIcon = 'inbox';
 
 @immutable
@@ -78,5 +80,8 @@ class PendingTypeRegistry {
 }
 
 final pendingTypeRegistryProvider = Provider<PendingTypeRegistry>(
-  (ref) => PendingTypeRegistry({FinancePendingTypes.module: financePendingModule}),
+  (ref) => PendingTypeRegistry({
+    FinancePendingTypes.module: financePendingModule,
+    TasksPendingTypes.module: tasksPendingModule,
+  }),
 );

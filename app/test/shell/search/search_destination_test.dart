@@ -43,7 +43,11 @@ void main() {
       '/ajustes/notificaciones': '/mas/ajustes/avisos',
       '/ajustes/modulos': '/mas/ajustes/modulos',
       '/ajustes/modulo/finance': '/mas/ajustes-finanzas',
+      '/ajustes/modulo/tasks': '/tareas/ajustes',
       '/mas/cuentas/acc-1': '/mas/cuentas/acc-1',
+      '/tareas': '/tareas',
+      '/tareas/tarea/task-1': '/tareas/tarea/task-1',
+      '/tareas/plantillas/tpl-1': '/tareas/plantillas/tpl-1',
     };
     for (final MapEntry(key: url, value: location) in cases.entries) {
       test('maps "$url" to $location', () => expect(nativeLocationOf(url), location));
@@ -52,8 +56,7 @@ void main() {
     for (final url in [
       '/finanzas/desconocido',
       '/finanzas/deudas/debt-1',
-      '/ajustes/modulo/tasks',
-      '/tareas',
+      '/ajustes/modulo/notes',
       'https://example.com/finanzas',
     ]) {
       test('has no native location for "$url"', () => expect(nativeLocationOf(url), isNull));
@@ -77,7 +80,7 @@ void main() {
     });
 
     test('has no destination for an unknown route', () {
-      expect(searchDestinationOf(result(module: 'tasks', type: 'task', url: '/tareas/1')), isNull);
+      expect(searchDestinationOf(result(module: 'notes', type: 'note', url: '/notas/1')), isNull);
     });
   });
 

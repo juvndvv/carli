@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
 import '../../core/format/dates.dart';
+import '../../core/modules/app_module.dart';
+import '../../core/modules/modules_provider.dart';
 import '../../core/notifications/notifications_providers.dart';
 import '../../core/pending/pending_providers.dart';
 import '../../core/router/router.dart';
@@ -13,6 +15,9 @@ import '../../modules/finance/data/finance_changes.dart';
 import '../../modules/finance/data/finance_format.dart';
 import '../../modules/finance/data/finance_providers.dart';
 import '../../modules/finance/ui/finance_home_card.dart';
+import '../../modules/tasks/data/tasks_providers.dart';
+import '../../modules/tasks/ui/tasks_home_card.dart';
+import '../../modules/tasks/ui/tasks_routes.dart';
 import '../../ui/button.dart';
 import '../../ui/icon_names.dart';
 import '../../ui/page.dart';
@@ -38,6 +43,7 @@ class HomeScreen extends ConsumerWidget {
     final moment = now ?? DateTime.now();
     final greeting = greetingFor(moment.hour);
     final hasNotifications = ref.watch(notificationsProvider).value?.items.isNotEmpty ?? false;
+    final showsTasks = ref.watch(enabledModuleIdsProvider)?.contains(AppModuleIds.tasks) ?? false;
 
     return CarliPage(
       title: firstName == null || firstName.isEmpty ? greeting : '$greeting, $firstName',
@@ -57,6 +63,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       onRefresh: () async {
         ref.read(financeChangesProvider.notifier).refreshAll();
+        if (showsTasks) ref.read(tasksChangesProvider.notifier).notify();
         await Future.wait([
           ref.read(financeSummaryProvider.future).then((_) {}, onError: (_) {}),
           ref.read(pendingSummaryProvider.notifier).refresh().then((_) {}, onError: (_) {}),
@@ -76,6 +83,13 @@ class HomeScreen extends ConsumerWidget {
                 onOpen: (filter) => context.push(Routes.pendingFor(filter.queryParameters)),
               ),
               FinanceHomeCard(onTap: () => context.go(Routes.summary)),
+              if (showsTasks) ...[
+                const SizedBox(height: CarliSpace.s16),
+                TasksHomeCard(
+                  onOpen: () => context.go(TasksRoutes.today),
+                  onOpenTask: (task) => context.push(TasksRoutes.task(task.id)),
+                ),
+              ],
               const UpcomingModulesCard(),
               if (!hasNotifications) ...[const SizedBox(height: CarliSpace.s16), const NotificationsHomeCard()],
             ],

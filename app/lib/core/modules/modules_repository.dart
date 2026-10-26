@@ -22,6 +22,11 @@ class ModulesRepository {
     ];
   }
 
+  Future<AppModule> updateSettings(String id, Map<String, Object?> settings) async {
+    final response = await _dio.patch<Map<String, dynamic>>('/v1/modules/$id', data: {'settings': settings});
+    return AppModule.fromJson(response.data!['data'] as Map<String, dynamic>);
+  }
+
   Future<AppModule> setEnabled(String id, bool enabled) async {
     final response = await _dio.patch<Map<String, dynamic>>('/v1/modules/$id', data: {'enabled': enabled});
     return AppModule.fromJson(response.data!['data'] as Map<String, dynamic>);
