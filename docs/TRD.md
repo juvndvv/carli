@@ -12,41 +12,40 @@
 
 | Área | Decisión |
 |---|---|
-| Repositorio | Monorepo: `app/` (Flutter) + `backend/` (Laravel) + `frontend/` (Angular, legado) + `infra/` + `docs/` |
+| Repositorio | Monorepo: `app/` (Flutter) + `backend/` (Laravel) + `infra/` + `docs/` |
 | Cliente | App nativa iOS en Flutter 3.47 / Dart 3.13 (bundle `dev.jotade.personal`, solo iOS). Riverpod 3, go_router 18, dio |
-| Cliente legado | Angular 22 (PWA) en `frontend/`. Se mantiene hasta que se decida retirarlo; el stack web lo sigue sirviendo |
 | UI | Librería propia "Ember" en `app/lib/ui` (widgets `Carli*`) sobre `ThemeExtension` de tokens. Iconos Hugeicons, gráficos fl_chart |
 | Backend | Laravel 13, PHP 8.4, arquitectura modular por dominio (`app/Modules/*`) |
 | BD | PostgreSQL 18, un esquema por módulo (`finance.*`), PK UUIDv7 |
-| Auth | Laravel Sanctum: token personal (Bearer) en la app iOS, guardado en el Keychain; cookie de sesión en la web legada. Laravel Fortify headless para 2FA TOTP. Bloqueo local con Face ID |
-| Avisos | App iOS: notificación local diaria (20:00) con el número de pendientes, sin APNs por ahora. Web legada: Web Push (VAPID) con `laravel-notification-channels/webpush` |
+| Auth | Laravel Sanctum: token personal (Bearer) en la app iOS, guardado en el Keychain. Laravel Fortify headless para 2FA TOTP. Bloqueo local con Face ID |
+| Avisos | Notificación local diaria (20:00) con el número de pendientes y bandeja in-app. Sin push remoto hasta tener APNs |
 | Colas y cron | Queue driver `database` + `schedule:work` en contenedor propio (sin Redis en v1) |
-| Contrato API | REST JSON `/api/v1`, OpenAPI generado con Scramble. Modelos Dart escritos a mano en cada módulo (`data/`); la web legada genera tipos TS con `openapi-typescript` |
-| Despliegue | Backend: Docker Compose en VPS propio: Caddy (TLS + web legada + proxy) · PHP-FPM · worker · scheduler · Postgres. App: build de Xcode instalada en el dispositivo |
+| Contrato API | REST JSON `/api/v1`, OpenAPI generado con Scramble. Modelos Dart escritos a mano en cada módulo (`data/`) |
+| Despliegue | Backend: Docker Compose en VPS propio: Caddy (TLS + proxy de las rutas del backend) · PHP-FPM · worker · scheduler · Postgres. App: build de Xcode instalada en el dispositivo |
 | Calidad | Pest + Larastan + Pint · `flutter analyze` + `flutter test` + `integration_test` · GitHub Actions |
 | Open Banking (F3) | Enable Banking (AIS, modo restricted, gratis para cuentas propias) detrás de la interfaz `BankDataProvider`. Solo lectura |
 
-> Versiones a fecha de octubre 2026. Fijarlas en `composer.json` / `pubspec.yaml` (y `package.json` mientras viva la web) y actualizar con Renovate o Dependabot.
+> Versiones a fecha de octubre 2026. Fijarlas en `composer.json` / `pubspec.yaml` y actualizar con Renovate o Dependabot.
 
 ## 2. Arquitectura
 
 ```
 ┌──────────────── VPS (Docker Compose) ─────────────────────┐
 │                                                           │
-│  Caddy :443 ──┬── /           → Angular build (legado)    │
-│               └── /api, /sanctum → php-fpm (Laravel)      │
+│  Caddy :443 ──┬── /api, /sanctum, /up… → php-fpm (Laravel)│
+│               └── resto → 404                             │
 │                                                           │
 │  worker   (php artisan queue:work)                        │
 │  scheduler(php artisan schedule:work)                     │
 │  postgres (volumen persistente) ── backup diario ────────────► almacenamiento externo (restic)
 └───────────────────────────────────────────────────────────┘
-        ▲                         ▲
-        │ HTTPS + Bearer token    │ HTTPS (cookie de sesión)
-   App iOS (Flutter)         Navegador / PWA legada
+        ▲
+        │ HTTPS + Bearer token
+   App iOS (Flutter)
    └ notificación local 20:00
 ```
 
-La app iOS habla con `/api/v1` con un token personal de Sanctum (`Authorization: Bearer`), así que no depende de cookies ni de CORS. La web legada sigue en el mismo origen que la API (`https://app.tudominio.com` y `/api`) con cookies `SameSite=Lax`.
+La app habla con `/api/v1` con un token personal de Sanctum (`Authorization: Bearer`), así que no depende de cookies ni de CORS. Caddy solo expone las rutas del backend (§10).
 
 ## 3. Estructura del monorepo
 
@@ -54,9 +53,8 @@ La app iOS habla con `/api/v1` con un token personal de Sanctum (`Authorization:
 personal-app/
 ├── app/                     # Flutter (iOS)
 ├── backend/                 # Laravel 13
-├── frontend/                # Angular 22 (legado)
 ├── infra/
-│   ├── docker/              # Dockerfiles (php, caddy, backup)
+│   ├── docker/              # Dockerfiles (php, caddy, backup); la imagen de caddy se construye desde infra/
 │   ├── scripts/
 │   └── Caddyfile
 ├── compose.yaml
@@ -169,10 +167,10 @@ MVP: el saldo se **calcula al vuelo** con `SUM` indexado (para un usuario son mi
 | Tabla | Campos clave |
 |---|---|
 | `users` | id, name, email, password, two_factor_secret, two_factor_recovery_codes, preferences jsonb (tema, locale) |
-| `sessions` | driver de sesión `database` (web legada) |
+| `sessions` | driver de sesión `database` (resto del cliente web, §6.3) |
 | `personal_access_tokens` | tokens de Sanctum de la app iOS (uno por dispositivo, `name = 'carli iOS'`) |
 | `user_modules` | user_id, module_id, enabled, settings jsonb |
-| `push_subscriptions` | (del paquete webpush) endpoint, public_key, auth_token, user_agent |
+| `push_subscriptions` | (del paquete webpush) endpoint, public_key, auth_token, user_agent. Resto del cliente web, §6.3 |
 | `notifications` | canal `database` de Laravel (bandeja de la app) |
 | `notification_preferences` | user_id, module_id, type, push bool, in_app bool |
 | `jobs`, `failed_jobs`, `cache` | framework |
@@ -309,7 +307,7 @@ Reglas de importación (F3):
 
 ## 6. API REST
 
-Prefijo `/api/v1`. JSON. Autenticación con Sanctum: token Bearer (app iOS) o cookie de sesión (web legada); los endpoints aceptan ambos. Errores con formato Laravel (`message`, `errors`). Paginación por cursor en listados largos.
+Prefijo `/api/v1`. JSON. Autenticación con token Bearer de Sanctum. Errores con formato Laravel (`message`, `errors`). Paginación por cursor en listados largos.
 
 ### 6.1 Core
 
@@ -317,9 +315,6 @@ Prefijo `/api/v1`. JSON. Autenticación con Sanctum: token Bearer (app iOS) o co
 |---|---|---|
 | POST | `/api/v1/auth/token` | App: `{ email, password, device_name, code? \| recovery_code? }` → `{ token, user }` o `{ two_factor: true }`. Mismo rate limit que el login |
 | DELETE | `/api/v1/auth/token` | App: revoca solo el token en uso |
-| GET | `/sanctum/csrf-cookie` | Web legada: inicializa CSRF |
-| POST | `/login`, `/logout` | Web legada: Fortify |
-| POST | `/two-factor-challenge` | Web legada: Fortify |
 | GET/PATCH | `/api/v1/me` | Usuario + preferencias; perfil |
 | PATCH | `/api/v1/me/preferences` | Tema, ajustes |
 | PUT | `/api/v1/me/password` | Cambio de contraseña con la actual |
@@ -329,19 +324,17 @@ Prefijo `/api/v1`. JSON. Autenticación con Sanctum: token Bearer (app iOS) o co
 | GET | `/api/v1/me/tokens` | Dispositivos con token activo |
 | DELETE | `/api/v1/me/tokens/{id}` | Revoca un dispositivo |
 | POST | `/api/v1/me/tokens/logout-others` | Revoca todos menos el actual |
-| GET/DELETE | `/api/v1/me/sessions[/{id}]`, POST `/me/sessions/logout-others` | Sesiones web |
 | GET | `/api/v1/modules` | Módulos habilitados |
 | PATCH | `/api/v1/modules/{id}` | Activar/desactivar, settings |
 | GET | `/api/v1/notifications` | Bandeja (paginada) |
 | GET | `/api/v1/notifications/unread-count` | Contador del punto de no leídas |
 | POST | `/api/v1/notifications/read` | Marcar leídas |
-| POST/DELETE | `/api/v1/push-subscriptions` | Alta/baja de suscripción Web Push (web legada) |
 | GET/PUT | `/api/v1/notification-preferences` | Preferencias |
 | GET | `/api/v1/pending/summary` | `{ total, by_module: [{ module, type, count }] }` para contador y tarjeta de Inicio |
 | GET | `/api/v1/pending?module=&type=&cursor=` | Lista paginada de `PendingItem` |
 | GET | `/api/v1/search?q=` | Búsqueda global (≥ 2 caracteres) |
 
-Los endpoints `me/password`, `me/two-factor*` y `me/tokens*` existen porque las rutas de Fortify dependen de la sesión web; aceptan el token, piden la contraseña actual en las operaciones sensibles y van limitados a 10/min. La web sigue usando Fortify.
+Los endpoints `me/password`, `me/two-factor*` y `me/tokens*` sustituyen a las rutas de Fortify, que dependen de la sesión web; piden la contraseña actual en las operaciones sensibles y van limitados a 10/min.
 
 ### 6.2 Finanzas (`/api/v1/finance`)
 
@@ -369,12 +362,12 @@ Los endpoints `me/password`, `me/two-factor*` y `me/tokens*` existen porque las 
 | POST | `/contacts/{id}/settle` | Liquida saldo, crea movimiento |
 | CRUD | `/debts` | |
 | GET | `/bank/aspsps?country=ES` | Bancos disponibles (F3) |
-| POST | `/bank/connections` | `{ aspsp_name, aspsp_country, return_to? }` → `{ auth_url }`. `return_to: app` desde la app iOS |
-| GET | `/bank/callback` | Vuelta del banco: valida `state`, crea sesión y redirige a vincular cuentas: a `carli://bank/callback` si el `state` cifrado lleva `return_to: app`, a la web si no |
+| POST | `/bank/connections` | `{ aspsp_name, aspsp_country, return_to: 'app' }` → `{ auth_url }` |
+| GET | `/bank/callback` | Vuelta del banco: valida `state`, crea sesión y redirige a vincular cuentas: a `carli://bank/callback` si el `state` cifrado lleva `return_to: app` |
 | GET | `/bank/connections` | Estado, `valid_until`, último sync |
 | POST | `/bank/connections/{id}/accounts` | `[{ external_account_uid, account_id \| new, sync_from_date }]` |
 | POST | `/bank/connections/{id}/sync` | Sincronizar ahora (job en cola) |
-| POST | `/bank/connections/{id}/renew` | Nuevo `auth_url` conservando las vinculaciones; acepta `return_to: app` |
+| POST | `/bank/connections/{id}/renew` | Nuevo `auth_url` conservando las vinculaciones; también con `return_to: 'app'` |
 | DELETE | `/bank/connections/{id}` | Revoca y marca `revoked` |
 
 En F3, `GET /transactions` añade los filtros `source` y `uncategorized=1`.
@@ -396,9 +389,21 @@ Ejemplo de movimiento:
 }
 ```
 
+### 6.3 Restos del cliente web
+
+El backend todavía conserva piezas del cliente Angular, retirado el 2026-10-26. Ningún cliente las usa; se pueden quitar cuando convenga:
+
+- Sesión de Sanctum por cookie: `statefulApi()` en `bootstrap/app.php`, `SANCTUM_STATEFUL_DOMAINS`, `SESSION_*`, `/sanctum/csrf-cookie` y la tabla `sessions`.
+- Rutas web de Fortify: `POST /login`, `/logout`, `/two-factor-challenge`, `/forgot-password`, `/reset-password` y `/user/*` (Caddy aún las pasa al backend).
+- `GET/DELETE /api/v1/me/sessions[/{id}]` y `POST /me/sessions/logout-others` (sesiones de navegador).
+- Web Push: claves `VAPID_*` (`make setup` aún las genera), `GET /push/public-key`, `POST/DELETE /push-subscriptions`, la tabla `push_subscriptions` y el canal WebPush. Hoy el push de servidor no llega a ningún dispositivo hasta que exista APNs.
+- El callback del banco redirige a la web cuando falta `return_to`.
+- La preferencia `sidebar_collapsed` en `PATCH /me/preferences`.
+- Las URLs de las notificaciones guardadas se generan con el formato de rutas de la web; la app las traduce a sus rutas en `core/notifications/notification_route.dart`.
+
 ## 7. App iOS (Flutter)
 
-Cliente principal: app nativa en `app/` (Flutter 3.47, Dart 3.13), solo iOS (bundle `dev.jotade.personal`, iOS 15+). El frontend Angular de `frontend/` queda como legado hasta que se decida retirarlo; no recibe funcionalidad nueva.
+Cliente principal: app nativa en `app/` (Flutter 3.47, Dart 3.13), solo iOS (bundle `dev.jotade.personal`, iOS 15+). Sustituye a la PWA Angular, retirada del repo el 2026-10-26.
 
 ### 7.1 Estructura
 
@@ -492,10 +497,6 @@ Shell con `StatefulShellRoute.indexedStack` y 5 pestañas; cada una conserva su 
 
 El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña. La pestaña Más muestra el contador de Pendientes.
 
-### 7.6 Web legada (Angular)
-
-`frontend/` (Angular 22, PWA con Web Push) sigue compilándose y sirviéndose desde Caddy con cookie de sesión. Mientras exista, los cambios de API deben ser compatibles con ella (por eso el `return_to` y los endpoints `me/*` por token son adiciones, no sustituciones). Retirarla es una decisión pendiente.
-
 ## 8. Procesos en segundo plano
 
 | Tarea | Frecuencia | Qué hace |
@@ -507,11 +508,11 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 | `finance:payroll-overdue` | Diario 09:00 | Si hoy > `expected_end_date` + 1 y no hay periodo nuevo: push de aviso (PRD FI-PE-07) |
 | `finance:weekly-summary` | Lunes 09:00 | Opcional |
 | `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. |
-| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry` suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy solo llega por Web Push; en iOS lo cubre el aviso local de §7.4 |
+| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry` suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
 
-Los avisos de servidor marcados como push solo salen por Web Push (web legada); en la app iOS aparecen en la bandeja de notificaciones.
+Mientras no haya APNs, los avisos de servidor solo se ven en la bandeja de notificaciones de la app.
 
 Zona horaria de la app: `Europe/Madrid`; fechas de movimientos como `date` (sin hora).
 
@@ -520,12 +521,11 @@ Zona horaria de la app: `Europe/Madrid`; fechas de movimientos como `date` (sin 
 - Sin registro: `php artisan app:create-user`.
 - Fortify con rate limit de login (5/min) y 2FA TOTP; `POST /auth/token` usa el mismo limitador.
 - App iOS: token de Sanctum por dispositivo en el Keychain (`flutter_secure_storage`), revocable desde Ajustes → Seguridad (`/me/tokens`). Bloqueo opcional con Face ID. Contraseña, 2FA y cierre de otros dispositivos piden la contraseña actual.
-- Web legada: cookies `Secure`, `HttpOnly`, `SameSite=Lax`; `SESSION_DOMAIN` y `SANCTUM_STATEFUL_DOMAINS` al dominio de la app.
 - Policies por modelo (aunque haya un usuario: protege contra IDs ajenos si un día hay más).
-- Cabeceras en Caddy: HSTS, CSP estricta, `X-Content-Type-Options`, `Referrer-Policy`.
+- Cabeceras en Caddy: HSTS, CSP `default-src 'none'` en la API (más permisiva solo en `/docs`), `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`. Las rutas que no son del backend responden 404.
 - Postgres sin puerto expuesto fuera de la red Docker. SSH con clave, firewall (solo 22/80/443), actualizaciones automáticas de seguridad del SO.
 - Backups cifrados (restic) y **prueba de restauración** trimestral.
-- Open Banking (F3): clave privada de Enable Banking como **Docker secret** en `/run/secrets/enable_banking.pem`, nunca en el repo ni en la BD; `ENABLE_BANKING_APP_ID` en `.env`. `bank_connections.session_id` cifrado (cast `encrypted`). La redirect URL registrada en Enable Banking es `https://<dominio>/api/v1/finance/bank/callback`; el destino final (web o `carli://bank/callback`) va en el `state` cifrado, de un solo uso y 30 min de validez. `transactions.raw` puede contener IBAN y nombres de contrapartes: queda cubierto por los backups cifrados.
+- Open Banking (F3): clave privada de Enable Banking como **Docker secret** en `/run/secrets/enable_banking.pem`, nunca en el repo ni en la BD; `ENABLE_BANKING_APP_ID` en `.env`. `bank_connections.session_id` cifrado (cast `encrypted`). La redirect URL registrada en Enable Banking es `https://<dominio>/api/v1/finance/bank/callback`; el destino final (`carli://bank/callback`) va en el `state` cifrado, de un solo uso y 30 min de validez. `transactions.raw` puede contener IBAN y nombres de contrapartes: queda cubierto por los backups cifrados.
 
 ## 10. Despliegue
 
@@ -533,7 +533,7 @@ Zona horaria de la app: `Europe/Madrid`; fechas de movimientos como `date` (sin 
 
 | Servicio | Imagen | Notas |
 |---|---|---|
-| `caddy` | caddy:2 | TLS automático, sirve `frontend/dist` (web legada), proxy `/api`, `/sanctum`, `/login`… a `app:9000` (php_fastcgi) |
+| `caddy` | caddy:2, build desde `infra/` (`infra/docker/caddy/Dockerfile`) | TLS automático. Solo pasa a `app:9000` (php_fastcgi) `/api`, `/sanctum/*`, `/user/*`, `/docs`, `/up`, `/broadcasting/*` y los POST de Fortify (`/login`, `/logout`, `/two-factor-challenge`…); cualquier otra ruta responde 404 |
 | `app` | build propio (php:8.4-fpm + extensiones pgsql, intl, bcmath, gmp) | |
 | `worker` | misma imagen | `php artisan queue:work --tries=3` |
 | `scheduler` | misma imagen | `php artisan schedule:work` |
@@ -553,16 +553,15 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 |---|---|---|
 | Backend unit/feature | Pest + `RefreshDatabase` sobre Postgres real (no SQLite: se usan esquemas y pg_trgm) | Servicios de dominio (saldos, transferencias, recurrentes, presupuestos) al 90 %; todos los endpoints con un test feature |
 | Backend estático | Larastan nivel 8+, Pint | CI falla si hay errores |
-| App estático | `flutter analyze` (`flutter_lints`) | Sin avisos |
+| App estático | `flutter analyze` (`flutter_lints`); `make test-app` lanza este y `flutter test` | Sin avisos |
 | App unit/widget | `flutter test`, con el adaptador `FakeApi` de `test/support` en lugar del `HttpClientAdapter` de dio | Formatos, providers, componentes de `ui/`, pantallas del shell y de Finanzas |
 | App integración | `integration_test/` en simulador contra un backend local real (puerto 8181, base de pruebas sembrada con `SEED_DEMO_USER=true php artisan migrate:fresh --seed`): `flutter test integration_test/<fichero> -d <simulador> --dart-define=API_URL=http://127.0.0.1:8181/api` | Login y flujos de Core |
 | Capturas | `flutter drive --driver=test_driver/integration_test.dart --target=integration_test/screenshots*_test.dart` con `SCREENSHOT_DIR` (y `SHOT_THEME`, `SHOT_PREFIX`) | Revisión visual en claro y oscuro |
 | Accesibilidad | `Semantics` en widgets de `ui/`, tamaños táctiles ≥ 44 pt, revisión con VoiceOver | Etiquetas en todos los controles icon-only, gráficos con vista tabla |
-| Web legada | Vitest + Playwright (`make test-frontend`, `make test-e2e`) | Mientras exista |
 
 ## 12. Plan de implementación sugerido
 
-1. **Infra base**: monorepo, compose dev, Laravel + Angular vacíos, CI.
+1. **Infra base**: monorepo, compose dev, Laravel vacío, CI.
 2. **Core backend**: auth Sanctum/Fortify, usuarios, módulos, notificaciones DB.
 3. **Design system** (`ui/`): tokens, tema, componentes base; catálogo en `/dev/catalogo` (solo debug).
 4. **Shell de la app**: login, bloqueo, pestañas, Inicio, ajustes, tema.
@@ -574,14 +573,14 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 
 ## 13. ADRs a registrar
 
-- ADR-001 Monorepo sin herramienta de orquestación (`app/`, `backend/`, `frontend/` independientes).
+- ADR-001 Monorepo sin herramienta de orquestación (`app/`, `backend/`, `infra/` independientes).
 - ADR-002 Importes en céntimos `bigint` con signo.
 - ADR-003 Saldo calculado al vuelo.
 - ADR-004 Un esquema Postgres por módulo.
 - ADR-005 Cola en base de datos, sin Redis.
-- ADR-006 Mismo origen SPA + API (aplica a la web legada; la app iOS usa token).
+- ADR-006 Mismo origen SPA + API. Superado por ADR-010: la app usa token.
 - ADR-007 Periodo financiero de nómina a nómina, calculado por rangos de fecha (sin `period_id` en movimientos).
 - ADR-008 Open Banking vía agregador con licencia (Enable Banking, modo restricted) detrás de `BankDataProvider`. Descartados: acceso directo PSD2 (requiere licencia AISP + eIDAS), GoCardless Bank Account Data (sin altas nuevas en 2026) y Tink/Yapily/Salt Edge (de pago, contratación con ventas).
 - ADR-009 Pendientes como estado calculado y contrato de Core (`PendingItemsProvider`), sin tabla propia ni flag en `transactions`.
-- ADR-010 Cliente nativo iOS en Flutter en lugar de la PWA Angular, con token de Sanctum por dispositivo. Pendiente: cuándo retirar `frontend/`.
+- ADR-010 Cliente nativo iOS en Flutter en lugar de la PWA Angular, con token de Sanctum por dispositivo. El frontend Angular se retiró del repo el 2026-10-26.
 - ADR-011 Aviso diario como notificación local mientras no haya APNs.

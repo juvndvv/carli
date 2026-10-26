@@ -1,8 +1,8 @@
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { EMBER, FACE_SIZE, INK, markPainter, PAPER } from '../../frontend/scripts/lib/carli-mark.mjs';
-import { encodePng } from '../../frontend/scripts/lib/png.mjs';
+import { EMBER, FACE_SIZE, INK, markPainter, PAPER } from './lib/carli-mark.mjs';
+import { encodePng } from './lib/png.mjs';
 
 const assets = join(dirname(fileURLToPath(import.meta.url)), '..', 'ios', 'Runner', 'Assets.xcassets');
 const opaque = (color) => [...color, 255];

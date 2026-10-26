@@ -2,7 +2,7 @@
 
 Design system propio de **carli**, el asistente personal. Desde el 26/10/2026 sigue el prototipo "Health Tracker" que Juanda dejó en `docs/Health Tracker.zip` (tokens en `ds/colors_and_type.css`, derivados del Yurest Design System): estética tipo Apple Fitness, fondo negro puro en oscuro y gris claro en claro, tarjetas grandes y redondeadas, títulos muy gruesos, etiquetas de sección en mayúsculas y un único acento rosa-rojo ("ember"). Sustituye a la dirección "Sol".
 
-Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`CarliColors` como `ThemeExtension`, `CarliSpace`, `CarliRadius`, `CarliMotion`), tipografía en `typography.dart` (`CarliType`), `ThemeData` claro y oscuro en `theme.dart`, y los componentes en `app/lib/ui/` como widgets `Carli*`. Los colores se leen con `context.colors`. En debug, `/dev/catalogo` muestra todos los componentes. El frontend Angular legado (`frontend/src/app/ui/`) usa los mismos tokens como CSS custom properties; no se le añaden componentes nuevos. El [mockup](../mockup/index.html) todavía usa los tokens monocromos antiguos.
+Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`CarliColors` como `ThemeExtension`, `CarliSpace`, `CarliRadius`, `CarliMotion`), tipografía en `typography.dart` (`CarliType`), `ThemeData` claro y oscuro en `theme.dart`, y los componentes en `app/lib/ui/` como widgets `Carli*`. Los colores se leen con `context.colors`. En debug, `/dev/catalogo` muestra todos los componentes. El [mockup](../mockup/index.html) todavía usa los tokens monocromos antiguos.
 
 ## 1. Principios
 
@@ -26,7 +26,7 @@ Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`Ca
 | `bg` | `#F5F5F7` | `#000000` | Fondo de la app y de las barras de navegación (translúcido) |
 | `surface` | `#FFFFFF` | `#161616` | Tarjetas, sheets, inputs, tab bar (translúcida) |
 | `surface2` | `#F0F0F2` | `#1F1F1F` | Buscador, segmentado, botón ghost, iconos circulares, skeleton, avisos en bloque |
-| `sidebar` | `#FFFFFF` | `#0A0A0A` | Reservado (la app no tiene sidebar; la usa la web legada) |
+| `sidebar` | `#FFFFFF` | `#0A0A0A` | Sin uso; se conserva por compatibilidad |
 | `border` | `#EBEBEB` | `#262626` | Bordes y divisores |
 | `text` | `#1F1F1F` | `#FFFFFF` | Texto principal |
 | `text2` | `#666666` | `#A3A3A3` | Texto secundario |
@@ -89,7 +89,7 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 ### 2.5 Forma, sombras y movimiento
 
 - Radios (`CarliRadius`): `sm 6` (tags, skeleton), `md 12` (inputs, filas, select), `control 12` (botones, segmentado, buscador), `controlLg 16` (botón grande), `chip 8` (chips, tooltips de gráfico), `lg 22` (tarjetas), `sheet 28` (sheets inferiores), `xl 32`, `full 999` (avatares, iconos circulares, botón "+", badges, toast).
-- Iconos: Hugeicons (`hugeicons`, estilo stroke rounded) con `CarliIcon`, trazo 1.5 (2 en estados activos y badges), 20 pt por defecto. Los nombres que guarda la base de datos siguen la nomenclatura kebab-case de siempre (`shopping-cart`, `piggy-bank`…) y se traducen al glifo con `carliIconNamed()` en `ui/icon_names.dart`, generado con `node tool/generate-icon-names.mjs` desde el registro del frontend legado; para añadir uno, se registra allí y se regenera.
+- Iconos: Hugeicons (`hugeicons`, estilo stroke rounded) con `CarliIcon`, trazo 1.5 (2 en estados activos y badges), 20 pt por defecto. Los nombres que guarda la base de datos siguen la nomenclatura kebab-case de siempre (`shopping-cart`, `piggy-bank`…) y se traducen al glifo con `carliIconNamed()` en `ui/icon_names.dart`, que se mantiene a mano y es la fuente de verdad: para añadir uno, se añade una entrada que asocia el nombre a un glifo de `HugeIconsStrokeRounded`.
 - Sombras: ninguna en tarjetas (`elevation: 0`). Solo el botón "+" lleva elevación; sheets y toasts se distinguen por superficie y forma.
 - Espaciado (`CarliSpace`, pt): `s2, s4, s8, s12, s16, s20, s24, s32, s40, s48, s64`.
 - Movimiento (`CarliMotion`): `hover 120ms`, `enter 200ms` (ease-out; barras de progreso, entradas), `fade 240ms` (salida del arranque). Con "Reducir movimiento" (`MediaQuery.disableAnimationsOf`) no hay animación en progreso, skeleton ni arranque.
@@ -157,7 +157,7 @@ Fuera de `ui/`: `UnreadDot` y `NotificationsBellButton` (`shell/notifications/`)
 - **Logo**: una carita mínima, un cuadrado redondeado con dos ojos ovalados. Se dibuja en una caja de 100 × 100: cara `x/y 12–88` con radio 28; ojos en `(39, 47)` y `(61, 47)`, radios 5,5 × 9. Cara ember (`#E5063F`) y ojos blancos en ambos temas. Sin sombras, degradados ni boca. En la app lo pinta `CarliFacePainter`.
 - **Personalidad**: cercana y simpática. La carita puede expresar estados (parpadear, pensar) cuando llegue la IA; sin más rasgos que los ojos.
 - **Firma**: logo a la izquierda del nombre, separados 10 pt, logo ≈ 1,4 × la altura de la x (36 pt con texto de 20 pt en el login).
-- **Icono de app**: la geometría vive en `frontend/scripts/lib/carli-mark.mjs`; `node app/tool/generate-ios-assets.mjs` genera el `AppIcon` de iOS (fondo negro y carita ember al 62 %) y la imagen de lanzamiento. Los iconos de la PWA legada siguen saliendo de `npm run icons` en `frontend/`.
+- **Icono de app**: la geometría vive en `app/tool/lib/carli-mark.mjs`; `node app/tool/generate-ios-assets.mjs` genera el `AppIcon` de iOS (fondo negro y carita ember al 62 %) y la imagen de lanzamiento.
 - **Arranque**:
   - La pantalla de lanzamiento nativa (`LaunchScreen.storyboard`) es la carita de 96 pt centrada sobre `bg`, en claro y oscuro.
   - `LaunchOverlay` arranca con ese mismo fotograma, así que no hay salto: la carita parpadea dos veces y aparece "carli" debajo; dura 1,5 s, se salta al tocar y se funde en 240 ms. Si el bloqueo con Face ID está activo, la carita queda quieta mientras se pide Face ID y, si falla, se muestra directamente la pantalla de bloqueo (círculo `primary` con el glifo de Face ID y "carli está bloqueada").

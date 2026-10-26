@@ -115,10 +115,8 @@ services:
   caddy:
     image: ${CADDY_IMAGE:-personal-app-caddy:latest}
     build:
-      context: ./frontend
-      dockerfile: ../infra/docker/caddy/Dockerfile
-      additional_contexts:
-        caddy-config: ./infra
+      context: ./infra
+      dockerfile: docker/caddy/Dockerfile
       target: production
     restart: unless-stopped
     environment:
@@ -179,14 +177,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
-  frontend-test:
-    profiles: ["test"]
-    build:
-      context: ./frontend
-      dockerfile: ../infra/docker/caddy/Dockerfile
-      target: frontend-test
-    image: personal-app-frontend:test
 
 secrets:
   enable_banking:

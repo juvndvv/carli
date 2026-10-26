@@ -3,8 +3,6 @@
 Asistente personal modular (Finanzas, y más adelante Tareas, Salud, Hábitos y Notas).
 Stack: app nativa iOS en Flutter (`app/`) · Laravel 13 (`backend/`) · PostgreSQL 18. Backend autoalojado en VPS propio.
 
-El frontend Angular de `frontend/` es legado: se mantiene hasta que se decida retirarlo y el stack web lo sigue sirviendo.
-
 ## Documentación
 
 - [docs/PRD.md](docs/PRD.md): requisitos de producto (shell + módulo Finanzas, fases F0–F3).
@@ -36,15 +34,15 @@ Los tests de integración y las capturas usan el usuario demo: un backend local 
 
 ## Puesta en marcha (Docker)
 
-Requisitos: Docker con Compose v2 y `make`. Todo corre en contenedores: `postgres`, `app` (php-fpm), `worker` (colas), `scheduler` (tareas programadas), `caddy` (SPA Angular legada + proxy FastCGI de la API) y `backup` (pg_dump diario).
+Requisitos: Docker con Compose v2 y `make`. Todo corre en contenedores: `postgres`, `app` (php-fpm), `worker` (colas), `scheduler` (tareas programadas), `caddy` (TLS y proxy FastCGI de las rutas del backend; el resto responde 404) y `backup` (pg_dump diario).
 
 ```sh
-make setup        # crea .env desde .env.example, construye imágenes y genera APP_KEY y claves VAPID
+make setup        # crea .env desde .env.example, construye imágenes y genera APP_KEY (y claves VAPID, que hoy no usa ningún cliente)
 make up           # levanta el stack (las migraciones se ejecutan al arrancar `app`)
 make create-user  # crea tu usuario (no hay registro público)
 ```
 
-La API queda en <http://localhost:8180/api> (la app iOS la usa con `API_URL`) y la web legada en <http://localhost:8180>. Otros comandos:
+La API queda en <http://localhost:8180/api>; la app iOS la usa con `API_URL`. Otros comandos:
 
 | Comando | Qué hace |
 |---|---|
@@ -54,7 +52,7 @@ La API queda en <http://localhost:8180/api> (la app iOS la usa con `API_URL`) y 
 | `make seed-demo` | Carga datos de demostración (`SEED_DEMO_USER=true`) |
 | `make shell` | Shell dentro de `app` |
 | `make test-backend` | Pest en una imagen `dev` contra la base `TEST_DB_DATABASE` (por defecto `personal_test`) |
-| `make test-frontend` | Vitest (`ng test`) del frontend Angular legado en un contenedor Node |
+| `make test-app` | `flutter analyze` y `flutter test` en `app/` (necesita Flutter en el host) |
 | `make backup` | Ejecuta un backup ahora |
 
 La configuración de Laravel llega a los contenedores por variables de entorno desde el `.env` raíz; `backend/.env` no se copia a las imágenes. Postgres solo escucha en `127.0.0.1:55440` del host.
@@ -69,14 +67,10 @@ La configuración de Laravel llega a los contenedores por variables de entorno d
    APP_BIND=0.0.0.0
    APP_PORT=80
    APP_HTTPS_PORT=443
-   SESSION_DOMAIN=app.example.com
-   SESSION_SECURE_COOKIE=true
-   SANCTUM_STATEFUL_DOMAINS=app.example.com
-   VAPID_SUBJECT=mailto:tu@correo.com
    DB_PASSWORD=<contraseña larga>
    ```
-   Cambia `DB_PASSWORD` antes del primer arranque (Postgres la fija al crear el volumen).
-3. `make up` y `make create-user`. Caddy obtiene y renueva el certificado TLS automáticamente y activa HSTS.
+   Cambia `DB_PASSWORD` antes del primer arranque (Postgres la fija al crear el volumen). `SESSION_*`, `SANCTUM_STATEFUL_DOMAINS` y `VAPID_*` siguen en `.env.example` como restos del cliente web; la app no los necesita.
+3. `make up` y `make create-user`. Compila la app con `--dart-define=API_URL=https://app.example.com/api`. Caddy obtiene y renueva el certificado TLS automáticamente y activa HSTS.
 4. Actualizar: `git pull && make up` (reconstruye las imágenes y migra al arrancar).
 
 ### Sincronización bancaria (Enable Banking, F3)
@@ -93,7 +87,7 @@ Opcional: sin configurar, la app funciona en manual y `Más → Ajustes de Finan
    # ENABLE_BANKING_REDIRECT_URL=...   # por defecto ${APP_URL}/api/v1/finance/bank/callback
    ```
    Compose monta el fichero como Docker secret en `/run/secrets/enable_banking.pem` en `app`, `worker` y `scheduler`. La clave nunca se guarda en la base de datos; el `session_id` de cada conexión se guarda cifrado con `APP_KEY`.
-5. `make up`. En la app iOS el consentimiento se abre en `ASWebAuthenticationSession`: la app envía `return_to: app` al conectar o renovar y el callback HTTPS devuelve el control con `carli://bank/callback`. La redirect URL registrada no cambia.
+5. `make up`. En la app el consentimiento se abre en `ASWebAuthenticationSession`: la app envía `return_to: app` al conectar o renovar y el callback HTTPS devuelve el control con `carli://bank/callback`.
 6. El `scheduler` sincroniza a las 07:00, 13:00 y 19:00 (`finance:bank-sync`) y avisa a 7 y 1 día de que caduque el consentimiento (`finance:bank-consent-expiry`, 09:00). El botón "Sincronizar ahora" encola un job en el `worker`.
 
 Para desarrollo sin Docker, define `ENABLE_BANKING_APP_ID` y `ENABLE_BANKING_PRIVATE_KEY_PATH` en `backend/.env`.
