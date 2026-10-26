@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property BankConnectionStatus $status
  * @property list<array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null}>|null $accounts
  * @property int|null $expiry_notice_days
+ * @property int $last_sync_transfers
  * @property CarbonImmutable|null $last_synced_at
  * @property string|null $last_error
  * @property CarbonImmutable|null $created_at
@@ -41,6 +42,7 @@ class BankConnection extends Model
     protected $attributes = [
         'provider' => 'enable_banking',
         'status' => 'active',
+        'last_sync_transfers' => 0,
     ];
 
     protected function casts(): array
@@ -51,6 +53,7 @@ class BankConnection extends Model
             'status' => BankConnectionStatus::class,
             'accounts' => 'array',
             'expiry_notice_days' => 'integer',
+            'last_sync_transfers' => 'integer',
             'last_synced_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

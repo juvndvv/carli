@@ -4,6 +4,7 @@ namespace App\Modules\Finance\Domain\Services;
 
 use App\Models\User;
 use App\Modules\Finance\Domain\Enums\TransactionKind;
+use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use App\Modules\Finance\Events\TransactionSaved;
 use App\Modules\Finance\Models\Account;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 final class TransferService
 {
+    private const string BANK_LOCKED = 'Esta transferencia viene del banco: el importe y la fecha no se pueden cambiar.';
+
     public function __construct(
         private readonly TagService $tags,
         private readonly PeriodService $periods,
@@ -87,6 +90,7 @@ final class TransferService
 
         DB::transaction(function () use ($leg, $data): void {
             $legs = $this->legs($leg);
+            $this->assertBankFieldsUnchanged($legs, $data);
             $magnitude = array_key_exists('amount_cents', $data) ? abs((int) $data['amount_cents']) : null;
 
             if ($magnitude === 0) {
@@ -125,6 +129,27 @@ final class TransferService
                 TransactionSaved::dispatch($each->id, $each->user_id);
             }
         });
+    }
+
+    /**
+     * @param  list<Transaction>  $legs
+     * @param  array<string, mixed>  $data
+     */
+    private function assertBankFieldsUnchanged(array $legs, array $data): void
+    {
+        foreach ($legs as $each) {
+            if ($each->source !== TransactionSource::Bank) {
+                continue;
+            }
+
+            if (array_key_exists('amount_cents', $data) && abs((int) $data['amount_cents']) !== abs($each->amount_cents)) {
+                throw ValidationException::withMessages(['amount_cents' => self::BANK_LOCKED]);
+            }
+
+            if (array_key_exists('date', $data) && (string) $data['date'] !== $each->date->toDateString()) {
+                throw ValidationException::withMessages(['date' => self::BANK_LOCKED]);
+            }
+        }
     }
 
     /**

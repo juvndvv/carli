@@ -19,6 +19,7 @@ use App\Modules\Finance\Http\Controllers\SummaryController;
 use App\Modules\Finance\Http\Controllers\TagController;
 use App\Modules\Finance\Http\Controllers\TransactionController;
 use App\Modules\Finance\Http\Controllers\TransferController;
+use App\Modules\Finance\Http\Controllers\TransferDetectionController;
 use Illuminate\Support\Facades\Route;
 
 $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
@@ -52,10 +53,14 @@ Route::where([
     Route::get('transactions/export.csv', [TransactionController::class, 'export'])->name('transactions.export');
     Route::get('transactions/{transaction}/similar', [SimilarTransactionsController::class, 'count'])->name('transactions.similar');
     Route::post('transactions/{transaction}/categorize-similar', [SimilarTransactionsController::class, 'categorize'])->name('transactions.categorize-similar');
+    Route::post('transactions/{transaction}/convert-to-transfer', [TransferDetectionController::class, 'link'])->name('transactions.convert-to-transfer');
+    Route::post('transactions/{transaction}/undo-transfer', [TransferDetectionController::class, 'undo'])->name('transactions.undo-transfer');
     Route::post('transactions/{transaction}/restore', [TransactionController::class, 'restore'])->withTrashed()->name('transactions.restore');
     Route::apiResource('transactions', TransactionController::class);
 
     Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+    Route::post('transfers/suggestions/confirm', [TransferDetectionController::class, 'confirm'])->name('transfers.suggestions.confirm');
+    Route::post('transfers/suggestions/dismiss', [TransferDetectionController::class, 'dismiss'])->name('transfers.suggestions.dismiss');
     Route::get('payees/suggest', [PayeeController::class, 'suggest'])->name('payees.suggest');
 
     Route::get('categories/suggest', [PayeeController::class, 'suggestCategory'])->name('categories.suggest');

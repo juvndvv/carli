@@ -55,6 +55,9 @@ final class TransactionResource extends JsonResource
             'uncategorized' => $transaction->isUncategorized(),
             'transfer_group_id' => $transaction->transfer_group_id,
             'transfer_account_id' => $counterpart?->account_id,
+            'transfer_source' => $transaction->transfer_source?->value,
+            'transfer_detected_at' => $transaction->transfer_detected_at?->toIso8601String(),
+            'transfer_undoable' => $transaction->isConvertedTransfer(),
             'recurring_rule_id' => $transaction->recurring_rule_id,
             'debt_id' => $transaction->debt_id,
             'splits' => $transaction->splits->map(fn (TransactionSplit $split) => [

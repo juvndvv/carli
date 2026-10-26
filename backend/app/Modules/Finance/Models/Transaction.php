@@ -5,6 +5,7 @@ namespace App\Modules\Finance\Models;
 use App\Modules\Finance\Domain\Enums\TransactionKind;
 use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
+use App\Modules\Finance\Domain\Enums\TransferSource;
 use App\Modules\Finance\Models\Concerns\BelongsToUser;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,6 +31,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property TransactionStatus $status
  * @property TransactionSource $source
  * @property string|null $transfer_group_id
+ * @property TransferSource|null $transfer_source
+ * @property CarbonImmutable|null $transfer_detected_at
  * @property string|null $recurring_rule_id
  * @property CarbonImmutable|null $recurring_date
  * @property string|null $debt_id
@@ -68,6 +71,8 @@ class Transaction extends Model
             'kind' => TransactionKind::class,
             'status' => TransactionStatus::class,
             'source' => TransactionSource::class,
+            'transfer_source' => TransferSource::class,
+            'transfer_detected_at' => 'immutable_datetime',
             'amount_cents' => 'integer',
             'date' => 'immutable_date',
             'recurring_date' => 'immutable_date',
@@ -189,6 +194,11 @@ class Transaction extends Model
     public function isTransfer(): bool
     {
         return $this->kind === TransactionKind::Transfer;
+    }
+
+    public function isConvertedTransfer(): bool
+    {
+        return $this->isTransfer() && $this->transfer_source !== null;
     }
 
     public function sharedCents(): int

@@ -67,7 +67,7 @@ describe('import', function () {
         $result = runSync($this->connection);
         $rows = bankRows($this->account->id);
 
-        expect($result)->toBe(['imported' => 2, 'accounts' => 1])
+        expect($result)->toBe(['imported' => 2, 'accounts' => 1, 'transfers' => 0])
             ->and($rows->map(fn (Transaction $t) => [$t->kind->value, $t->amount_cents, $t->payee, $t->external_id, $t->category_id])->all())->toBe([
                 ['expense', -1234, 'MERCADONA', 'ref-1', null],
                 ['income', 150000, 'ACME SL', 'ref-2', null],

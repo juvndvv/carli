@@ -33,6 +33,7 @@ final class BankConnectionResource extends JsonResource
             'expires_in_days' => max(0, (int) SpanishCalendar::today()->diffInDays($validUntil, false)),
             'last_synced_at' => $connection->last_synced_at?->toIso8601String(),
             'last_error' => $connection->last_error,
+            'last_sync_transfers' => $connection->last_sync_transfers,
             'bank_accounts_count' => count($connection->accounts ?? []),
             'linked_accounts' => $connection->linkedAccounts
                 ->filter(fn (Account $account) => $account->external_account_uid !== null)

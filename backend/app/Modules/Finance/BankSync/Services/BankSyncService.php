@@ -16,6 +16,7 @@ use App\Modules\Finance\Domain\Services\BudgetService;
 use App\Modules\Finance\Domain\Services\CategoryRuleService;
 use App\Modules\Finance\Domain\Services\GoalService;
 use App\Modules\Finance\Domain\Services\PeriodService;
+use App\Modules\Finance\Domain\Services\TransferDetector;
 use App\Modules\Finance\Domain\Support\SpanishCalendar;
 use App\Modules\Finance\Models\Account;
 use App\Modules\Finance\Models\BankConnection;
@@ -43,21 +44,22 @@ final class BankSyncService
         private readonly BudgetService $budgets,
         private readonly GoalService $goals,
         private readonly PeriodService $periods,
+        private readonly TransferDetector $transfers,
     ) {}
 
     /**
-     * @return array{imported: int, accounts: int}
+     * @return array{imported: int, accounts: int, transfers: int}
      */
     public function sync(BankConnection $connection, ?PsuContext $psu = null): array
     {
         if (! $connection->status->isSyncable()) {
-            return ['imported' => 0, 'accounts' => 0];
+            return ['imported' => 0, 'accounts' => 0, 'transfers' => 0];
         }
 
         if ($connection->valid_until->isPast()) {
             $connection->forceFill(['status' => BankConnectionStatus::Expired])->save();
 
-            return ['imported' => 0, 'accounts' => 0];
+            return ['imported' => 0, 'accounts' => 0, 'transfers' => 0];
         }
 
         try {
@@ -65,7 +67,7 @@ final class BankSyncService
         } catch (BankProviderException $exception) {
             $this->recordFailure($connection, $exception->getMessage());
 
-            return ['imported' => 0, 'accounts' => 0];
+            return ['imported' => 0, 'accounts' => 0, 'transfers' => 0];
         } catch (Throwable $exception) {
             $this->recordFailure($connection, 'Error inesperado al sincronizar.');
 
@@ -76,13 +78,14 @@ final class BankSyncService
             'status' => BankConnectionStatus::Active,
             'last_synced_at' => CarbonImmutable::now(),
             'last_error' => null,
+            'last_sync_transfers' => $result['transfers'],
         ])->save();
 
         return $result;
     }
 
     /**
-     * @return array{imported: int, accounts: int}
+     * @return array{imported: int, accounts: int, transfers: int}
      */
     private function syncAccounts(BankConnection $connection, ?PsuContext $psu): array
     {
@@ -101,8 +104,9 @@ final class BankSyncService
         }
 
         $this->evaluateAlerts($connection->user_id, $imported);
+        $detected = $this->transfers->detect($connection->user_id, SpanishCalendar::today()->subDays(TransferDetector::SYNC_WINDOW_DAYS));
 
-        return ['imported' => $imported->count(), 'accounts' => $accounts->count()];
+        return ['imported' => $imported->count(), 'accounts' => $accounts->count(), 'transfers' => count($detected['converted'])];
     }
 
     /**
