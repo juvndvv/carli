@@ -58,7 +58,7 @@ El primer módulo es **Finanzas**: registrar manualmente ingresos y gastos, sabe
 - Iniciación de pagos (PIS): la conexión bancaria es solo de lectura.
 - Movimientos pendientes (no contabilizados) del banco.
 - Multimoneda, inversiones, cripto.
-- Modo offline / sincronización.
+- Modo offline / sincronización (excepto Notas, §9.5).
 - Varios usuarios, cuentas compartidas con otras personas, roles.
 - App nativa (iOS/Android); solo PWA.
 
@@ -377,7 +377,153 @@ Tareas compartidas, avisos por ubicación, sincronización con Calendario/Record
 5. Avisos a hora concreta: **TODO, se decide más adelante**. TA-06 y §8.5 quedan fuera de la v1; la hora de una tarea se guarda y se muestra, pero no avisa.
 6. Hábitos: **sin marca de hábito en Tareas**. Se deja la puerta abierta con el historial por ocurrencia (TA-PL-09); el módulo Hábitos podrá leerlo o importar una plantilla. Mientras tanto, una lista "Hábitos" sirve para agruparlas.
 
-## 9. Requisitos no funcionales
+## 9. Módulo Notas
+
+Notas de texto, listas reutilizables y la lista de la compra, con carpetas multinivel. Funciona sin conexión (§9.5). Mockups (8 pantallas, claro y oscuro): https://claude.ai/artifact/H8MxjZpXViwzBDX2rLLSKA
+
+### 9.1 Conceptos
+
+Una sola entidad, **nota**, con tres tipos. El tipo se puede cambiar después (texto ↔ lista).
+
+- **Nota de texto**: título opcional + cuerpo en **texto plano**. Enlaces detectados. Sin formato (decidido).
+- **Lista**: título + elementos marcables (checklist). Cubre "listas" y "checklists": no hay diferencia útil entre las dos. Ejemplos: maleta de viaje, cosas para la mudanza, películas pendientes.
+- **Lista de la compra**: una lista con extras de supermercado: cantidad, sección (Fruta, Lácteos…), sugerencias, "En el carro" abajo, **reposición por producto** y botón **Terminar compra**. Sin relación con Finanzas.
+- **Carpeta**: agrupación **multinivel** (carpetas dentro de carpetas) para cualquier tipo de nota (Casa › Reformas › Cocina). Una nota está en una carpeta o en la raíz.
+
+Conceptos de la compra:
+
+- **Reposición** (por producto): cada producto habitual tiene su propia frecuencia: *en cada compra*, *cada N días/semanas desde que lo compraste*, o *sin repetir*. Cuando le toca, vuelve solo a la lista sin marcar. Leche cada semana, papel de cocina cada 3 semanas, aceite cada mes.
+- **Terminar compra**: vacía el carro y apunta la fecha de compra de cada producto, que es lo que usa la reposición. No guarda importe ni historial.
+- **Reinicio de listas** (no compra): "Empezar de nuevo" desmarca todo. Manual.
+
+### 9.2 Frontera con Tareas
+
+Regla única: **¿tiene fecha y te importa si lo hiciste? → Tarea. ¿Es contenido que consultas, rellenas o reutilizas? → Nota.**
+
+| Caso | Dónde | Por qué |
+|---|---|---|
+| "Hacer la compra" cada sábado | **Tareas** (plantilla) con enlace a la lista de la compra | Tiene fecha, aparece en Hoy, cuenta en la racha y en Pendientes si vence |
+| Lo que hay que comprar | **Notas** (compra) | No tiene fecha; se rellena durante la semana |
+| Revisión mensual del coche con 6 pasos | **Tareas** (plantilla con subtareas) | Quieres saber si se hizo cada mes (historial TA-PL-09) |
+| Maleta de viaje, que reutilizas en cada viaje | **Notas** (lista) + "Empezar de nuevo" | Sin fecha, sin historial: solo desmarcar |
+| Comprar papel de cocina cada 3 semanas | **Notas** (reposición del producto) | No te avisa ni vence: solo reaparece en la lista |
+| Ideas, apuntes, datos de la caldera | **Notas** (texto) | Contenido |
+
+Consecuencias de diseño:
+
+1. Las notas **no tienen fecha de vencimiento, ni avisos, ni entran en Pendientes ni en el aviso de las 20:00**. Si algo lo necesita, es una tarea.
+2. La reposición de un producto **no genera tareas ni avisos**: el producto reaparece en la lista y ya. Usa intervalos "desde la última compra" (como el tipo "tras completarla" de Tareas), no calendario.
+3. **Puente en ambos sentidos** (sin duplicar lógica): una tarea o plantilla puede enlazar una nota ("Hacer la compra" → abre la lista); un elemento de una lista se puede convertir en tarea ("Llamar al fontanero" → Bandeja de Tareas).
+4. Las **subtareas de Tareas no se convierten en notas** ni al revés: siguen siendo cosas distintas aunque se parezcan visualmente.
+
+Alternativa descartada: hacer las listas repetibles como plantillas de Tareas. Mete en Hoy y Pendientes cosas que no tienen fecha real (la compra no "vence") y obliga a completar algo para que se reinicie.
+
+### 9.3 Requisitos funcionales
+
+#### Notas (todas)
+| ID | Requisito | Prio |
+|---|---|---|
+| NO-01 | Crear desde "+" eligiendo tipo (Texto, Lista, Compra). Abre directamente el editor con el teclado. | Must |
+| NO-02 | Guardado automático (sin botón Guardar). Una nota vacía al salir se descarta. | Must |
+| NO-03 | Fijar notas: las fijadas van arriba en la vista Notas y salen en la tarjeta de Inicio. | Must |
+| NO-04 | Archivar (sale de la vista principal, se ve en "Archivadas") y borrar con deshacer en toast 4 s. | Must |
+| NO-05 | Buscar en título, cuerpo y elementos, sin acentos (Postgres `unaccent` + `tsvector` español). Alimenta SH-10. | Must |
+| NO-06 | Filtro por tipo: Todas · Texto · Listas · Compra. Orden: fijadas, luego última edición. | Must |
+| NO-11 | **Carpetas multinivel**: crear (también dentro de otra), renombrar, reordenar, mover (con su contenido) y borrar (su contenido sube a la carpeta padre, nunca se borra en cascada). Mover una nota desde la nota o deslizando, con un selector en árbol. La raíz de Notas muestra Fijadas, Carpetas (con contador recursivo) y Recientes; dentro de una carpeta, subcarpetas arriba y notas debajo, con migas de pan en la cabecera. | Must |
+| NO-12 | La búsqueda y los filtros por tipo buscan en todas las carpetas y muestran la ruta ("Casa › Reformas") bajo cada resultado. | Must |
+| NO-07 | Convertir texto ↔ lista: cada línea pasa a ser un elemento, y al revés. | Should |
+| NO-08 | Duplicar nota (útil para listas-plantilla: "Maleta playa" → "Maleta montaña"). | Should |
+| NO-09 | Enlazar desde Tareas: una tarea o plantilla puede llevar una nota enlazada; la nota muestra "Enlazada en: Hacer la compra". | Should |
+| NO-10 | Papelera 30 días en vez de borrado directo. | Could |
+
+#### Listas
+| ID | Requisito | Prio |
+|---|---|---|
+| NO-LI-01 | Añadir elementos en cadena (Intro crea el siguiente). Marcar con un toque. | Must |
+| NO-LI-02 | Reordenar arrastrando; borrar deslizando. | Must |
+| NO-LI-03 | Opción por lista: los marcados bajan a "Hechos" (plegado) o se quedan en su sitio tachados. | Should |
+| NO-LI-04 | "Empezar de nuevo": desmarca todos los elementos (con confirmación). | Must |
+| NO-LI-05 | Reinicio programado de una lista (no compra). | Fuera de v1 |
+| NO-LI-06 | Convertir elemento en tarea (va a Bandeja de Tareas, con enlace a la nota). | Should |
+| NO-LI-07 | Progreso "4 de 9" en la cabecera y en la fila de la vista Notas. | Must |
+
+#### Lista de la compra
+| ID | Requisito | Prio |
+|---|---|---|
+| NO-CO-01 | Alta rápida con sugerencias de lo que has comprado antes (por frecuencia). Cantidad opcional en texto libre ("2", "1 kg"). | Must |
+| NO-CO-02 | Agrupación por sección del súper. La sección se recuerda por producto: la primera vez se asigna por diccionario o a mano, luego se aprende. | Must |
+| NO-CO-03 | Al marcar, el producto baja a "En el carro" (plegado). Tocarlo lo devuelve. | Must |
+| NO-CO-04 | **Reposición por producto**: frecuencia *En cada compra*, *Cada N días / semanas desde que lo compraste* o *Sin repetir* (por defecto). Cuando toca, el producto vuelve a la lista sin marcar, con su cantidad habitual. | Must |
+| NO-CO-05 | Varias listas de compra (Súper, Farmacia, Bricolaje). Una es la principal: la que abre la pestaña Compra. | Should |
+| NO-CO-06 | **Terminar compra**: vacía "En el carro" (con deshacer) y recalcula la reposición. Sin importe ni historial. | Must |
+| NO-CO-07 | Pantalla siempre encendida mientras la lista está abierta en el súper (opción). | Could |
+
+#### Vistas e integración con el shell
+| ID | Requisito | Prio |
+|---|---|---|
+| NO-VI-01 | **Notas**: búsqueda arriba, filtros por tipo, fijadas en tarjetas, resto en lista con vista previa (2 líneas de texto o "4 de 9"). | Must |
+| NO-VI-02 | **Compra**: abre directamente la lista principal, lista para usar en el súper. Selector arriba si hay varias. | Must |
+| NO-VI-03 | Tarjeta en **Inicio**: "Compra · 8 por comprar" con los 3 primeros y hasta 2 notas fijadas. | Must |
+| NO-SH-01 | Pendientes y aviso de las 20:00: **nada** de Notas. | Must |
+| NO-SH-02 | Ajustes de Notas: lista de compra principal, secciones (renombrar, ordenar como tu súper), comportamiento de marcados por defecto | Should |
+
+### 9.4 Navegación
+
+Barra contextual: **Inicio · Notas · Compra** + botón "+".
+
+- Tres pestañas, no cinco como Tareas. Carpetas, Archivadas y Papelera viven dentro de Notas; las listas normales viven en Notas filtradas.
+- "Terminar compra" va al final de la lista de Compra, nunca en la barra (para no pulsarlo por error).
+- "+" en Notas abre el selector de tipo; "+" en Compra añade un producto (foco en el campo de alta rápida), no crea una nota nueva.
+
+### 9.5 Conectividad (decidido: caché + cola offline)
+
+carli es online-only y el backend vive en un Mac que se duerme. Para Notas:
+
+- **Caché local** (SQLite en el dispositivo) de todas las notas, carpetas y productos: siempre se pueden leer.
+- **Cola de cambios offline**: marcar, añadir, editar y terminar compra funcionan sin red y se envían al volver.
+- La reposición se calcula también en el cliente (mismas reglas), para que los productos que tocan aparezcan aunque no haya red.
+- Conflictos: un solo usuario y un dispositivo; "último en escribir gana" por elemento con `updated_at`.
+- Es la primera excepción a "sin offline" del TRD: se apunta como ADR nuevo.
+
+### 9.6 Fuera de alcance
+
+Listas compartidas (decidido: la compra no se comparte), formato enriquecido e imágenes/adjuntos, etiquetas, reinicio programado de listas, reposición por calendario fijo ("cada sábado"), importe de la compra, historial de compras y enlace con gastos de Finanzas (descartado), sugerencias de frecuencia a partir del historial, dibujo, notas de voz, precios por producto y comparador, escaneo de tickets, sincronización con Notas o Recordatorios de iOS, widgets y Siri (candidatos a F+1, el widget de compra sería el primero).
+
+### 9.7 Notas técnicas
+
+En el TRD: reposición y sincronización (§4.1.4), esquema `notes` (§5.6), API (§6.5), caché y cola offline en la app (§7.6) y ADR-014.
+
+### 9.8 Riesgos y críticas
+
+| Tema | Comentario |
+|---|---|
+| Competir con Notas y Recordatorios de iOS | Recordatorios ya tiene listas de la compra con secciones automáticas, compartidas, con widget y Siri, y funcionan sin red. Lo que justifica hacerlo en carli: reposición por producto, funcionar offline y el enlace con Tareas. Si no aporta más que eso tras unas semanas, Recordatorios basta. |
+| Offline | Ver §9.5. Es lo más caro del módulo (cola, caché, reposición duplicada en Dart y PHP). Sin ello la pestaña Compra falla en el peor momento. |
+| Reposición por producto | Configurar frecuencia producto a producto es tedioso. Por eso el valor por defecto es "Sin repetir" y solo se configura en los que de verdad repites. |
+| Notas de texto | Para apuntes largos, Apple Notes es mucho mejor (formato, imágenes, escaneo). El texto plano aquí sirve para notas rápidas, no para sustituirla. Mejor asumirlo que perseguirla. |
+| Repetición duplicada | Hay dos formas de "repetir" (plantillas de Tareas y reposición de productos). La regla de §9.2 tiene que estar en la UI: bajo la reposición, una línea explica "No crea tareas ni avisos". |
+| Carpetas multinivel | Con pocas notas, más de 2 niveles esconde cosas: la búsqueda y Recientes son las que de verdad las encuentran. Sin límite de profundidad, pero la UI no anima a anidar (crear subcarpeta va en el menú, no como botón principal). |
+| Alcance | Las tres piezas (texto, listas, compra) son casi tres módulos. Orden propuesto: compra + listas primero, texto y carpetas después. |
+
+### 9.9 Decisiones (2026-10-26)
+
+1. Offline: **sí**, caché local + cola solo para Notas.
+2. La compra **no se comparte** con nadie.
+3. Notas de texto en **texto plano**.
+4. Reposición **por producto y por intervalo** desde la última compra (NO-CO-04).
+5. **Carpetas multinivel** (NO-11).
+6. Enlace del gasto de la compra con Finanzas: **descartado**. La compra no guarda importe ni historial.
+
+### 9.10 Estado (v1, 2026-10-26)
+
+Implementado: todo lo Must, NO-07, NO-08, NO-10 (papelera 30 días), NO-LI-03, NO-CO-05 y NO-SH-02.
+
+Pendiente:
+- NO-09 (enlace desde Tareas, `tasks.note_id` y `task_templates.note_id`) y NO-LI-06 (convertir un elemento en tarea): siguiente entrega, ahora que Tareas está en `main`.
+- Enlaces detectados en las notas de texto (abrirlos con un toque): hoy el cuerpo es un campo de texto plano sin detección.
+- NO-CO-07 (pantalla siempre encendida en el súper).
+
+## 10. Requisitos no funcionales
 
 - **Privacidad**: autoalojado en VPS propio; ningún dato sale a terceros salvo el servicio push del navegador (contenido cifrado extremo a extremo por Web Push).
 - **Seguridad**: HTTPS obligatorio, 2FA opcional, rate limit en login, backups diarios cifrados de la BD fuera del VPS.
@@ -386,7 +532,7 @@ Tareas compartidas, avisos por ubicación, sincronización con Calendario/Record
 - **Responsive**: desde 360 px de ancho.
 - **Exactitud**: los importes nunca se calculan con coma flotante (ver TRD).
 
-## 10. Riesgos y decisiones abiertas
+## 11. Riesgos y decisiones abiertas
 
 | Tema | Comentario |
 |---|---|
@@ -399,6 +545,6 @@ Tareas compartidas, avisos por ubicación, sincronización con Calendario/Record
 | Doble conteo (F3) | Lo manual y lo importado pueden duplicarse; responsabilidad del usuario. Mitigación: saldo del banco visible (FI-BK-07). |
 | Periodo financiero | Decidido: de nómina a nómina con fecha variable (§7.5). Riesgo: si un mes no se registra la nómina, el periodo se alarga; se mitiga con el recurrente de la nómina en modo "con confirmación" y un aviso. |
 
-## 11. Glosario
+## 12. Glosario
 
 Patrimonio neto, saldo, conciliación, recurrente, split, rollover: ver §7.1.

@@ -16,7 +16,7 @@
 | Cliente | App nativa iOS en Flutter 3.47 / Dart 3.13 (bundle `dev.jotade.personal`, solo iOS). Riverpod 3, go_router 18, dio |
 | UI | Librería propia "Ember" en `app/lib/ui` (widgets `Carli*`) sobre `ThemeExtension` de tokens. Iconos Hugeicons, gráficos fl_chart |
 | Backend | Laravel 13, PHP 8.4, arquitectura modular por dominio (`app/Modules/*`) |
-| BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`), PK UUIDv7 |
+| BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`, `notes.*`), PK UUIDv7 |
 | Auth | Laravel Sanctum: token personal (Bearer) en la app iOS, guardado en el Keychain. Laravel Fortify headless para 2FA TOTP. Bloqueo local con Face ID |
 | Avisos | Notificación local diaria (20:00) con el número de pendientes y bandeja in-app. Sin push remoto hasta tener APNs |
 | Colas y cron | Queue driver `database` + `schedule:work` en contenedor propio (sin Redis en v1) |
@@ -196,6 +196,18 @@ interface DailyDigestContributor { public function digestCounts(User $user): arr
 ```
 
 `PendingRegistry::digest()` suma a los contadores de Pendientes lo que aportan estos contribuidores y `SendPendingDigests` lo usa, así las tareas abiertas de hoy entran en el aviso ("Tienes 1 tarea vencida y 2 tareas de hoy por hacer") sin aparecer en Pendientes.
+
+### 4.1.4 Notas: sincronización y reposición (PRD §9)
+
+Notas es el único módulo que funciona sin conexión (ADR-014). La app escribe siempre en su caché local y encola el cambio; el servidor aplica la cola con las mismas reglas.
+
+- **Operaciones**: `{id (UUID v7 del cliente), type, at, payload}`. Tipos: `folder.upsert|delete`, `note.upsert|purge`, `item.upsert|delete`, `product.upsert|delete`, `section.upsert|delete` y `shopping.finish`. Los upserts son parciales (solo se escriben las claves presentes) y crean la fila si no existe. `POST /notes/sync` las aplica en orden, cada una en su transacción, y devuelve el resultado de cada una más el snapshot completo.
+- **Idempotencia**: cada id de operación se guarda en `notes.sync_operations` con su resultado; reenviarla devuelve `duplicate`.
+- **Conflictos**: último en escribir gana por fila con `updated_at = at` de la operación; una operación más antigua que la fila vuelve como `stale`. Borrados, purgas y `shopping.finish` siempre se aplican. Los efectos laterales (mover el contenido de una carpeta borrada, quitar `is_primary` a otra lista, la fecha de compra) no tocan `updated_at`, para no invalidar ediciones offline anteriores.
+- **Reposición** (sin jobs ni RRULE): un producto con `restock_mode = every_trip` toca justo después de cada compra; uno `interval`, cuando `fecha local (Europe/Madrid) de last_bought_at + restock_interval_days <= hoy`. Si toca, no está en la lista y `restocked_for` no es su ciclo (`{product_id}:{epoch de last_bought_at}`), se añade un elemento con id **UUID v5** del ciclo (namespace `6f0b5c3e-2d4a-5b8e-9c1f-7a3d2e1b0c9d`) y se apunta el ciclo en `restocked_for`. El servidor lo evalúa al construir el snapshot y tras `shopping.finish`; la app, al abrir la lista, al terminar compra y al recibir un snapshot. El id determinista evita duplicados entre los dos lados y `restocked_for` hace que un elemento repuesto y borrado no vuelva en el mismo ciclo. Los casos compartidos viven en `backend/app/Modules/Notes/tests/Fixtures/restock_cases.json` y los comprueban Pest y `flutter test`.
+- **Terminar compra**: `shopping.finish {note_id, item_ids, finished_at}` borra los elementos del carro, pone `last_bought_at = finished_at` (a segundos) y suma `times_bought` a sus productos, y repone. Deshacer en la app manda operaciones compensatorias (restaura los elementos y `last_bought_at`, `times_bought` y `restocked_for` vía `product.upsert`, y borra lo repuesto).
+- **Búsqueda**: `notes.immutable_unaccent()` (envoltorio `IMMUTABLE` de `unaccent`) alimenta columnas `tsvector` generadas en español sobre título + cuerpo y sobre cada elemento, con índices GIN. La consulta convierte cada palabra en prefijo (`palabra:*`) y añade un `ILIKE` sin acentos de respaldo. `NotesSearcher` reutiliza la consulta para la búsqueda global.
+- Notas no aporta nada a Pendientes ni al aviso de las 20:00.
 
 ### 4.2 Registro de módulos
 
@@ -401,6 +413,27 @@ Reglas de importación (F3):
 | Saldo con un contacto | `SUM(shares no liquidadas)` + deudas abiertas `owed_to_me` − deudas `i_owe` − pagos |
 | Periodo financiero | `[start_date, end_date]`; el abierto llega hasta hoy. Un movimiento pertenece al periodo cuyo rango contiene su `date`. No se guarda `period_id` en `transactions`, así mover límites no obliga a reescribir movimientos |
 
+### 5.6 Notas (`notes`)
+
+Todas las marcas de tiempo son `timestamptz(6)` (la comparación de `updated_at` necesita las fracciones de segundo). Los ids los genera la app, salvo las secciones por defecto (UUID v5 de `section:{user_id}:{position}`).
+
+```sql
+note_folders (id, user_id, parent_id NULL → note_folders, name, position, timestamps)      -- sin ciclos (se valida al mover)
+notes (id, user_id, folder_id NULL → note_folders ON DELETE SET NULL,
+  type CHECK (type IN ('text','list','shopping')), title NULL, body NULL,
+  pinned_at, archived_at, deleted_at NULL, checked_behavior CHECK IN ('move','inline'),
+  is_primary bool, sort int, search tsvector GENERATED, timestamps)                       -- único is_primary por usuario
+note_items (id, note_id → notes CASCADE, product_id NULL → shopping_products, text, quantity NULL,
+  section_id NULL → shopping_sections, checked_at NULL, position, search tsvector GENERATED, timestamps)
+shopping_sections (id, user_id, name, position, timestamps)                               -- 10 por defecto
+shopping_products (id, user_id, note_id → notes CASCADE, name, name_normalized, section_id NULL,
+  default_quantity NULL, restock_mode CHECK IN ('every_trip','interval','none'), restock_interval_days NULL CHECK (>= 1),
+  last_bought_at NULL, times_bought, restocked_for NULL, timestamps)
+sync_operations (id = id de la operación, user_id, type, status, processed_at)
+```
+
+Borrar una carpeta sube sus subcarpetas y notas a la carpeta padre. Las notas borradas quedan en la papelera (`deleted_at`) y se purgan a los 30 días al construir el snapshot. Los modelos usan nombres cualificados (`notes.notes`); `notes` está en `DB_SEARCH_PATH` para que `migrate:fresh` (y los tests) también vacíen el esquema.
+
 ## 6. API REST
 
 Prefijo `/api/v1`. JSON. Autenticación con token Bearer de Sanctum. Errores con formato Laravel (`message`, `errors`). Paginación por cursor en listados largos.
@@ -522,6 +555,16 @@ El backend todavía conserva piezas del cliente Angular, retirado el 2026-10-26.
 - La preferencia `sidebar_collapsed` en `PATCH /me/preferences`.
 - Las URLs de las notificaciones guardadas se generan con el formato de rutas de la web; la app las traduce a sus rutas en `core/notifications/notification_route.dart`.
 
+### 6.5 Notas (`/api/v1/notes`)
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/snapshot` | Carpetas, notas (con elementos, incluidas archivadas y papelera), secciones y productos. Repone antes de responder |
+| POST | `/sync` | `{operations: [...]}` (máx. 500) → `{results: [{id, status: applied|duplicate|stale|rejected, error}], data: snapshot}`. Un error en una operación no falla el lote; el 422 es solo para el sobre |
+| GET | `/search?q=&limit=` | `[{id, type, title, snippet, folder_path: ["Casa","Reformas"], archived, updated_at}]` |
+
+`POST /sync` no pasa por el middleware que recorta textos y convierte `''` en `null`: los cuerpos se guardan tal cual y un elemento de lista puede crearse vacío. Ajustes del módulo en `user_modules.settings` (`checked_behavior` por defecto).
+
 ## 7. App iOS (Flutter)
 
 Cliente principal: app nativa en `app/` (Flutter 3.47, Dart 3.13), solo iOS (bundle `dev.jotade.personal`, iOS 15+). Sustituye a la PWA Angular, retirada del repo el 2026-10-26.
@@ -577,6 +620,7 @@ Reglas: `modules/*` no se importan entre sí; `ui/` no importa de `modules/` ni 
 | `flutter_local_notifications`, `timezone`, `flutter_timezone` | Aviso local diario |
 | `qr_flutter` | QR del alta de 2FA |
 | `intl`, `flutter_localizations` | Locale `es-ES` |
+| `drift`, `drift_flutter`, `uuid` | Caché offline de Notas y ids de cliente (UUID v7 / v5), §7.6 |
 
 ### 7.3 Contrato de módulo en la app
 
@@ -604,7 +648,7 @@ Cada módulo aporta sus rutas en `core/router/router.dart`, su tarjeta de Inicio
 
 ### 7.5 Rutas
 
-Shell con `StatefulShellRoute.indexedStack` y 5 pestañas; cada una conserva su pila.
+Shell con `StatefulShellRoute.indexedStack`: cada pestaña conserva su pila (las de Notas, en §7.6).
 
 ```
 /arranque, /login
@@ -626,6 +670,15 @@ Shell con `StatefulShellRoute.indexedStack` y 5 pestañas; cada una conserva su 
 Dentro de `/tareas` la barra muestra Inicio · Hoy · Próximas · Listas · Plantillas y el "+" abre el alta rápida de tarea (`ShellContext.tasks`).
 
 El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña. La pestaña Más muestra el contador de Pendientes.
+
+### 7.6 Notas offline (`modules/notes`)
+
+- **Caché**: base SQLite con `drift` (`data/local_db.dart`, código generado en `local_db.g.dart` con `dart run build_runner build`). Tablas espejo de las del servidor más `pending_operations` (la cola).
+- **Escrituras**: `NotesActions` construye la operación, `NotesStore.record()` la aplica a la caché y la encola en la misma transacción, y `NotesSync` la envía con un pequeño retardo. Las pantallas leen un único `notesIndexProvider` (stream de drift), así que reaccionan al instante con o sin red.
+- **Sincronización**: con cola, `POST /notes/sync`; sin cola, `GET /notes/snapshot`. La respuesta sustituye la caché y se vuelven a aplicar las operaciones que entraron mientras tanto. Sin red (`DioException` sin respuesta) la cola espera y se reintenta cada 20 s, al volver a primer plano y con cada cambio; la app muestra "Sin conexión" en Notas y Compra. Al cerrar sesión se vacía la base local.
+- **Búsqueda**: online usa `GET /notes/search`; sin red, una búsqueda local sin acentos sobre la caché.
+- Secciones del súper para productos nuevos: diccionario de palabras clave en la app (`data/section_guess.dart`); después se aprende por producto.
+- Rutas: `/notas` (Notas: `/n/:id`, `/carpeta/:id`, `/archivadas`, `/papelera`, `/ajustes`) y `/compra` (lista principal). La barra contextual es Inicio · Notas · Compra; "+" abre el selector de tipo o enfoca el alta de producto. El editor de una nota (`/notas/n/:id`) oculta la barra.
 
 ## 8. Procesos en segundo plano
 
@@ -719,3 +772,4 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 - ADR-011 Aviso diario como notificación local mientras no haya APNs.
 - ADR-012 Transferencias entre cuentas propias detectadas por emparejamiento (§4.1.2). Contexto: una recarga BBVA → Revolut entraba como gasto + ingreso e inflaba ambos. Decisión: convertir solo parejas claras (importe exacto, ≤ 3 días, candidato único en ambos sentidos, al menos una señal fuerte, sin categoría) y proponer el resto en Pendientes como estado calculado (coherente con ADR-009); las únicas filas nuevas son las exclusiones, para que deshacer y "No es transferencia" sean definitivos. El IBAN se compara enmascarado para no guardar IBAN completos. Descartado: emparejar por importe y fecha sin señales (falsos positivos con Bizums y devoluciones) y guardar sugerencias en tabla (se quedarían obsoletas al borrar o categorizar).
 - ADR-013 Tareas repetitivas con RRULE (RFC 5545) y una fila por ocurrencia. Contexto: cron no expresa "cada 2 semanas desde el 4 de marzo" ni "el último viernes del mes", y hace falta el tipo "tras completarla". Decisión: la plantilla guarda una RRULE limitada al subconjunto del editor (motor en `Core/Recurrence` sobre `rlanvin/php-rrule`, reutilizable por otros módulos) o un intervalo en días desde que se completa; cada ocurrencia procesada se guarda como tarea (abierta, hecha u omitida con motivo) con clave única `plantilla + fecha`, y la generación es idempotente (job a las 00:05 + puesta al día perezosa, para que el Mac dormido no deje huecos). Las ocurrencias futuras de Próximas se calculan al vuelo. Descartado: expresiones cron (no cubren los casos), materializar el futuro (habría que regenerarlo al editar) y guardar solo la abierta (se pierde el historial que necesitará Hábitos).
+- ADR-014 Notas funciona sin conexión: caché local (drift) y cola de operaciones idempotentes con id del cliente (UUID v7), sincronizada por lotes con `POST /notes/sync` y "último en escribir gana" por fila. Contexto: el backend vive en un Mac que se duerme y la lista de la compra se usa en el súper, a menudo sin cobertura. Es la única excepción a "sin offline"; el resto de módulos sigue online. La reposición se calcula igual en PHP y Dart con ids deterministas (UUID v5) para que los dos lados no dupliquen productos. Descartado: offline en toda la app (coste alto y sin necesidad fuera de Notas) y CRDTs (un solo usuario y un dispositivo).
