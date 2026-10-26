@@ -60,7 +60,7 @@ class PendingItemRow extends StatelessWidget {
                   children: [
                     Text(
                       item.title,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: CarliType.body.copyWith(fontWeight: FontWeight.w500, color: colors.text),
                     ),
@@ -75,9 +75,11 @@ class PendingItemRow extends StatelessWidget {
               ),
               if (amount != null)
                 Text(
-                  formatMoney(amount, display: MoneyDisplay.signed),
-                  style: CarliType.money(CarliType.body)
-                      .copyWith(fontWeight: FontWeight.w500, color: amount > 0 ? colors.positive : colors.text),
+                  formatMoney(amount, display: descriptor.neutralAmount ? MoneyDisplay.absolute : MoneyDisplay.signed),
+                  style: CarliType.money(CarliType.body).copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: descriptor.neutralAmount ? colors.text2 : (amount > 0 ? colors.positive : colors.text),
+                  ),
                 ),
             ],
           ),

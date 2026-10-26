@@ -104,7 +104,7 @@ class _BankConnectionsScreenState extends ConsumerState<BankConnectionsScreen> {
     if (current?.status == BankConnectionStatus.error) {
       _toasts.error(current?.lastError ?? 'No se ha podido sincronizar ${current?.aspspName}.');
     } else if (current != null) {
-      _toasts.show('${current.aspspName} sincronizado');
+      _toasts.show(syncedMessage(current));
     }
   }
 

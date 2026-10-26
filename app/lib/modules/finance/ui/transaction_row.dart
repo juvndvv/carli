@@ -39,6 +39,7 @@ class TransactionRow extends StatelessWidget {
     };
     final badges = [
       if (transaction.uncategorized) CarliBadge('Por revisar', icon: carliIconNamed('circle-dashed')),
+      if (transaction.transferSource == TransferSource.auto) CarliBadge('Detectada', icon: carliIconNamed('sparkles')),
       if (transaction.status == TransactionStatus.pending) CarliBadge('Pendiente', icon: carliIconNamed('clock')),
       if (transaction.shares.isNotEmpty)
         CarliBadge('Compartido', tone: CarliBadgeTone.primary, icon: carliIconNamed('users')),

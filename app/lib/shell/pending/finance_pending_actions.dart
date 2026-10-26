@@ -253,3 +253,79 @@ class _ConfirmRecurringPendingActionState extends ConsumerState<ConfirmRecurring
     onPressed: _confirm,
   );
 }
+
+class TransferSuggestionPendingAction extends ConsumerStatefulWidget {
+  const TransferSuggestionPendingAction({super.key, required this.item, required this.onResolved});
+
+  final PendingItem item;
+  final ValueChanged<PendingItem> onResolved;
+
+  @override
+  ConsumerState<TransferSuggestionPendingAction> createState() => _TransferSuggestionPendingActionState();
+}
+
+enum _SuggestionAnswer { confirm, dismiss }
+
+class _TransferSuggestionPendingActionState extends ConsumerState<TransferSuggestionPendingAction> {
+  _SuggestionAnswer? _saving;
+
+  Future<void> _answer(_SuggestionAnswer answer) async {
+    final item = widget.item;
+    final outgoingId = item.metaString('outgoing_transaction_id');
+    final incomingId = item.metaString('incoming_transaction_id');
+    if (outgoingId == null || incomingId == null || _saving != null) return;
+    final repository = ref.read(transactionsRepositoryProvider);
+    final toasts = ref.read(toastControllerProvider.notifier);
+    final onResolved = widget.onResolved;
+    setState(() => _saving = answer);
+    try {
+      if (answer == _SuggestionAnswer.confirm) {
+        await repository.confirmTransferSuggestion(outgoingId: outgoingId, incomingId: incomingId);
+      } else {
+        await repository.dismissTransferSuggestion(outgoingId: outgoingId, incomingId: incomingId);
+      }
+    } catch (error) {
+      if (mounted) setState(() => _saving = null);
+      toasts.error(apiErrorMessage(error, fallback: 'No se ha podido guardar la respuesta.'));
+      return;
+    }
+    onResolved(item);
+    if (answer == _SuggestionAnswer.confirm) {
+      toasts.withUndo('Guardada como transferencia', () async {
+        try {
+          await repository.undoTransfer(outgoingId);
+        } catch (error) {
+          toasts.error(apiErrorMessage(error, fallback: 'No se ha podido deshacer.'));
+        }
+      });
+    } else {
+      toasts.show('Entendido: no es una transferencia');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: CarliSpace.s8,
+    runSpacing: CarliSpace.s8,
+    children: [
+      CarliButton(
+        label: 'Confirmar',
+        icon: carliIconNamed('check'),
+        variant: CarliButtonVariant.secondary,
+        size: CarliButtonSize.sm,
+        block: false,
+        loading: _saving == _SuggestionAnswer.confirm,
+        onPressed: _saving == null ? () => _answer(_SuggestionAnswer.confirm) : null,
+      ),
+      CarliButton(
+        label: 'No es transferencia',
+        icon: carliIconNamed('x'),
+        variant: CarliButtonVariant.ghost,
+        size: CarliButtonSize.sm,
+        block: false,
+        loading: _saving == _SuggestionAnswer.dismiss,
+        onPressed: _saving == null ? () => _answer(_SuggestionAnswer.dismiss) : null,
+      ),
+    ],
+  );
+}

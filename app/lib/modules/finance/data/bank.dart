@@ -75,6 +75,7 @@ class BankConnection {
     required this.lastSyncedAt,
     required this.lastError,
     required this.linkedAccounts,
+    this.lastSyncTransfers = 0,
   });
 
   factory BankConnection.fromJson(Json json) => BankConnection(
@@ -85,6 +86,7 @@ class BankConnection {
     lastSyncedAt: json['last_synced_at'] is String ? DateTime.parse(json['last_synced_at'] as String).toLocal() : null,
     lastError: json['last_error'] as String?,
     linkedAccounts: parseList(json['linked_accounts'], BankLinkedAccount.fromJson),
+    lastSyncTransfers: intOf(json['last_sync_transfers']),
   );
 
   final String id;
@@ -94,6 +96,7 @@ class BankConnection {
   final DateTime? lastSyncedAt;
   final String? lastError;
   final List<BankLinkedAccount> linkedAccounts;
+  final int lastSyncTransfers;
 }
 
 class BankAccountCandidate {
@@ -251,6 +254,12 @@ Set<String> duplicateTargets(List<String?> targets) {
   }
   return duplicates;
 }
+
+String syncedMessage(BankConnection connection) => switch (connection.lastSyncTransfers) {
+  0 => '${connection.aspspName} sincronizado',
+  1 => '${connection.aspspName} sincronizado · 1 transferencia entre tus cuentas detectada',
+  final count => '${connection.aspspName} sincronizado · $count transferencias entre tus cuentas detectadas',
+};
 
 bool syncFinished(BankConnection before, BankConnection after) =>
     after.lastSyncedAt != before.lastSyncedAt || after.status != before.status || after.lastError != before.lastError;

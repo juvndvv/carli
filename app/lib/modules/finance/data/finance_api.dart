@@ -93,6 +93,35 @@ class FinanceApi {
     return Transaction.fromJson((response.data!['data'] as Json)['from'] as Json);
   }
 
+  Future<Transaction> convertToTransfer(String id, {required String accountId}) async {
+    final response = await _dio.post<Json>(
+      '$_base/transactions/$id/convert-to-transfer',
+      data: {'account_id': accountId},
+    );
+    final legs = response.data!['data'] as Json;
+    final from = Transaction.fromJson(legs['from'] as Json);
+    return from.id == id ? from : Transaction.fromJson(legs['to'] as Json);
+  }
+
+  Future<List<Transaction>> undoTransfer(String id) async {
+    final response = await _dio.post<Json>('$_base/transactions/$id/undo-transfer', data: const <String, Object>{});
+    return parseList(response.data!['data'], Transaction.fromJson);
+  }
+
+  Future<void> confirmTransferSuggestion({required String outgoingId, required String incomingId}) async {
+    await _dio.post<Json>(
+      '$_base/transfers/suggestions/confirm',
+      data: {'outgoing_transaction_id': outgoingId, 'incoming_transaction_id': incomingId},
+    );
+  }
+
+  Future<void> dismissTransferSuggestion({required String outgoingId, required String incomingId}) async {
+    await _dio.post<Json>(
+      '$_base/transfers/suggestions/dismiss',
+      data: {'outgoing_transaction_id': outgoingId, 'incoming_transaction_id': incomingId},
+    );
+  }
+
   Future<List<Tag>> tags() async => parseList((await _get('tags'))['data'], Tag.fromJson);
 
   Future<List<ContactOption>> contactOptions() async =>

@@ -59,6 +59,8 @@ final financePendingActions = PendingModuleActions(
         CategorizePendingAction(key: ValueKey(item.key), item: item, onResolved: onResolved),
     FinancePendingTypes.recurring: (item, onResolved) =>
         ConfirmRecurringPendingAction(key: ValueKey(item.key), item: item, onResolved: onResolved),
+    FinancePendingTypes.transferSuggestion: (item, onResolved) =>
+        TransferSuggestionPendingAction(key: ValueKey(item.key), item: item, onResolved: onResolved),
   },
   open: openFinancePendingRoute,
 );

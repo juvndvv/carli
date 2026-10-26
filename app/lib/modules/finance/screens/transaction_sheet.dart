@@ -86,6 +86,12 @@ Future<void> showTransactionSheet(
   }
 }
 
+String transferNotice(TransferSource source) => switch (source) {
+  TransferSource.auto => 'Detectada como transferencia entre tus cuentas: no cuenta como gasto ni como ingreso.',
+  TransferSource.confirmed => 'Confirmaste que es una transferencia entre tus cuentas.',
+  TransferSource.linked => 'Transferencia con una cuenta sin conexión al banco.',
+};
+
 String withPeriodsNotice(String message, bool periodsChanged) =>
     periodsChanged ? '$message · periodos recalculados' : message;
 
@@ -129,6 +135,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
   var _submitted = false;
   var _saving = false;
   var _deleting = false;
+  var _converting = false;
   String? _error;
   String? _suggestion;
   List<PayeeSuggestion> _suggestions = const [];
@@ -137,6 +144,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
   Transaction? get _original => widget.transaction;
   bool get _editing => _original != null;
   bool get _fromBank => _original?.fromBank ?? false;
+  bool get _bankLocked => _fromBank || (_original?.transferUndoable ?? false);
   bool get _splitting => _splitEnabled && _kind != TransactionKind.adjustment && _kind != TransactionKind.transfer;
   bool get _sharesLocked => _original?.sharesLocked ?? false;
   CategoryKind get _categoryKind => _kind == TransactionKind.income ? CategoryKind.income : CategoryKind.expense;
@@ -411,6 +419,62 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
     }
   }
 
+  Future<void> _undoTransfer() async {
+    final original = _original;
+    if (original == null) return;
+    setState(() => _converting = true);
+    final repository = ref.read(transactionsRepositoryProvider);
+    final toasts = ref.read(toastControllerProvider.notifier);
+    try {
+      await repository.undoTransfer(original.id);
+      _close(const SheetSaved());
+      toasts.show(
+        original.transferSource == TransferSource.linked
+            ? 'Transferencia deshecha'
+            : 'Transferencia deshecha · no se volverá a sugerir',
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = apiErrorMessage(error, fallback: 'No se ha podido deshacer la transferencia.'));
+      }
+    } finally {
+      if (mounted) setState(() => _converting = false);
+    }
+  }
+
+  Future<void> _convertToTransfer(List<Account> manualAccounts) async {
+    final original = _original;
+    if (original == null) return;
+    final outgoing = original.amountCents < 0;
+    final picked = await pickCarliOption<String>(
+      context,
+      title: outgoing ? 'Transferencia a…' : 'Transferencia desde…',
+      options: [
+        for (final account in manualAccounts)
+          CarliOption(account.id, account.name, icon: carliIconNamed(account.iconName)),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    final account = manualAccounts.firstWhere((account) => account.id == picked.$1);
+    setState(() => _converting = true);
+    final repository = ref.read(transactionsRepositoryProvider);
+    final toasts = ref.read(toastControllerProvider.notifier);
+    try {
+      final leg = await repository.convertToTransfer(original.id, accountId: account.id);
+      _close(const SheetSaved());
+      toasts.withUndo(
+        outgoing ? 'Transferencia a ${account.name}' : 'Transferencia desde ${account.name}',
+        () => repository.undoTransfer(leg.id),
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = apiErrorMessage(error, fallback: 'No se ha podido convertir en transferencia.'));
+      }
+    } finally {
+      if (mounted) setState(() => _converting = false);
+    }
+  }
+
   void _close(SheetResult result) {
     if (mounted) Navigator.of(context).pop(result);
   }
@@ -443,6 +507,11 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
     }
 
     final involved = {_original?.accountId, _original?.transferAccountId};
+    final manualAccounts = [
+      for (final account in accounts?.active ?? const <Account>[])
+        if (account.bank == null && account.id != _original?.accountId) account,
+    ];
+    final transferSource = (_original?.transferUndoable ?? false) ? _original?.transferSource : null;
     final accountOptions = [
       for (final account in accounts?.all ?? const <Account>[])
         if (!account.archived || involved.contains(account.id))
@@ -495,6 +564,23 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
                     ],
                   ),
                 ),
+              if (transferSource != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: CarliSpace.s12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: CarliSpace.s8,
+                    children: [
+                      CarliIcon(carliIconNamed('arrow-left-right'), size: 14, color: colors.text3),
+                      Expanded(
+                        child: Text(
+                          transferNotice(transferSource),
+                          style: CarliType.small.copyWith(color: colors.text3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (_kindSegments.length > 1)
                 IgnorePointer(
                   ignoring: _fromBank,
@@ -502,7 +588,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
                 ),
               const SizedBox(height: CarliSpace.s8),
               IgnorePointer(
-                ignoring: _fromBank,
+                ignoring: _bankLocked,
                 child: CarliMoneyInput(
                   key: ValueKey(_kind),
                   value: _amount,
@@ -650,7 +736,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
               CarliField(
                 label: 'Fecha',
                 child: IgnorePointer(
-                  ignoring: _fromBank,
+                  ignoring: _bankLocked,
                   child: CarliDatePicker(value: _date, onChanged: (date) => setState(() => _date = date)),
                 ),
               ),
@@ -790,6 +876,27 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
                 ),
               if (_editing) ...[
                 const SizedBox(height: CarliSpace.s24),
+                if (transferSource != null) ...[
+                  CarliButton(
+                    label: 'Deshacer transferencia',
+                    icon: carliIconNamed('undo-2'),
+                    variant: CarliButtonVariant.secondary,
+                    size: CarliButtonSize.md,
+                    loading: _converting,
+                    onPressed: _undoTransfer,
+                  ),
+                  const SizedBox(height: CarliSpace.s8),
+                ] else if (_original!.canBecomeTransfer && manualAccounts.isNotEmpty) ...[
+                  CarliButton(
+                    label: _original!.amountCents < 0 ? 'Es una transferencia a…' : 'Es una transferencia desde…',
+                    icon: carliIconNamed('arrow-left-right'),
+                    variant: CarliButtonVariant.secondary,
+                    size: CarliButtonSize.md,
+                    loading: _converting,
+                    onPressed: () => _convertToTransfer(manualAccounts),
+                  ),
+                  const SizedBox(height: CarliSpace.s8),
+                ],
                 CarliButton(
                   label: 'Duplicar',
                   icon: carliIconNamed('copy'),

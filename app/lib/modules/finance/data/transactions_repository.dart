@@ -31,6 +31,17 @@ class TransactionsRepository {
 
   Future<Transaction> transfer(Json input) => _mutating(() => _api.transfer(input));
 
+  Future<Transaction> convertToTransfer(String id, {required String accountId}) =>
+      _mutating(() => _api.convertToTransfer(id, accountId: accountId));
+
+  Future<List<Transaction>> undoTransfer(String id) => _mutating(() => _api.undoTransfer(id));
+
+  Future<void> confirmTransferSuggestion({required String outgoingId, required String incomingId}) =>
+      _mutating(() => _api.confirmTransferSuggestion(outgoingId: outgoingId, incomingId: incomingId));
+
+  Future<void> dismissTransferSuggestion({required String outgoingId, required String incomingId}) =>
+      _mutating(() => _api.dismissTransferSuggestion(outgoingId: outgoingId, incomingId: incomingId));
+
   Future<int> bulkUpdate(Json input) => _mutating(() => _api.bulkUpdate(input));
 
   Future<List<int>> exportCsv(Query query) => _api.exportTransactions(query);

@@ -369,6 +369,18 @@ class ContactOption {
   final Cents balanceCents;
 }
 
+enum TransferSource {
+  auto('auto'),
+  confirmed('confirmed'),
+  linked('linked');
+
+  const TransferSource(this.value);
+
+  final String value;
+
+  static TransferSource? of(String? value) => values.where((source) => source.value == value).firstOrNull;
+}
+
 class Transaction {
   const Transaction({
     required this.id,
@@ -391,6 +403,8 @@ class Transaction {
     required this.uncategorized,
     required this.splits,
     required this.shares,
+    this.transferSource,
+    this.transferUndoable = false,
   });
 
   factory Transaction.fromJson(Json json) => Transaction(
@@ -414,6 +428,8 @@ class Transaction {
     uncategorized: json['uncategorized'] as bool? ?? false,
     splits: parseList(json['splits'], TransactionSplit.fromJson),
     shares: parseList(json['shares'], TransactionShare.fromJson),
+    transferSource: TransferSource.of(json['transfer_source'] as String?),
+    transferUndoable: json['transfer_undoable'] as bool? ?? false,
   );
 
   final String id;
@@ -436,8 +452,13 @@ class Transaction {
   final bool uncategorized;
   final List<TransactionSplit> splits;
   final List<TransactionShare> shares;
+  final TransferSource? transferSource;
+  final bool transferUndoable;
 
   int get splitCount => splits.length;
+
+  bool get canBecomeTransfer =>
+      fromBank && (kind == TransactionKind.expense || kind == TransactionKind.income) && !isSplit && shares.isEmpty;
 
   bool get isSplit => splits.isNotEmpty;
 

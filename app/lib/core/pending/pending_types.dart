@@ -5,11 +5,17 @@ const fallbackPendingIcon = 'inbox';
 
 @immutable
 class PendingTypeDescriptor {
-  const PendingTypeDescriptor({required this.label, required this.icon, required this.countLabel});
+  const PendingTypeDescriptor({
+    required this.label,
+    required this.icon,
+    required this.countLabel,
+    this.neutralAmount = false,
+  });
 
   final String label;
   final String icon;
   final String Function(int count) countLabel;
+  final bool neutralAmount;
 }
 
 @immutable
@@ -33,12 +39,20 @@ abstract final class FinancePendingTypes {
   static const module = 'finance';
   static const uncategorized = 'uncategorized_transaction';
   static const recurring = 'recurring_to_confirm';
+  static const transferSuggestion = 'transfer_suggestion';
 }
 
 final financePendingModule = PendingModuleInfo(
   name: 'Finanzas',
   icon: 'wallet',
   types: {
+    FinancePendingTypes.transferSuggestion: PendingTypeDescriptor(
+      label: 'Posibles transferencias',
+      icon: 'arrow-left-right',
+      neutralAmount: true,
+      countLabel: (count) =>
+          count == 1 ? '1 posible transferencia por revisar' : '$count posibles transferencias por revisar',
+    ),
     FinancePendingTypes.uncategorized: PendingTypeDescriptor(
       label: 'Movimientos por categorizar',
       icon: 'circle-dashed',

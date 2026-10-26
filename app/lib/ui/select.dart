@@ -35,12 +35,7 @@ class CarliSelect<T> extends StatelessWidget {
   final bool invalid;
 
   Future<void> _open(BuildContext context) async {
-    final picked = await showCarliSheet<(T,)>(
-      context,
-      title: title,
-      scrollable: true,
-      builder: (context) => _OptionList(options: options, value: value),
-    );
+    final picked = await pickCarliOption<T>(context, options: options, value: value, title: title);
     if (picked != null) onChanged(picked.$1);
   }
 
@@ -82,6 +77,18 @@ class CarliSelect<T> extends StatelessWidget {
     );
   }
 }
+
+Future<(T,)?> pickCarliOption<T>(
+  BuildContext context, {
+  required List<CarliOption<T>> options,
+  T? value,
+  String? title,
+}) => showCarliSheet<(T,)>(
+  context,
+  title: title,
+  scrollable: true,
+  builder: (context) => _OptionList(options: options, value: value),
+);
 
 class _OptionList<T> extends StatelessWidget {
   const _OptionList({required this.options, required this.value});
