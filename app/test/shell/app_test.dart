@@ -115,6 +115,9 @@ void main() {
 
     await tester.tap(find.descendant(of: find.byType(CarliBottomNav), matching: find.text('Más')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Cerrar sesión'), 200);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
 

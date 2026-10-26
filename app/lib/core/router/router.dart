@@ -4,7 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../dev/catalog_screen.dart';
+import '../../modules/finance/screens/accounts/account_detail_screen.dart';
+import '../../modules/finance/screens/accounts/accounts_screen.dart';
+import '../../modules/finance/screens/bank/bank_connections_screen.dart';
+import '../../modules/finance/screens/bank/bank_link_screen.dart';
 import '../../modules/finance/screens/budgets_screen.dart';
+import '../../modules/finance/screens/categories/categories_screen.dart';
+import '../../modules/finance/screens/debts/debts_screen.dart';
+import '../../modules/finance/screens/goals/goal_detail_screen.dart';
+import '../../modules/finance/screens/goals/goals_screen.dart';
+import '../../modules/finance/screens/recurring/recurring_screen.dart';
+import '../../modules/finance/screens/settings/finance_settings_screen.dart';
+import '../../modules/finance/screens/shared/contact_detail_screen.dart';
+import '../../modules/finance/screens/shared/shared_screen.dart';
 import '../../modules/finance/screens/summary_screen.dart';
 import '../../modules/finance/screens/transactions_screen.dart';
 import '../../shell/app_shell.dart';
@@ -22,6 +34,19 @@ abstract final class Routes {
   static const transactions = '/finanzas/movimientos';
   static const budgets = '/finanzas/presupuestos';
   static const more = '/mas';
+  static const accounts = '/mas/cuentas';
+  static const categories = '/mas/categorias';
+  static const recurring = '/mas/recurrentes';
+  static const goals = '/mas/objetivos';
+  static const debts = '/mas/deudas';
+  static const shared = '/mas/compartidos';
+  static const financeSettings = '/mas/ajustes-finanzas';
+  static const banks = '/mas/ajustes-finanzas/bancos';
+
+  static String account(String id) => '$accounts/$id';
+  static String goal(String id) => '$goals/$id';
+  static String contact(String id) => '$shared/$id';
+  static String bankLink(String connectionId) => '$banks/$connectionId/vincular';
   static const catalog = '/dev/catalogo';
 }
 
@@ -45,7 +70,65 @@ final routerProvider = Provider<GoRouter>((ref) {
           _branch(Routes.summary, const SummaryScreen()),
           _branch(Routes.transactions, const TransactionsScreen()),
           _branch(Routes.budgets, const BudgetsScreen()),
-          _branch(Routes.more, const MoreScreen()),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.more,
+                builder: (context, state) => const MoreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'cuentas',
+                    builder: (context, state) => const AccountsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        builder: (context, state) => AccountDetailScreen(accountId: state.pathParameters['id']!),
+                      ),
+                    ],
+                  ),
+                  GoRoute(path: 'categorias', builder: (context, state) => const CategoriesScreen()),
+                  GoRoute(path: 'recurrentes', builder: (context, state) => const RecurringScreen()),
+                  GoRoute(
+                    path: 'objetivos',
+                    builder: (context, state) => const GoalsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        builder: (context, state) => GoalDetailScreen(goalId: state.pathParameters['id']!),
+                      ),
+                    ],
+                  ),
+                  GoRoute(path: 'deudas', builder: (context, state) => const DebtsScreen()),
+                  GoRoute(
+                    path: 'compartidos',
+                    builder: (context, state) => const SharedScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        builder: (context, state) => ContactDetailScreen(contactId: state.pathParameters['id']!),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'ajustes-finanzas',
+                    builder: (context, state) => const FinanceSettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'bancos',
+                        builder: (context, state) => const BankConnectionsScreen(),
+                        routes: [
+                          GoRoute(
+                            path: ':id/vincular',
+                            builder: (context, state) => BankLinkScreen(connectionId: state.pathParameters['id']!),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     ],
