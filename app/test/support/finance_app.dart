@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carli/core/theme/theme.dart';
@@ -9,11 +10,16 @@ import 'package:carli/ui/toast.dart';
 import 'fake_api.dart';
 import 'test_app.dart';
 
-Future<ProviderContainer> pumpFinance(WidgetTester tester, Widget screen, FakeApi api) async {
+Future<ProviderContainer> pumpFinance(
+  WidgetTester tester,
+  Widget screen,
+  FakeApi api, {
+  List<Override> overrides = const [],
+}) async {
   tester.view.physicalSize = const Size(402 * 3, 874 * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
-  final container = testContainer(api, storage: {'auth_token': 'stored'});
+  final container = testContainer(api, storage: {'auth_token': 'stored'}, overrides: overrides);
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,

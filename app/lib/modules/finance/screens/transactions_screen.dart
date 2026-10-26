@@ -175,7 +175,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   Future<void> _pickTags(TransactionFilters filters) async {
-    final tags = ref.read(tagsProvider).value ?? const <Tag>[];
+    final tags = await ref.read(tagsProvider.future).then((value) => value, onError: (_) => const <Tag>[]);
+    if (!mounted) return;
     final result = await _pickMany(
       'Etiquetas',
       [for (final tag in tags) _Choice(tag.name, '#${tag.name}', subtitle: movementsCount(tag.transactionsCount))],

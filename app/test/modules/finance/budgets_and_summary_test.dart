@@ -141,4 +141,42 @@ void main() {
     expect(find.text('18.345,00$nbsp€'), findsOneWidget);
     expect(find.text('90 % del presupuesto'), findsOneWidget);
   });
+
+  testWidgets('edits limits and saves only the changes', (tester) async {
+    final api = FakeApi({
+      ...financeBaseRoutes(),
+      'GET /v1/finance/budgets': (_) => (200, budgetsJson([budgetRowJson()])),
+      'PUT /v1/finance/budgets': (_) => (200, budgetsJson([budgetRowJson()])),
+    });
+    await pumpFinance(tester, const BudgetsScreen(), api);
+
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar presupuestos'), findsOneWidget);
+
+    final casa = find.ancestor(of: find.text('Casa'), matching: find.byType(Row)).first;
+    await tester.enterText(find.descendant(of: casa, matching: find.byType(TextField)), '250');
+    await tester.pump();
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    await settle(tester);
+
+    final body = api.requests.singleWhere((r) => r.method == 'PUT').data as Map;
+    expect(body['period_id'], 'p-oct');
+    expect(body['budgets'], [
+      {'category_id': 'cat-home', 'amount_cents': 25000, 'rollover': false},
+    ]);
+    expect(find.text('Presupuestos guardados'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 6));
+  });
+
+  testWidgets('offers to create budgets when the period has none', (tester) async {
+    final api = FakeApi({...financeBaseRoutes(), 'GET /v1/finance/budgets': (_) => (200, budgetsJson(const []))});
+    await pumpFinance(tester, const BudgetsScreen(), api);
+
+    expect(find.text('Crear presupuestos'), findsOneWidget);
+    await tester.tap(find.text('Crear presupuestos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar presupuestos'), findsOneWidget);
+  });
 }

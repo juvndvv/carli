@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/api/api_error.dart';
+import '../../../core/files/file_sharer.dart';
 import '../../../core/format/dates.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
@@ -411,15 +408,9 @@ Future<void> exportTransactionsCsv(WidgetRef ref, Query query, {Rect? origin}) a
   final toasts = ref.read(toastControllerProvider.notifier);
   try {
     final bytes = await ref.read(transactionsRepositoryProvider).exportCsv(query);
-    final directory = await getTemporaryDirectory();
-    final file = File('${directory.path}/movimientos-${isoDate(today())}.csv');
-    await file.writeAsBytes(bytes, flush: true);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path, mimeType: 'text/csv')],
-        sharePositionOrigin: origin,
-      ),
-    );
+    await ref
+        .read(fileSharerProvider)
+        .share(fileName: 'movimientos-${isoDate(today())}.csv', bytes: bytes, mimeType: 'text/csv', origin: origin);
   } catch (error) {
     toasts.error(apiErrorMessage(error, fallback: 'No se ha podido exportar el CSV.'));
   }

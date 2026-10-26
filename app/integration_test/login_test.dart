@@ -46,6 +46,10 @@ void main() {
     await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const CarliApp()));
     await settle(tester);
 
+    for (var i = 0; i < 100 && container.read(authControllerProvider) is AuthUnknown; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await settle(tester);
     if (container.read(authControllerProvider) is! SignedIn) {
       await tester.enterText(find.byType(TextField).at(0), email);
       await tester.enterText(find.byType(TextField).at(1), password);
@@ -61,9 +65,26 @@ void main() {
 
     await openTab(tester, 'Presupuestos');
     await waitFor(tester, find.text('Por categoría'));
+    await tester.tap(find.text('Editar'));
+    await settle(tester);
+    expect(find.text('Editar presupuestos'), findsOneWidget);
+    await tester.tap(find.text('Guardar'));
+    await settle(tester);
 
     await openTab(tester, 'Movimientos');
     await waitFor(tester, find.textContaining('movimientos'));
+    await tester.tap(find.text('Seleccionar'));
+    await tester.pump();
+    await tester.tap(find.text('Todos'));
+    await tester.pump();
+    await tester.tap(find.text('Editar'));
+    await settle(tester);
+    await tester.tap(find.text('Estado'));
+    await tester.pump();
+    await tester.tap(find.text('Confirmado'));
+    await tester.pump();
+    await tester.tap(find.text('Aplicar'));
+    await waitFor(tester, find.textContaining('movimientos actualizados'));
 
     await tester.tap(find.byType(FloatingActionButton));
     await settle(tester);

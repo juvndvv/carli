@@ -29,6 +29,7 @@ import '../data/transactions_repository.dart';
 import '../ui/budget_line.dart';
 import '../ui/period_selector.dart';
 import '../ui/uncategorized_notice.dart';
+import 'budget_editor.dart';
 
 String budgetStatusIconName(BudgetStatus status) => switch (status) {
   BudgetStatus.ok => 'check',
@@ -107,6 +108,12 @@ class _BudgetsBodyState extends ConsumerState<_BudgetsBody> {
       toasts.error(apiErrorMessage(error, fallback: 'No se han podido copiar los presupuestos.'));
     } finally {
       if (mounted) setState(() => _copying = false);
+    }
+  }
+
+  Future<void> _edit() async {
+    if (await showBudgetEditor(context, data)) {
+      ref.read(toastControllerProvider.notifier).show('Presupuestos guardados');
     }
   }
 
@@ -221,26 +228,52 @@ class _BudgetsBodyState extends ConsumerState<_BudgetsBody> {
                       ),
                     ),
                     if (previous != null && rows.isNotEmpty)
-                      CarliButton(
-                        label: 'Copiar de ${previous.shortName}',
+                      CarliButton.icon(
                         icon: carliIconNamed('copy'),
-                        variant: CarliButtonVariant.ghost,
+                        semanticLabel: 'Copiar de ${previous.shortName}',
                         size: CarliButtonSize.sm,
-                        block: false,
                         loading: _copying,
                         onPressed: () => _copyFrom(previous),
                       ),
+                    if (rows.isNotEmpty) ...[
+                      const SizedBox(width: CarliSpace.s8),
+                      CarliButton(
+                        label: 'Editar',
+                        icon: carliIconNamed('pencil'),
+                        variant: CarliButtonVariant.secondary,
+                        size: CarliButtonSize.sm,
+                        block: false,
+                        onPressed: _edit,
+                      ),
+                    ],
                   ],
                 ),
               ),
               if (rows.isEmpty)
-                CarliEmptyState(
-                  icon: carliIconNamed('gauge'),
-                  title: 'Aún no hay presupuestos en este periodo',
-                  message:
-                      'Pon un límite a cada categoría y te avisaremos al llegar al $threshold % y al superarlo. Los límites se crean desde la web.',
-                  actionLabel: previous == null ? null : 'Copiar de ${previous.shortName}',
-                  onAction: previous == null ? null : () => _copyFrom(previous),
+                Column(
+                  children: [
+                    CarliEmptyState(
+                      icon: carliIconNamed('gauge'),
+                      title: 'Aún no hay presupuestos en este periodo',
+                      message:
+                          'Pon un límite a cada categoría y te avisaremos al llegar al $threshold % y al superarlo.',
+                      actionLabel: 'Crear presupuestos',
+                      onAction: _edit,
+                    ),
+                    if (previous != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: CarliSpace.s16),
+                        child: CarliButton(
+                          label: 'Copiar de ${previous.shortName}',
+                          icon: carliIconNamed('copy'),
+                          variant: CarliButtonVariant.secondary,
+                          size: CarliButtonSize.md,
+                          block: false,
+                          loading: _copying,
+                          onPressed: () => _copyFrom(previous),
+                        ),
+                      ),
+                  ],
                 )
               else
                 for (final (index, row) in rows.indexed) ...[

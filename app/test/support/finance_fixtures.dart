@@ -248,6 +248,22 @@ Map<String, FakeRoute> financeBaseRoutes({List<Json>? accounts}) => {
       'data': [periodJson(), periodJson(id: 'p-sep', current: false, name: 'Septiembre', shortName: 'sep')],
     },
   ),
+  'GET /v1/finance/contacts': (_) => (
+    200,
+    {
+      'data': [
+        {'id': 'ana', 'name': 'Ana', 'archived': false, 'balance_cents': 0},
+      ],
+    },
+  ),
+  'GET /v1/finance/tags': (_) => (
+    200,
+    {
+      'data': [
+        {'id': 't1', 'name': 'viaje', 'color': null, 'transactions_count': 3},
+      ],
+    },
+  ),
   'GET /v1/finance/settings': (_) => (
     200,
     {
