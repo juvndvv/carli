@@ -1,4 +1,4 @@
-# TRD · Personal App (shell modular + módulo Finanzas)
+# TRD · Personal App (shell modular + módulos Finanzas y Tareas)
 
 | | |
 |---|---|
@@ -16,7 +16,7 @@
 | Cliente | App nativa iOS en Flutter 3.47 / Dart 3.13 (bundle `dev.jotade.personal`, solo iOS). Riverpod 3, go_router 18, dio |
 | UI | Librería propia "Ember" en `app/lib/ui` (widgets `Carli*`) sobre `ThemeExtension` de tokens. Iconos Hugeicons, gráficos fl_chart |
 | Backend | Laravel 13, PHP 8.4, arquitectura modular por dominio (`app/Modules/*`) |
-| BD | PostgreSQL 18, un esquema por módulo (`finance.*`), PK UUIDv7 |
+| BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`), PK UUIDv7 |
 | Auth | Laravel Sanctum: token personal (Bearer) en la app iOS, guardado en el Keychain. Laravel Fortify headless para 2FA TOTP. Bloqueo local con Face ID |
 | Avisos | Notificación local diaria (20:00) con el número de pendientes y bandeja in-app. Sin push remoto hasta tener APNs |
 | Colas y cron | Queue driver `database` + `schedule:work` en contenedor propio (sin Redis en v1) |
@@ -156,6 +156,47 @@ Cuándo corre: al final de `BankSyncService::sync()` (ventana de 30 días, guard
 
 Las transferencias ya quedan fuera de ingresos, gastos, presupuestos y periodos porque todos filtran por `kind IN ('expense','income')` y `PeriodService::isPayroll()` exige `kind = 'income'`.
 
+### 4.1.3 Recurrencia (Core) y generación de tareas (PRD §8)
+
+**Motor de repetición** en `Core/Recurrence`, independiente de cualquier módulo (no conoce modelos; lo pueden usar Tareas, Notas o Finanzas). Envuelve `rlanvin/php-rrule` y solo admite el subconjunto que ofrece el editor: `FREQ` (`DAILY|WEEKLY|MONTHLY|YEARLY`), `INTERVAL` (1–365), `BYDAY`, `BYMONTHDAY`, `BYMONTH`, `BYSETPOS`. `DTSTART`, `UNTIL` y `COUNT` van aparte (columnas), no dentro del texto. Todas las fechas son días en `Europe/Madrid`.
+
+```php
+final readonly class RecurrenceRule {
+    public static function parse(string $rule, CarbonImmutable $start, ?CarbonImmutable $until = null, ?int $count = null): self; // InvalidArgumentException si no es válida
+    public static function isValid(string $rule): bool;
+    public function between(CarbonImmutable $from, CarbonImmutable $to): array;   // list<CarbonImmutable>, ambos inclusive
+    public function next(CarbonImmutable $from, int $limit): array;               // las $limit primeras >= $from
+    public function frequency(): string;  public function interval(): int;
+    public function part(string $name): ?string;
+    public function toString(): string;   // texto normalizado: 'FREQ=WEEKLY;BYDAY=MO,TH'
+}
+final class RecurrenceDescriber {
+    public static function describe(RecurrenceRule $rule): string;                 // 'Cada 2 semanas, el sábado'
+    public static function afterDone(int $days): string;                          // '10 días después de completarla'
+    public static function ending(?CarbonImmutable $until, ?int $count): ?string; // 'hasta el 9 nov' | '10 veces'
+    public static function shortDate(CarbonImmutable $date): string;              // '9 nov'
+}
+```
+
+**Generación** (`Modules/Tasks/Domain/Services/OccurrenceGenerator`):
+
+- Cada plantilla guarda `generated_through`: todas las ocurrencias con fecha ≤ ese día ya se procesaron. En cada pasada se calculan las de `(generated_through, hoy + lead_days]` y se avanza `generated_through` hasta ese horizonte. Al crear una plantilla vale ayer (no se generan fechas pasadas de un `dtstart` antiguo); al reanudarla, también (lo que tocó en pausa no se recupera ni se registra).
+- Idempotente: único `(template_id, occurrence_date)` en `tasks.tasks`, bloqueo `FOR UPDATE` de la plantilla y se saltan las fechas que ya tienen fila.
+- Política *Sustituir* (`replace`): solo la última fecha jugable se crea abierta; las intermedias se guardan como `skipped` con `skip_reason = 'missed'` (si ya pasaron) o `'replaced'`, y la abierta anterior pasa a `skipped/replaced`. *Acumular* crea todas abiertas.
+- Fechas saltadas (`task_template_exceptions`, el EXDATE): al llegar su día se guarda una fila `skipped/manual` y no se toca la abierta anterior. Saltar una fecha que ya tiene tarea omite esa tarea.
+- Tipo "tras completarla" (`after_done_interval_days`, sin `rrule`): `next_due_date` es la siguiente fecha. Se genera cuando `next_due_date − lead_days ≤ hoy` y no hay ninguna abierta; al crearla pasa a `null`. Completar u omitir pone `next_due_date = hoy + intervalo` (y genera si ya toca); deshacer la vuelve a `null`. `until`/`count` cortan la serie.
+- Una tarea generada copia título, notas, hora, importancia y subtareas de la plantilla. Editar la plantilla solo afecta a las futuras; con `apply_to_open` copia título, notas, lista, hora e importancia a las abiertas. Las hechas nunca cambian.
+- Historial por ocurrencia: cada fecha procesada deja una fila (`open`, `done` o `skipped` con motivo), base del historial de la plantilla y del futuro módulo Hábitos (PRD TA-PL-09).
+- Dos disparadores con el mismo código: `tasks:generate` (diario 00:05) y la **puesta al día perezosa** al pedir Hoy, Próximas o los contadores de Pendientes (`catchUp($user)`, memorizado por petición).
+
+**Pendientes y aviso de las 20:00**: `TasksPendingItems` implementa `PendingItemsProvider` con el tipo `overdue_task` (abiertas con `due_date < hoy`; acción en línea Hecha / Pasar a hoy / Omitir) y además `Core/Pending/DailyDigestContributor`:
+
+```php
+interface DailyDigestContributor { public function digestCounts(User $user): array; } // ['task_due_today' => 2]
+```
+
+`PendingRegistry::digest()` suma a los contadores de Pendientes lo que aportan estos contribuidores y `SendPendingDigests` lo usa, así las tareas abiertas de hoy entran en el aviso ("Tienes 1 tarea vencida y 2 tareas de hoy por hacer") sin aparecer en Pendientes.
+
 ### 4.2 Registro de módulos
 
 `GET /api/v1/modules` devuelve los módulos habilitados para el usuario:
@@ -194,10 +235,10 @@ MVP: el saldo se **calcula al vuelo** con `SUM` indexado (para un usuario son mi
 | Tabla | Campos clave |
 |---|---|
 | `users` | id, name, email, password, two_factor_secret, two_factor_recovery_codes, preferences jsonb (tema, locale) |
-| `sessions` | driver de sesión `database` (resto del cliente web, §6.3) |
+| `sessions` | driver de sesión `database` (resto del cliente web, §6.4) |
 | `personal_access_tokens` | tokens de Sanctum de la app iOS (uno por dispositivo, `name = 'carli iOS'`) |
 | `user_modules` | user_id, module_id, enabled, settings jsonb |
-| `push_subscriptions` | (del paquete webpush) endpoint, public_key, auth_token, user_agent. Resto del cliente web, §6.3 |
+| `push_subscriptions` | (del paquete webpush) endpoint, public_key, auth_token, user_agent. Resto del cliente web, §6.4 |
 | `notifications` | canal `database` de Laravel (bandeja de la app) |
 | `notification_preferences` | user_id, module_id, type, push bool, in_app bool |
 | `jobs`, `failed_jobs`, `cache` | framework |
@@ -335,7 +376,21 @@ Reglas de importación (F3):
 - Si el banco no da un id estable: `external_id = sha256(fecha|importe|concepto|n.º de ocurrencia ese día)`.
 - Signo según `credit_debit_indicator` (DBIT → negativo). Solo `status = BOOK`.
 
-### 5.4 Reglas de cálculo
+### 5.4 Tareas (`tasks`)
+
+| Tabla | Campos clave |
+|---|---|
+| `task_lists` | user_id, name, color, icon, is_default (único parcial por usuario: la *Bandeja*), sort_order, archived_at |
+| `task_templates` | user_id, list_id, title, notes, subtasks jsonb (títulos), rrule (texto sin DTSTART) **o** after_done_interval_days (CHECK: exactamente uno), dtstart, until **o** count, policy (`replace`/`accumulate`), lead_days (0–365), due_time, important, generated_through, next_due_date, paused_at |
+| `tasks` | user_id, list_id, template_id (null al borrar la plantilla), occurrence_date, title, notes, due_date, due_time, status (`open`/`done`/`skipped`), skip_reason (`manual`/`replaced`/`missed`), completed_at, skipped_at, important, sort. Único `(template_id, occurrence_date)`; índice parcial `(user_id, due_date) WHERE status = 'open'` para vencidas y Hoy; trigram en `title` para la búsqueda |
+| `task_subtasks` | task_id, title, done_at, sort |
+| `task_template_exceptions` | template_id, date (único): fechas saltadas, equivalente a EXDATE |
+
+- *Vencida* no se guarda: `status = 'open' AND due_date < hoy` (como ADR-009).
+- Ajustes del módulo en `user_modules.settings`: `default_list_id`, `default_policy`, `show_done_in_today` (`PATCH /api/v1/modules/tasks`).
+- `DB_SEARCH_PATH` incluye `tasks` (por defecto `public,finance,tasks`) para que `migrate:fresh` limpie también este esquema.
+
+### 5.5 Reglas de cálculo
 
 | Concepto | Cálculo |
 |---|---|
@@ -434,7 +489,28 @@ Ejemplo de movimiento:
 }
 ```
 
-### 6.3 Restos del cliente web
+### 6.3 Tareas (`/api/v1/tasks`)
+
+Middleware `module:tasks` + `EnsureTasksInitialized` (crea la Bandeja la primera vez).
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/today` | `{date, overdue[], today[], done[], progress: {done, total}}`. Pone al día las plantillas antes de responder |
+| GET | `/upcoming?days=14` | Un elemento por día: `{date, tasks[], occurrences[]}`; las ocurrencias son virtuales (plantillas activas, sin las saltadas), no se guardan |
+| GET/POST/PATCH/DELETE | `/lists[/{id}]` | Con `open_tasks_count`. `PATCH {archived}` archiva; la Bandeja no se archiva ni se borra; solo se borran listas vacías. `?archived=1` incluye las archivadas |
+| PUT | `/lists/order` | `{ids: []}` |
+| GET | `/tasks?list_id=&status=open\|done\|all&q=&from=&to=` | Paginado (100). `done` ordena por `completed_at` (registro de hechas) |
+| POST/GET/PATCH/DELETE | `/tasks[/{id}]` | Alta rápida: `{title, due_date?, due_time?, list_id?, important?, subtasks?: []}`. Sin fecha no hay hora |
+| POST | `/tasks/{id}/complete`, `/reopen`, `/skip`, `/postpone {date}` | Completar/omitir una de "tras completarla" programa la siguiente |
+| POST/PATCH/DELETE | `/tasks/{id}/subtasks[/{subtask}]` | `{title}`, `{done}`; marcarlas todas no completa la tarea |
+| GET/POST/PATCH/DELETE | `/templates[/{id}]` | Frecuencia: `rrule` **o** `after_done_interval_days`, más `dtstart`, `until` **o** `count`. Respuesta con `frequency_text`, `ending_text`, `next_date`, `upcoming_dates` (5), `skipped_dates`, `open_task_id`. `PATCH … {apply_to_open: true}`; `DELETE …?delete_open=1` |
+| POST | `/templates/{id}/pause`, `/resume`, `/skip {date}`, `/unskip {date}` | |
+| GET | `/templates/{id}/history` | Últimas ocurrencias + `{done, window}` para "Hecha 8 de las últimas 10" |
+| POST | `/templates/preview` | `{rrule` o `after_done_interval_days`, `dtstart?, until?, count?}` → `{description, ending, dates[5]}` para el editor |
+
+Búsqueda global: `TasksSearcher` devuelve plantillas (`/tareas/plantillas/{id}`) y tareas (`/tareas/tarea/{id}`).
+
+### 6.4 Restos del cliente web
 
 El backend todavía conserva piezas del cliente Angular, retirado el 2026-10-26. Ningún cliente las usa; se pueden quitar cuando convenga:
 
@@ -471,10 +547,14 @@ app/lib/
 ├── ui/                   # DESIGN SYSTEM "Ember": widgets Carli* (ver DESIGN-SYSTEM.md §3)
 ├── shell/                # launch, login, lock, home (Inicio), more (Más), pending, notifications, search, settings
 ├── modules/
-│   └── finance/
-│       ├── data/         # FinanceApi, modelos, providers, repositorios, Enable Banking
-│       ├── screens/      # resumen, movimientos, presupuestos, cuentas, categorías, recurrentes, objetivos, deudas, compartidos, ajustes, bancos
-│       └── ui/           # widgets propios del módulo (transaction-row, budget-line, period-selector, tarjeta de Inicio…)
+│   ├── finance/
+│   │   ├── data/         # FinanceApi, modelos, providers, repositorios, Enable Banking
+│   │   ├── screens/      # resumen, movimientos, presupuestos, cuentas, categorías, recurrentes, objetivos, deudas, compartidos, ajustes, bancos
+│   │   └── ui/           # widgets propios del módulo (transaction-row, budget-line, period-selector, tarjeta de Inicio…)
+│   └── tasks/
+│       ├── data/         # TasksApi, modelos, providers (un contador de cambios refresca todas las vistas), TaskActions, FrequencyDraft (RRULE ↔ editor)
+│       ├── screens/      # Hoy, Próximas, Listas (+ lista, hechas, archivadas), Plantillas, editor de plantilla, detalle, alta rápida, ajustes
+│       └── ui/           # fila de tarea con check y deslizar para posponer, tarjeta de Inicio, acción en Pendientes, rutas
 └── dev/                  # catálogo de componentes (solo debug, /dev/catalogo)
 ```
 
@@ -537,8 +617,13 @@ Shell con `StatefulShellRoute.indexedStack` y 5 pestañas; cada una conserva su 
 /mas/categorias, /mas/recurrentes, /mas/objetivos[/:id], /mas/deudas, /mas/compartidos[/:id]
 /mas/ajustes-finanzas[/bancos[/:id/vincular?renovado=1]]
 /mas/ajustes[/perfil|/seguridad|/avisos|/modulos|/apariencia]
+/tareas                         → /tareas/hoy
+/tareas/hoy, /tareas/proximas, /tareas/listas[/:id|/hechas|/archivadas], /tareas/plantillas   pestañas de Tareas
+/tareas/tarea/:id, /tareas/plantillas/nueva, /tareas/plantillas/:id, /tareas/ajustes          fuera del shell
 /dev/catalogo                   solo en debug
 ```
+
+Dentro de `/tareas` la barra muestra Inicio · Hoy · Próximas · Listas · Plantillas y el "+" abre el alta rápida de tarea (`ShellContext.tasks`).
 
 El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña. La pestaña Más muestra el contador de Pendientes.
 
@@ -555,7 +640,8 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 | `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. Después detecta transferencias de los últimos 30 días (§4.1.2). |
 | `finance:refresh-bank-account-names` (F3) | A mano | Relee `/accounts/{uid}/details` de las cuentas vinculadas, guarda `details`/`product` en el snapshot y renombra a «Banco · details» solo las cuentas que conservan el nombre por defecto antiguo («Banco titular»); `--dry-run`. Al renovar la conexión se aplica el mismo renombrado con los datos nuevos |
 | `finance:detect-transfers` (F3) | A mano | Reprocesa todo lo importado; `--dry-run` lista lo que convertiría y lo que quedaría como sugerencia |
-| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry` suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
+| `tasks:generate` | Diario 00:05 | Pone al día todas las plantillas activas (§4.1.3). Idempotente; la misma puesta al día corre al abrir Hoy o Próximas |
+| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry::digest()` (Pendientes + tareas abiertas de hoy) suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
 
@@ -601,7 +687,7 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 | Backend unit/feature | Pest + `RefreshDatabase` sobre Postgres real (no SQLite: se usan esquemas y pg_trgm) | Servicios de dominio (saldos, transferencias, recurrentes, presupuestos) al 90 %; todos los endpoints con un test feature |
 | Backend estático | Larastan nivel 8+, Pint | CI falla si hay errores |
 | App estático | `flutter analyze` (`flutter_lints`); `make test-app` lanza este y `flutter test` | Sin avisos |
-| App unit/widget | `flutter test`, con el adaptador `FakeApi` de `test/support` en lugar del `HttpClientAdapter` de dio | Formatos, providers, componentes de `ui/`, pantallas del shell y de Finanzas |
+| App unit/widget | `flutter test`, con el adaptador `FakeApi` de `test/support` en lugar del `HttpClientAdapter` de dio | Formatos, providers, componentes de `ui/`, pantallas del shell, de Finanzas y de Tareas |
 | App integración | `integration_test/` en simulador contra un backend local real (puerto 8181, base de pruebas sembrada con `SEED_DEMO_USER=true php artisan migrate:fresh --seed`): `flutter test integration_test/<fichero> -d <simulador> --dart-define=API_URL=http://127.0.0.1:8181/api` | Login y flujos de Core |
 | Capturas | `flutter drive --driver=test_driver/integration_test.dart --target=integration_test/screenshots*_test.dart` con `SCREENSHOT_DIR` (y `SHOT_THEME`, `SHOT_PREFIX`) | Revisión visual en claro y oscuro |
 | Accesibilidad | `Semantics` en widgets de `ui/`, tamaños táctiles ≥ 44 pt, revisión con VoiceOver | Etiquetas en todos los controles icon-only, gráficos con vista tabla |
@@ -632,3 +718,4 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 - ADR-010 Cliente nativo iOS en Flutter en lugar de la PWA Angular, con token de Sanctum por dispositivo. El frontend Angular se retiró del repo el 2026-10-26.
 - ADR-011 Aviso diario como notificación local mientras no haya APNs.
 - ADR-012 Transferencias entre cuentas propias detectadas por emparejamiento (§4.1.2). Contexto: una recarga BBVA → Revolut entraba como gasto + ingreso e inflaba ambos. Decisión: convertir solo parejas claras (importe exacto, ≤ 3 días, candidato único en ambos sentidos, al menos una señal fuerte, sin categoría) y proponer el resto en Pendientes como estado calculado (coherente con ADR-009); las únicas filas nuevas son las exclusiones, para que deshacer y "No es transferencia" sean definitivos. El IBAN se compara enmascarado para no guardar IBAN completos. Descartado: emparejar por importe y fecha sin señales (falsos positivos con Bizums y devoluciones) y guardar sugerencias en tabla (se quedarían obsoletas al borrar o categorizar).
+- ADR-013 Tareas repetitivas con RRULE (RFC 5545) y una fila por ocurrencia. Contexto: cron no expresa "cada 2 semanas desde el 4 de marzo" ni "el último viernes del mes", y hace falta el tipo "tras completarla". Decisión: la plantilla guarda una RRULE limitada al subconjunto del editor (motor en `Core/Recurrence` sobre `rlanvin/php-rrule`, reutilizable por otros módulos) o un intervalo en días desde que se completa; cada ocurrencia procesada se guarda como tarea (abierta, hecha u omitida con motivo) con clave única `plantilla + fecha`, y la generación es idempotente (job a las 00:05 + puesta al día perezosa, para que el Mac dormido no deje huecos). Las ocurrencias futuras de Próximas se calculan al vuelo. Descartado: expresiones cron (no cubren los casos), materializar el futuro (habría que regenerarlo al editar) y guardar solo la abierta (se pierde el historial que necesitará Hábitos).

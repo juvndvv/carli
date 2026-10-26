@@ -1,4 +1,4 @@
-# PRD · Personal App (shell modular + módulo Finanzas)
+# PRD · Personal App (shell modular + módulos Finanzas y Tareas)
 
 | | |
 |---|---|
@@ -46,7 +46,8 @@ El primer módulo es **Finanzas**: registrar manualmente ingresos y gastos, sabe
 | **F1 · Finanzas MVP** | Cuentas, movimientos, transferencias, categorías y etiquetas, dashboard, presupuestos |
 | **F2 · Finanzas v1.1** | Recurrentes/suscripciones, objetivos de ahorro, deudas y préstamos, gastos compartidos, exportación CSV |
 | **F3 · Sincronización bancaria** | Conexión de Revolut, BBVA y MyInvestor vía Open Banking (Enable Banking), importación automática de movimientos, bandeja "Sin categorizar", aviso de renovación del consentimiento (§7.2, FI-BK) |
-| **F4+** | Otros módulos: Tareas, Salud, Hábitos, Notas (solo se reserva su hueco en el shell) |
+| **F4 · Tareas** | Tareas sueltas, listas, plantillas que se repiten (RRULE y "tras completarla"), vistas Hoy y Próximas, vencidas en Pendientes (§8) |
+| **F5+** | Otros módulos: Salud, Hábitos, Notas (solo se reserva su hueco en el shell) |
 
 > Recomendación: no empezar F2 hasta usar F1 dos o tres semanas. Lo que eches en falta en el uso real pesa más que este documento.
 
@@ -259,7 +260,124 @@ La nómina no llega siempre el mismo día (festivos, fines de semana, pagas extr
 
 Ejemplo: nómina el 28/09 → periodo 28/09–27/10. Nómina el 28/10 → nuevo periodo desde el 28/10. Paga extra el 15/11 (solo 18 días después) → no abre periodo. Nómina el 26/11 (adelantada) → periodo 28/10–25/11 y nuevo desde el 26/11.
 
-## 8. Requisitos no funcionales
+## 8. Módulo Tareas
+
+Estado: v1 implementada el 2026-10-26 (detalle técnico en TRD §4.1.3, §5.4, §6.3 y ADR-013). Entran todos los Must y Should salvo TA-06 (avisos a la hora), más TA-07 (Importante), TA-08 (búsqueda, en la búsqueda global), TA-VI-06 (registro de hechas, sin filtros de fecha en la app) y la vista del historial de TA-PL-09. Mockups: https://claude.ai/artifact/QufJbwpf7jxkuNM72bsK63
+
+### 8.1 Conceptos
+
+- **Tarea**: algo que hacer una vez. Título, notas opcionales, fecha opcional (con hora opcional), lista, subtareas opcionales. Estados: *abierta*, *hecha*, *omitida*.
+- **Plantilla**: molde de una tarea que se repite ("Sacar la basura", "Pagar comunidad"). Guarda título, notas, lista, subtareas, hora y **frecuencia**. No se completa: genera tareas que sí se completan.
+- **Ocurrencia**: cada fecha en la que una plantilla toca. Se convierte en tarea cuando llega su día (o N días antes, si la plantilla lo pide).
+- **Lista**: agrupación simple y plana (Casa, Personal, Trabajo…). Una tarea está en una sola lista. Hay una lista por defecto, *Bandeja*, para lo que se apunta sin clasificar.
+- **Vencida**: tarea abierta con fecha anterior a hoy. Es un estado calculado, no un campo (mismo criterio que ADR-009).
+
+### 8.2 Frecuencia (el "cron")
+
+No se expone una expresión cron. Internamente se guarda una **regla RRULE (RFC 5545)** + fecha de inicio, porque cron no sabe expresar "cada 2 semanas", "cada 3 días desde el 4 de marzo" ni "el último viernes del mes", y RRULE sí (y hay librerías maduras en PHP y Dart). En la UI, un constructor con estas opciones:
+
+| Tipo | Ejemplo en la UI | RRULE |
+|---|---|---|
+| Diaria / cada N días | Cada 3 días | `FREQ=DAILY;INTERVAL=3` |
+| Semanal en días concretos | Cada lunes y jueves | `FREQ=WEEKLY;BYDAY=MO,TH` |
+| Cada N semanas | Cada 2 semanas, el sábado | `FREQ=WEEKLY;INTERVAL=2;BYDAY=SA` |
+| Mensual por día | El día 1 de cada mes | `FREQ=MONTHLY;BYMONTHDAY=1` |
+| Mensual por posición | El último viernes de cada mes | `FREQ=MONTHLY;BYDAY=FR;BYSETPOS=-1` |
+| Último día del mes | Último día de cada mes | `FREQ=MONTHLY;BYMONTHDAY=-1` |
+| Anual | Cada 15 de marzo | `FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=15` |
+| **Tras completarla** | 10 días después de hacerla | sin RRULE: `interval_after_done = 10 días` |
+
+El último tipo no es un calendario: la siguiente fecha se calcula desde el día en que completas la anterior (regar plantas, cambiar sábanas, cortarse el pelo). Es lo que más falla en las apps que solo tienen calendario fijo.
+
+### 8.3 Requisitos funcionales
+
+#### Tareas
+| ID | Requisito | Prio |
+|---|---|---|
+| TA-01 | Alta rápida: título y fecha con atajos (Hoy, Mañana, Fin de semana, Sin fecha). Lista por defecto: Bandeja. ≤ 2 toques tras escribir. | Must |
+| TA-02 | Completar con un toque (círculo), con deshacer en toast durante 4 s. | Must |
+| TA-03 | Editar título, notas, fecha, hora, lista. Borrar con confirmación. | Must |
+| TA-04 | Posponer desde la fila (deslizar): Mañana, Fin de semana, Próxima semana, Elegir fecha. | Must |
+| TA-05 | Subtareas como lista de comprobación dentro de la tarea; la tarea no se completa sola al marcarlas todas. | Should |
+| TA-06 | Aviso local a la hora indicada, si la tarea tiene hora. **Fuera de la v1** (§8.8). | Should |
+| TA-07 | Prioridad: marca única "Importante" (sin niveles). Ordena primero dentro del día. | Could |
+| TA-08 | Búsqueda en tareas (alimenta SH-10). | Could |
+
+#### Plantillas
+| ID | Requisito | Prio |
+|---|---|---|
+| TA-PL-01 | Crear plantilla con título, lista, notas, subtareas, hora opcional y frecuencia (§8.2). Desde cero o activando "Repetir" al crear una tarea. | Must |
+| TA-PL-02 | Vista previa de las 5 próximas fechas mientras se edita la frecuencia, y descripción en lenguaje natural ("Cada 2 semanas, el sábado"). | Must |
+| TA-PL-03 | Inicio y fin: fecha de inicio (por defecto hoy); fin nunca, en una fecha o tras N veces. | Must |
+| TA-PL-04 | **Si no la completas** (por plantilla): *Sustituir* (por defecto: al generar la nueva, la anterior abierta pasa a *omitida*) o *Acumular* (se mantienen todas abiertas). Tipo "tras completarla" no aplica: nunca hay dos abiertas. | Must |
+| TA-PL-05 | Antelación: la tarea aparece el mismo día (por defecto) o N días antes de su fecha ("Pagar IBI" aparece 7 días antes con fecha de vencimiento). | Should |
+| TA-PL-06 | Pausar / reanudar sin perder la configuración. Una pausada no genera ni aparece en Próximas. | Must |
+| TA-PL-07 | Saltar una ocurrencia concreta desde Próximas o desde la tarea ("Saltar esta vez"). | Should |
+| TA-PL-08 | Editar una plantilla afecta a las ocurrencias futuras. La tarea abierta ya generada pregunta: "¿Aplicar también a la de hoy?". Las hechas no cambian nunca. | Must |
+| TA-PL-09 | Historial por plantilla: últimas ocurrencias con hecha / omitida / saltada y racha simple ("8 de las últimas 10"). Se guarda siempre (cada ocurrencia con su estado y fecha) aunque la vista llegue después: es lo que usará el futuro módulo Hábitos. | Must (datos) / Could (vista) |
+| TA-PL-10 | Borrar plantilla: las tareas ya generadas se quedan (abiertas o hechas); se ofrece borrar también la abierta. | Must |
+
+#### Vistas
+| ID | Requisito | Prio |
+|---|---|---|
+| TA-VI-01 | **Hoy**: vencidas (arriba, agrupadas) + tareas de hoy + hechas hoy (plegadas al final). Progreso del día "3 de 7". | Must |
+| TA-VI-02 | **Próximas**: agenda de 14 días con las tareas con fecha y las ocurrencias programadas de las plantillas (en gris, con icono de repetición), calculadas al vuelo, no guardadas. | Must |
+| TA-VI-03 | **Listas**: Bandeja + listas del usuario con contador de abiertas; dentro, tareas con y sin fecha. Crear, renombrar, reordenar, archivar listas. | Must |
+| TA-VI-04 | **Plantillas**: todas, con frecuencia en texto, próxima fecha, lista y estado (activa / pausada). | Must |
+| TA-VI-05 | Tarjeta en **Inicio**: "3 tareas para hoy · 1 vencida" y las 3 primeras con check en línea. | Must |
+| TA-VI-06 | Registro de hechas (filtrable por lista y fechas). | Could |
+
+#### Integración con el shell
+| ID | Requisito | Prio |
+|---|---|---|
+| TA-SH-01 | **Pendientes (SH-12)**: solo las tareas **vencidas** (tipo `overdue_task`), con acción en línea Hecha / Posponer a hoy / Omitir. Las de hoy no entran: Pendientes no debe convertirse en una segunda lista de tareas. | Must |
+| TA-SH-02 | **Aviso de las 20:00 (SH-13)**: incluye "Te quedan 2 tareas de hoy" si hay abiertas de hoy, y las vencidas en el recuento general. Sigue siendo un solo aviso al día. | Must |
+| TA-SH-03 | Ajustes del módulo: lista por defecto, política por defecto (Sustituir/Acumular), mostrar hechas en Hoy, avisos por hora. | Should |
+
+### 8.4 Generación de tareas (comportamiento)
+
+1. Un job diario (00:05 Europe/Madrid) crea las tareas de las ocurrencias con fecha (menos antelación) ≤ hoy. Clave única `plantilla + fecha de ocurrencia`: idempotente.
+2. **Puesta al día**: si el backend estuvo parado (el Mac dormido), al volver se generan las ocurrencias perdidas aplicando la política: con *Sustituir* solo se crea la última y las intermedias quedan como omitidas; con *Acumular* se crean todas.
+3. **Generación perezosa**: además del job, al pedir Hoy o Próximas se ejecuta la misma puesta al día para ese usuario. Así el resultado es correcto aunque el scheduler no haya corrido.
+4. Tipo "tras completarla": al completar, se calcula la siguiente fecha = fecha de completado + intervalo. Si se omite, cuenta desde el día en que se omite.
+5. Una tarea generada guarda copia de título/notas/subtareas (editarla no toca la plantilla) y referencia a la plantilla.
+
+### 8.5 Notificaciones del módulo
+
+> **v1**: solo el resumen de las 20:00. Los avisos a la hora de la tarea y el resumen matinal quedan pendientes (§8.8, punto 5): la hora se guarda y se muestra, pero no avisa.
+
+| Tipo | Disparador | Por defecto |
+|---|---|---|
+| Tarea con hora | A la hora indicada (aviso local) | On |
+| Resumen del día | Dentro del aviso de las 20:00 (SH-13) | On |
+| Resumen matinal | 08:30, "Hoy tienes 5 tareas" | Off |
+
+Sin APNs, los avisos con hora son **notificaciones locales** que programa la app: solo se reprograman cuando la app se abre, e iOS limita a 64 pendientes. La app calcula las ocurrencias de las plantillas con la misma RRULE (en Dart) para programar los próximos 7 días. Riesgo asumible para uso personal; si molesta, es el motivo para activar APNs.
+
+### 8.6 Fuera de alcance
+
+Tareas compartidas, avisos por ubicación, sincronización con Calendario/Recordatorios de iOS, lenguaje natural ("mañana a las 9"), widgets y Siri (candidatos a F+1), etiquetas, proyectos con secciones, estimaciones de tiempo, dependencias entre tareas.
+
+### 8.7 Riesgos y críticas
+
+| Tema | Comentario |
+|---|---|
+| Competir con Recordatorios de iOS | Ya tienes una app de tareas gratis, con Siri, widgets y avisos fiables. Lo que justifica este módulo es: plantillas con políticas que Recordatorios no tiene (sustituir/acumular, tras completarla), y estar junto al resto de carli (Inicio, Pendientes, 20:00). Si a las 3 semanas solo usas tareas sueltas, el módulo sobra. |
+| Sobrecarga de vistas | Hoy + Próximas + Listas + Plantillas son 4 pestañas. Plantillas podría vivir dentro de Listas o de Ajustes del módulo. Decidido en §8.8 (punto 4). |
+| Avisos locales | Ver §8.5. Una tarea con hora creada en una plantilla no avisa si no abres la app en días. |
+| Acumulación | "Acumular" en una plantilla diaria genera montañas de vencidas tras una semana fuera. Por eso el valor por defecto es "Sustituir". |
+| Pendientes inflado | Si muchas tareas vencen, Pendientes pierde valor para Finanzas. Mitigación: TA-SH-01 solo vencidas, y agrupadas por módulo. |
+
+### 8.8 Decisiones (Juanda, 2026-10-26)
+
+1. Tipo "tras completarla": **entra en la v1**.
+2. Si no la completas: **configurable por plantilla** (Sustituir / Acumular), con valor por defecto en Ajustes del módulo (TA-SH-03).
+3. Organización: **listas simples**, sin etiquetas.
+4. Pestañas: **Plantillas como pestaña propia** (Inicio · Hoy · Próximas · Listas · Plantillas) y **botón "+" también en Tareas**.
+5. Avisos a hora concreta: **TODO, se decide más adelante**. TA-06 y §8.5 quedan fuera de la v1; la hora de una tarea se guarda y se muestra, pero no avisa.
+6. Hábitos: **sin marca de hábito en Tareas**. Se deja la puerta abierta con el historial por ocurrencia (TA-PL-09); el módulo Hábitos podrá leerlo o importar una plantilla. Mientras tanto, una lista "Hábitos" sirve para agruparlas.
+
+## 9. Requisitos no funcionales
 
 - **Privacidad**: autoalojado en VPS propio; ningún dato sale a terceros salvo el servicio push del navegador (contenido cifrado extremo a extremo por Web Push).
 - **Seguridad**: HTTPS obligatorio, 2FA opcional, rate limit en login, backups diarios cifrados de la BD fuera del VPS.
@@ -268,7 +386,7 @@ Ejemplo: nómina el 28/09 → periodo 28/09–27/10. Nómina el 28/10 → nuevo 
 - **Responsive**: desde 360 px de ancho.
 - **Exactitud**: los importes nunca se calculan con coma flotante (ver TRD).
 
-## 9. Riesgos y decisiones abiertas
+## 10. Riesgos y decisiones abiertas
 
 | Tema | Comentario |
 |---|---|
@@ -281,6 +399,6 @@ Ejemplo: nómina el 28/09 → periodo 28/09–27/10. Nómina el 28/10 → nuevo 
 | Doble conteo (F3) | Lo manual y lo importado pueden duplicarse; responsabilidad del usuario. Mitigación: saldo del banco visible (FI-BK-07). |
 | Periodo financiero | Decidido: de nómina a nómina con fecha variable (§7.5). Riesgo: si un mes no se registra la nómina, el periodo se alarga; se mitiga con el recurrente de la nómina en modo "con confirmación" y un aviso. |
 
-## 10. Glosario
+## 11. Glosario
 
 Patrimonio neto, saldo, conciliación, recurrente, split, rollover: ver §7.1.
