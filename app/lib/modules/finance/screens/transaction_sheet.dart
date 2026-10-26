@@ -495,10 +495,11 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
                     ],
                   ),
                 ),
-              IgnorePointer(
-                ignoring: _fromBank,
-                child: CarliSegmented<TransactionKind>(segments: _kindSegments, value: _kind, onChanged: _setKind),
-              ),
+              if (_kindSegments.length > 1)
+                IgnorePointer(
+                  ignoring: _fromBank,
+                  child: CarliSegmented<TransactionKind>(segments: _kindSegments, value: _kind, onChanged: _setKind),
+                ),
               const SizedBox(height: CarliSpace.s8),
               IgnorePointer(
                 ignoring: _fromBank,
