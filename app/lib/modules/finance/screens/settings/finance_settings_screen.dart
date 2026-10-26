@@ -25,7 +25,7 @@ import '../../../../ui/toast.dart';
 import '../../data/finance_changes.dart';
 import '../../data/finance_providers.dart';
 import '../../data/finance_settings_admin.dart';
-import '../transaction_sheet.dart';
+import '../../data/models.dart';
 import 'period_date_sheet.dart';
 
 class FinanceSettingsScreen extends ConsumerWidget {
@@ -35,7 +35,7 @@ class FinanceSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(financeSettingsValuesProvider);
+    final settings = ref.watch(financeSettingsProvider);
     return CarliPage(
       title: 'Ajustes de Finanzas',
       onRefresh: () async {
@@ -44,7 +44,7 @@ class FinanceSettingsScreen extends ConsumerWidget {
           FinanceScope.categories,
           FinanceScope.periods,
         ]);
-        await ref.read(financeSettingsValuesProvider.future).then((_) {}, onError: (_) {});
+        await ref.read(financeSettingsProvider.future).then((_) {}, onError: (_) {});
       },
       slivers: [
         SliverPadding(
@@ -56,7 +56,7 @@ class FinanceSettingsScreen extends ConsumerWidget {
                 child: AsyncView(
                   value: settings,
                   errorTitle: 'No se han podido cargar los ajustes',
-                  onRetry: () => ref.invalidate(financeSettingsValuesProvider),
+                  onRetry: () => ref.invalidate(financeSettingsProvider),
                   loading: const Padding(
                     padding: EdgeInsets.all(CarliSpace.s16),
                     child: Column(
@@ -128,7 +128,7 @@ int? _parseInt(String text) => int.tryParse(text.trim());
 class GeneralSettingsForm extends ConsumerStatefulWidget {
   const GeneralSettingsForm({super.key, required this.settings});
 
-  final FinanceSettingsValues settings;
+  final FinanceSettings settings;
 
   @override
   ConsumerState<GeneralSettingsForm> createState() => _GeneralSettingsFormState();
@@ -137,7 +137,7 @@ class GeneralSettingsForm extends ConsumerStatefulWidget {
 class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
   static const _lastUsed = '';
 
-  late FinanceSettingsValues _baseline = widget.settings;
+  late FinanceSettings _baseline = widget.settings;
   late String? _accountId = _baseline.defaultAccountId;
   late final _threshold = TextEditingController(text: '${_baseline.budgetWarningThreshold}');
   late final _remind = TextEditingController(text: '${_baseline.remindDaysBefore}');
@@ -161,7 +161,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
     super.dispose();
   }
 
-  void _reset(FinanceSettingsValues settings) {
+  void _reset(FinanceSettings settings) {
     _baseline = settings;
     _accountId = settings.defaultAccountId;
     _threshold.text = '${settings.budgetWarningThreshold}';
@@ -198,7 +198,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
         _inRange(_remind, 0, 30) &&
         (_mode == PeriodMode.calendar || _inRange(_minDays, 1, 60));
     if (!valid) return;
-    final values = FinanceSettingsValues(
+    final values = FinanceSettings(
       defaultAccountId: _accountId,
       budgetWarningThreshold: _parseInt(_threshold.text)!,
       remindDaysBefore: _parseInt(_remind.text)!,
@@ -276,11 +276,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
               options: [
                 const CarliOption(_lastUsed, 'La última usada'),
                 for (final account in accounts)
-                  CarliOption(
-                    account.id,
-                    account.name,
-                    icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type)),
-                  ),
+                  CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? account.type.icon)),
               ],
               onChanged: (value) => setState(() {
                 _accountId = value == _lastUsed ? null : value;
@@ -366,7 +362,7 @@ class _OpeningCategoriesCard extends ConsumerStatefulWidget {
 class _OpeningCategoriesCardState extends ConsumerState<_OpeningCategoriesCard> {
   final _pending = <String, bool>{};
 
-  Future<void> _toggle(PeriodOpeningCategory category, bool opensPeriod) async {
+  Future<void> _toggle(Category category, bool opensPeriod) async {
     setState(() => _pending[category.id] = opensPeriod);
     final toasts = ref.read(toastControllerProvider.notifier);
     try {
@@ -374,7 +370,7 @@ class _OpeningCategoriesCardState extends ConsumerState<_OpeningCategoriesCard> 
       toasts.show(opensPeriod ? '${category.name} abrirá periodo' : '${category.name} ya no abre periodo');
     } catch (error) {
       toasts.error(apiErrorMessage(error, fallback: 'No se ha podido actualizar la categoría.'));
-      ref.invalidate(periodOpeningCategoriesProvider);
+      ref.invalidate(categoriesProvider);
     } finally {
       if (mounted) setState(() => _pending.remove(category.id));
     }
@@ -390,7 +386,7 @@ class _OpeningCategoriesCardState extends ConsumerState<_OpeningCategoriesCard> 
       child: AsyncView(
         value: categories,
         errorTitle: 'No se han podido cargar las categorías',
-        onRetry: () => ref.invalidate(periodOpeningCategoriesProvider),
+        onRetry: () => ref.invalidate(categoriesProvider),
         loading: const Padding(padding: EdgeInsets.all(CarliSpace.s16), child: CarliSkeleton(height: 44)),
         data: (items) => items.isEmpty
             ? Padding(
@@ -441,7 +437,7 @@ class _PeriodsCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _moveStart(BuildContext context, WidgetRef ref, ManagedPeriod period) async {
+  Future<void> _moveStart(BuildContext context, WidgetRef ref, Period period) async {
     final date = await showPeriodDateSheet(
       context,
       title: 'Mover inicio del periodo',
@@ -463,7 +459,7 @@ class _PeriodsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final periods = ref.watch(managedPeriodsProvider);
+    final periods = ref.watch(periodsProvider.select((value) => value.whenData((periods) => periods.all)));
     return _SettingsCard(
       title: 'Periodos',
       action: CarliButton(
@@ -477,7 +473,7 @@ class _PeriodsCard extends ConsumerWidget {
       child: AsyncView(
         value: periods,
         errorTitle: 'No se han podido cargar los periodos',
-        onRetry: () => ref.invalidate(managedPeriodsProvider),
+        onRetry: () => ref.invalidate(periodsProvider),
         loading: const Padding(padding: EdgeInsets.all(CarliSpace.s16), child: CarliSkeleton(height: 44)),
         data: (items) => Column(
           children: [

@@ -17,7 +17,6 @@ import '../../../../ui/toast.dart';
 import '../../data/contacts.dart';
 import '../../data/finance_providers.dart';
 import '../../data/transactions_repository.dart';
-import '../transaction_sheet.dart';
 
 enum ContactSheetResult { saved, archived, deleted }
 
@@ -277,11 +276,7 @@ class _SettleFormState extends ConsumerState<SettleForm> {
               invalid: _error != null && accountId == null,
               options: [
                 for (final account in accounts)
-                  CarliOption(
-                    account.id,
-                    account.name,
-                    icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type)),
-                  ),
+                  CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? account.type.icon)),
               ],
               onChanged: (value) => setState(() {
                 _accountId = value;

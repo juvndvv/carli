@@ -23,7 +23,7 @@ import '../../data/finance_providers.dart';
 import '../../data/json.dart';
 import '../../data/models.dart';
 import '../../data/transactions_repository.dart';
-import '../goals/full_sheet.dart';
+import '../../../../ui/full_sheet.dart';
 import 'debt_sheet.dart';
 import 'debts_screen.dart';
 

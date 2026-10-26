@@ -28,7 +28,8 @@ void main() {
       retry: (_, _) => null,
       overrides: [
         unauthorizedHandlerProvider.overrideWith(
-          (ref) => () => ref.read(authControllerProvider.notifier).handleUnauthorized(),
+          (ref) =>
+              () => ref.read(authControllerProvider.notifier).handleUnauthorized(),
         ),
       ],
     );

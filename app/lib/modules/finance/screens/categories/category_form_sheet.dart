@@ -16,14 +16,12 @@ import '../../data/categories_admin.dart';
 import '../../data/finance_providers.dart';
 import '../../data/models.dart';
 
-const _noParent = '';
-
-Future<AdminCategory?> showCategoryForm(
+Future<Category?> showCategoryForm(
   BuildContext context, {
   required CategoryKind kind,
-  AdminCategory? category,
+  Category? category,
   String? parentId,
-}) => showModalBottomSheet<AdminCategory>(
+}) => showModalBottomSheet<Category>(
   context: context,
   useRootNavigator: true,
   isScrollControlled: true,
@@ -39,7 +37,7 @@ class CategoryFormSheet extends ConsumerStatefulWidget {
   const CategoryFormSheet({super.key, required this.kind, this.category, this.parentId});
 
   final CategoryKind kind;
-  final AdminCategory? category;
+  final Category? category;
   final String? parentId;
 
   @override
@@ -56,7 +54,7 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
   var _saving = false;
   String? _error;
 
-  AdminCategory? get _category => widget.category;
+  Category? get _category => widget.category;
 
   bool get _canChangeParent => !(_category?.hasChildren ?? false);
 
@@ -94,7 +92,7 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
     final colors = context.colors;
     final tree = ref.watch(adminCategoriesProvider).value;
     final parents = [
-      for (final parent in tree?.topLevel(_draft.kind) ?? const <AdminCategory>[])
+      for (final parent in tree?.topLevel(_draft.kind) ?? const <Category>[])
         if (parent.id != _category?.id) parent,
     ];
     final nameError = _submitted && !_draft.valid ? 'Ponle un nombre.' : null;
@@ -149,14 +147,18 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
                 const SizedBox(height: CarliSpace.s16),
                 CarliField(
                   label: 'Dentro de',
-                  child: CarliSelect<String>(
+                  child: CarliSelect<String?>(
                     title: 'Dentro de',
-                    value: _draft.parentId ?? _noParent,
-                    onChanged: (id) => setState(() => _draft.parentId = id == _noParent ? null : id),
+                    value: _draft.parentId,
+                    onChanged: (id) => setState(() => _draft.parentId = id),
                     options: [
-                      const CarliOption(_noParent, 'Ninguna (categoría principal)'),
+                      const CarliOption<String?>(null, 'Ninguna (categoría principal)'),
                       for (final parent in parents)
-                        CarliOption(parent.id, parent.name, icon: carliIconNamed(parent.icon ?? fallbackCategoryIcon)),
+                        CarliOption<String?>(
+                          parent.id,
+                          parent.name,
+                          icon: carliIconNamed(parent.icon ?? fallbackCategoryIcon),
+                        ),
                     ],
                   ),
                 ),

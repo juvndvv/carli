@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carli/core/format/dates.dart';
 import 'package:carli/core/theme/tokens.dart';
-import 'package:carli/modules/finance/data/goals.dart';
 import 'package:carli/modules/finance/data/json.dart';
 import 'package:carli/modules/finance/screens/goals/goal_detail_screen.dart';
 import 'package:carli/modules/finance/screens/goals/goals_screen.dart';

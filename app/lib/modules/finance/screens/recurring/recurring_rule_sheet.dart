@@ -20,8 +20,6 @@ import '../../data/recurring.dart';
 import '../../ui/transaction_extras.dart';
 import '../transaction_tools.dart';
 
-const _noCategory = '';
-
 enum RecurringRuleSheetResult { saved, deleted }
 
 Future<RecurringRuleSheetResult?> showRecurringRuleSheet(
@@ -148,10 +146,10 @@ class _RecurringRuleSheetState extends ConsumerState<RecurringRuleSheet> {
         CarliOption<String>(option.id, option.label, icon: carliIconNamed(option.icon)),
     ];
     final categoryOptions = [
-      CarliOption<String>(_noCategory, 'Sin categoría', icon: carliIconNamed('circle')),
+      CarliOption<String?>(null, 'Sin categoría', icon: carliIconNamed('circle')),
       if (categories != null)
         for (final option in recurringCategoryOptions(categories, categoryKind))
-          CarliOption<String>(option.id, option.label, icon: carliIconNamed(option.icon)),
+          CarliOption<String?>(option.id, option.label, icon: carliIconNamed(option.icon)),
     ];
 
     return Column(
@@ -223,12 +221,12 @@ class _RecurringRuleSheetState extends ConsumerState<RecurringRuleSheet> {
               const SizedBox(height: CarliSpace.s16),
               CarliField(
                 label: 'Categoría',
-                child: CarliSelect<String>(
+                child: CarliSelect<String?>(
                   title: 'Categoría',
                   placeholder: 'Sin categoría',
                   options: categoryOptions,
-                  value: _draft.categoryId ?? _noCategory,
-                  onChanged: (id) => setState(() => _draft.categoryId = id == _noCategory ? null : id),
+                  value: _draft.categoryId,
+                  onChanged: (id) => setState(() => _draft.categoryId = id),
                 ),
               ),
               const SizedBox(height: CarliSpace.s16),

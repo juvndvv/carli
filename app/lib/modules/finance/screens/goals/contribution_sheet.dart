@@ -16,7 +16,7 @@ import '../../../../ui/toast.dart';
 import '../../data/goals.dart';
 import '../../data/json.dart';
 import '../../data/models.dart';
-import 'full_sheet.dart';
+import '../../../../ui/full_sheet.dart';
 
 enum ContributionDirection { add, withdraw }
 

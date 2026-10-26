@@ -10,10 +10,11 @@ import '../../../../ui/icon_names.dart';
 import '../../../../ui/select.dart';
 import '../../../../ui/sheet.dart';
 import '../../data/categories_admin.dart';
+import '../../data/models.dart';
 
 const _keepTransactions = '';
 
-Future<bool> showDeleteCategory(BuildContext context, AdminCategory category) async {
+Future<bool> showDeleteCategory(BuildContext context, Category category) async {
   if (category.hasChildren) {
     await showCupertinoDialog<void>(
       context: context,
@@ -43,7 +44,7 @@ Future<bool> showDeleteCategory(BuildContext context, AdminCategory category) as
 class _DeleteCategorySheet extends ConsumerStatefulWidget {
   const _DeleteCategorySheet({required this.category});
 
-  final AdminCategory category;
+  final Category category;
 
   @override
   ConsumerState<_DeleteCategorySheet> createState() => _DeleteCategorySheetState();

@@ -23,21 +23,20 @@ import 'account_form_sheet.dart';
 
 enum AccountAction { detail, edit, reconcile, toggleNetWorth, toggleArchived, delete }
 
-Future<AccountDetails?> editAccount(BuildContext context, WidgetRef ref, [AccountDetails? account]) async {
+Future<Account?> editAccount(BuildContext context, WidgetRef ref, [Account? account]) async {
   final toasts = ref.read(toastControllerProvider.notifier);
   final saved = await showAccountForm(context, account: account);
   if (saved != null) toasts.show(account == null ? 'Cuenta creada' : 'Cuenta actualizada');
   return saved;
 }
 
-Future<ReconcileResult?> reconcileAccount(BuildContext context, AccountDetails account) =>
-    showCarliSheet<ReconcileResult>(
-      context,
-      title: 'Conciliar cuenta',
-      builder: (context) => ReconcileSheet(account: account),
-    );
+Future<ReconcileResult?> reconcileAccount(BuildContext context, Account account) => showCarliSheet<ReconcileResult>(
+  context,
+  title: 'Conciliar cuenta',
+  builder: (context) => ReconcileSheet(account: account),
+);
 
-Future<void> setAccountArchived(WidgetRef ref, AccountDetails account, bool archived) async {
+Future<void> setAccountArchived(WidgetRef ref, Account account, bool archived) async {
   final repository = ref.read(accountsRepositoryProvider);
   final toasts = ref.read(toastControllerProvider.notifier);
   try {
@@ -51,7 +50,7 @@ Future<void> setAccountArchived(WidgetRef ref, AccountDetails account, bool arch
   }
 }
 
-Future<void> setAccountIncludedInNetWorth(WidgetRef ref, AccountDetails account, bool include) async {
+Future<void> setAccountIncludedInNetWorth(WidgetRef ref, Account account, bool include) async {
   final repository = ref.read(accountsRepositoryProvider);
   final toasts = ref.read(toastControllerProvider.notifier);
   try {
@@ -65,7 +64,7 @@ Future<void> setAccountIncludedInNetWorth(WidgetRef ref, AccountDetails account,
   }
 }
 
-Future<bool> removeAccount(BuildContext context, WidgetRef ref, AccountDetails account) async {
+Future<bool> removeAccount(BuildContext context, WidgetRef ref, Account account) async {
   final repository = ref.read(accountsRepositoryProvider);
   final toasts = ref.read(toastControllerProvider.notifier);
   final confirmed = await confirmCarli(
@@ -89,7 +88,7 @@ Future<bool> removeAccount(BuildContext context, WidgetRef ref, AccountDetails a
 Future<void> runAccountAction(
   BuildContext context,
   WidgetRef ref,
-  AccountDetails account,
+  Account account,
   AccountAction action, {
   VoidCallback? onDeleted,
 }) async {
@@ -111,7 +110,7 @@ Future<void> runAccountAction(
 
 Future<AccountAction?> showAccountMenu(
   BuildContext context,
-  AccountDetails account, {
+  Account account, {
   Set<AccountAction> actions = const {
     AccountAction.detail,
     AccountAction.edit,
@@ -192,7 +191,7 @@ class _MenuRow extends StatelessWidget {
 class ReconcileSheet extends ConsumerStatefulWidget {
   const ReconcileSheet({super.key, required this.account});
 
-  final AccountDetails account;
+  final Account account;
 
   @override
   ConsumerState<ReconcileSheet> createState() => _ReconcileSheetState();
@@ -204,7 +203,7 @@ class _ReconcileSheetState extends ConsumerState<ReconcileSheet> {
   var _saving = false;
   String? _error;
 
-  AccountDetails get account => widget.account;
+  Account get account => widget.account;
 
   Cents? get _difference => _actual == null ? null : _actual! - account.clearedBalanceCents;
 
@@ -332,7 +331,7 @@ class _ReconcileSheetState extends ConsumerState<ReconcileSheet> {
 class BankBalanceLine extends StatelessWidget {
   const BankBalanceLine({super.key, required this.link, this.detailed = false});
 
-  final BankLinkDetails link;
+  final AccountBankLink link;
   final bool detailed;
 
   @override

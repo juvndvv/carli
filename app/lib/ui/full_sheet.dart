@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/tokens.dart';
-import '../../../../core/theme/typography.dart';
+import '../core/theme/tokens.dart';
+import '../core/theme/typography.dart';
 
 Future<T?> showFullSheet<T>(BuildContext context, WidgetBuilder builder) => showModalBottomSheet<T>(
   context: context,

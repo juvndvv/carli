@@ -143,7 +143,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         _Choice(
           account.id,
           account.name,
-          icon: account.icon ?? accountTypeIconName(account.type),
+          icon: account.icon ?? account.type.icon,
           subtitle: account.archived ? 'Archivada' : null,
         ),
     ], filters.accountIds);

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carli/core/format/dates.dart';
-import 'package:carli/modules/finance/data/goals.dart' show addMonths;
 import 'package:carli/modules/finance/data/json.dart';
 import 'package:carli/modules/finance/screens/debts/debt_sheet.dart';
 import 'package:carli/modules/finance/screens/debts/debts_screen.dart';

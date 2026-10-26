@@ -21,6 +21,7 @@ import '../../../../ui/stat.dart';
 import '../../../../ui/tabs.dart';
 import '../../../../ui/toast.dart';
 import '../../data/recurring.dart';
+import '../../data/finance_providers.dart';
 import 'confirm_occurrence_sheet.dart';
 import 'recurring_rule_sheet.dart';
 
@@ -134,7 +135,7 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
       trailing: CarliButton.icon(icon: carliIconNamed('plus'), semanticLabel: 'Nuevo recurrente', onPressed: _create),
       onRefresh: () async {
         ref.invalidate(recurringRulesProvider);
-        ref.invalidate(recurringReminderDaysProvider);
+        ref.invalidate(financeSettingsProvider);
         await ref.read(recurringRulesProvider.future).then((_) {}, onError: (_) {});
       },
       slivers: [

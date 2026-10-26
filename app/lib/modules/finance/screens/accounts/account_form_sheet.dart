@@ -17,15 +17,14 @@ import '../../data/accounts_admin.dart';
 import '../../data/models.dart';
 import '../transaction_tools.dart';
 
-Future<AccountDetails?> showAccountForm(BuildContext context, {AccountDetails? account}) =>
-    showModalBottomSheet<AccountDetails>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: false,
-      builder: (context) => FractionallySizedBox(heightFactor: 0.94, child: AccountFormSheet(account: account)),
-    );
+Future<Account?> showAccountForm(BuildContext context, {Account? account}) => showModalBottomSheet<Account>(
+  context: context,
+  useRootNavigator: true,
+  isScrollControlled: true,
+  useSafeArea: true,
+  showDragHandle: false,
+  builder: (context) => FractionallySizedBox(heightFactor: 0.94, child: AccountFormSheet(account: account)),
+);
 
 int? _dayOf(String text) => int.tryParse(text.trim());
 
@@ -38,14 +37,14 @@ bool _validDay(String text) {
 class AccountFormSheet extends ConsumerStatefulWidget {
   const AccountFormSheet({super.key, this.account});
 
-  final AccountDetails? account;
+  final Account? account;
 
   @override
   ConsumerState<AccountFormSheet> createState() => _AccountFormSheetState();
 }
 
 class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
-  late final AccountDetails? _account = widget.account;
+  late final Account? _account = widget.account;
   late final _name = TextEditingController(text: _account?.name ?? '');
   late final _statementDay = TextEditingController(text: _account?.statementDay?.toString() ?? '');
   late final _paymentDay = TextEditingController(text: _account?.paymentDay?.toString() ?? '');
@@ -53,7 +52,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
   late Cents? _initialBalance = _account?.initialBalanceCents ?? 0;
   late DateTime? _initialDate = _account == null ? today() : _account.initialBalanceDate;
   late Cents? _creditLimit = _account?.creditLimitCents;
-  late String? _icon = _account == null ? accountTypeIcon(AccountType.checking) : _account.icon;
+  late String? _icon = _account == null ? AccountType.checking.icon : _account.icon;
   late String? _color = _account?.color;
   late var _includeInNetWorth = _account?.includeInNetWorth ?? true;
   var _submitted = false;
@@ -73,8 +72,8 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
   }
 
   void _changeType(AccountType type) => setState(() {
-    final defaults = AccountType.values.map(accountTypeIcon).toSet();
-    if (_icon == null || defaults.contains(_icon)) _icon = accountTypeIcon(type);
+    final defaults = AccountType.values.map((type) => type.icon).toSet();
+    if (_icon == null || defaults.contains(_icon)) _icon = type.icon;
     _type = type;
   });
 
@@ -151,7 +150,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
                   onChanged: _changeType,
                   options: [
                     for (final type in AccountType.values)
-                      CarliOption(type, accountTypeLabel(type), icon: carliIconNamed(accountTypeIcon(type))),
+                      CarliOption(type, type.label, icon: carliIconNamed(type.icon)),
                   ],
                 ),
               ),

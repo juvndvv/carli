@@ -26,20 +26,6 @@ const bankCallbackErrors = {
   'proveedor': 'El banco no ha podido completar la conexión. Inténtalo de nuevo en unos minutos.',
 };
 
-const accountTypeLabels = {
-  AccountType.checking: 'Corriente',
-  AccountType.savings: 'Ahorro',
-  AccountType.creditCard: 'Tarjeta de crédito',
-  AccountType.cash: 'Efectivo',
-};
-
-String accountTypeApi(AccountType type) => switch (type) {
-  AccountType.checking => 'checking',
-  AccountType.savings => 'savings',
-  AccountType.creditCard => 'credit_card',
-  AccountType.cash => 'cash',
-};
-
 enum BankConnectionStatus {
   active,
   expired,
@@ -237,7 +223,7 @@ String? maskIban(String? iban) {
 
 String candidateTitle(BankAccountCandidate candidate) {
   final name = candidate.name?.trim();
-  return name == null || name.isEmpty ? accountTypeLabels[candidate.suggestedAccountType]! : name;
+  return name == null || name.isEmpty ? candidate.suggestedAccountType.label : name;
 }
 
 String candidateSubtitle(BankAccountCandidate candidate) => [
@@ -253,7 +239,7 @@ String defaultNewAccountName(String bank, BankAccountCandidate candidate) {
   final name = candidate.name?.trim();
   return name != null && name.isNotEmpty
       ? '$bank $name'
-      : '$bank ${accountTypeLabels[candidate.suggestedAccountType]!.toLowerCase()}';
+      : '$bank ${candidate.suggestedAccountType.label.toLowerCase()}';
 }
 
 Set<String> duplicateTargets(List<String?> targets) {

@@ -20,6 +20,8 @@ import '../../../../ui/skeleton.dart';
 import '../../data/accounts_admin.dart';
 import '../../data/finance_changes.dart';
 import '../../data/transaction_filters.dart';
+import '../../data/finance_providers.dart';
+import '../../data/models.dart';
 import 'account_actions.dart';
 
 class AccountsScreen extends ConsumerStatefulWidget {
@@ -34,12 +36,12 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
   Future<void> _refresh() async {
     ref.read(financeChangesProvider.notifier).notify(const [FinanceScope.accounts]);
-    await ref.read(accountsOverviewProvider.future).then((_) {}, onError: (_) {});
+    await ref.read(accountsProvider.future).then((_) {}, onError: (_) {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final overview = ref.watch(accountsOverviewProvider);
+    final overview = ref.watch(accountsProvider);
     return CarliPage(
       title: 'Cuentas',
       trailing: CarliButton.icon(
@@ -55,7 +57,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             child: AsyncView(
               value: overview,
               errorTitle: 'No se han podido cargar las cuentas',
-              onRetry: () => ref.invalidate(accountsOverviewProvider),
+              onRetry: () => ref.invalidate(accountsProvider),
               loading: const _AccountsSkeleton(),
               data: (data) => data.all.isEmpty
                   ? CarliCard(
@@ -83,7 +85,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 class _AccountsBody extends StatelessWidget {
   const _AccountsBody({required this.data, required this.showArchived, required this.onToggleArchived});
 
-  final AccountsOverview data;
+  final AccountsData data;
   final bool showArchived;
   final VoidCallback onToggleArchived;
 
@@ -141,7 +143,7 @@ class _AccountsBody extends StatelessWidget {
 class AccountCard extends ConsumerWidget {
   const AccountCard({super.key, required this.account});
 
-  final AccountDetails account;
+  final Account account;
 
   Future<void> _openMenu(BuildContext context, WidgetRef ref) async {
     final action = await showAccountMenu(context, account);

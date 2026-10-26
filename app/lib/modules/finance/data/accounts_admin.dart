@@ -6,6 +6,7 @@ import '../../../core/format/dates.dart';
 import '../../../core/format/money.dart';
 import 'finance_api.dart';
 import 'finance_changes.dart';
+import 'finance_providers.dart';
 import 'json.dart';
 import 'models.dart';
 
@@ -14,150 +15,6 @@ const accountHistoryMaxPages = 5;
 const accountHistoryPageSize = 200;
 const accountIconChoices = ['landmark', 'piggy-bank', 'credit-card', 'banknote', 'wallet', 'coins', 'euro', 'building'];
 const accountColorChoices = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
-
-String accountTypeApi(AccountType type) => switch (type) {
-  AccountType.checking => 'checking',
-  AccountType.savings => 'savings',
-  AccountType.creditCard => 'credit_card',
-  AccountType.cash => 'cash',
-};
-
-String accountTypeLabel(AccountType type) => switch (type) {
-  AccountType.checking => 'Corriente',
-  AccountType.savings => 'Ahorro',
-  AccountType.creditCard => 'Tarjeta de crédito',
-  AccountType.cash => 'Efectivo',
-};
-
-String accountTypeIcon(AccountType type) => switch (type) {
-  AccountType.checking => 'landmark',
-  AccountType.savings => 'piggy-bank',
-  AccountType.creditCard => 'credit-card',
-  AccountType.cash => 'banknote',
-};
-
-class BankLinkDetails {
-  const BankLinkDetails({
-    required this.connectionId,
-    required this.aspspName,
-    required this.status,
-    required this.lastSyncedAt,
-    required this.balanceCents,
-    required this.balanceAt,
-    required this.differenceCents,
-  });
-
-  factory BankLinkDetails.fromJson(Json json) => BankLinkDetails(
-    connectionId: json['connection_id'] as String? ?? '',
-    aspspName: json['aspsp_name'] as String? ?? '',
-    status: json['status'] as String? ?? 'active',
-    lastSyncedAt: _instantOrNull(json['last_synced_at']),
-    balanceCents: intOrNull(json['balance_cents']),
-    balanceAt: _instantOrNull(json['balance_at']),
-    differenceCents: intOrNull(json['difference_cents']),
-  );
-
-  final String connectionId;
-  final String aspspName;
-  final String status;
-  final DateTime? lastSyncedAt;
-  final Cents? balanceCents;
-  final DateTime? balanceAt;
-  final Cents? differenceCents;
-}
-
-DateTime? _instantOrNull(Object? value) => value is String ? DateTime.tryParse(value)?.toLocal() : null;
-
-class AccountDetails {
-  const AccountDetails({
-    required this.id,
-    required this.name,
-    required this.type,
-    this.initialBalanceCents = 0,
-    this.initialBalanceDate,
-    this.balanceCents = 0,
-    this.clearedBalanceCents = 0,
-    this.pendingCents = 0,
-    this.creditLimitCents,
-    this.statementDay,
-    this.paymentDay,
-    this.usedCreditCents,
-    this.availableCreditCents,
-    this.color,
-    this.icon,
-    this.includeInNetWorth = true,
-    this.archived = false,
-    this.bank,
-  });
-
-  factory AccountDetails.fromJson(Json json) {
-    final balance = intOf(json['balance_cents']);
-    return AccountDetails(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      type: accountTypeOf(json['type'] as String?),
-      initialBalanceCents: intOf(json['initial_balance_cents']),
-      initialBalanceDate: parseIsoDateOrNull(json['initial_balance_date']),
-      balanceCents: balance,
-      clearedBalanceCents: intOrNull(json['cleared_balance_cents']) ?? balance,
-      pendingCents: intOf(json['pending_cents']),
-      creditLimitCents: intOrNull(json['credit_limit_cents']),
-      statementDay: intOrNull(json['statement_day']),
-      paymentDay: intOrNull(json['payment_day']),
-      usedCreditCents: intOrNull(json['used_credit_cents']),
-      availableCreditCents: intOrNull(json['available_credit_cents']),
-      color: json['color'] as String?,
-      icon: json['icon'] as String?,
-      includeInNetWorth: json['include_in_net_worth'] as bool? ?? true,
-      archived: json['archived'] as bool? ?? false,
-      bank: json['bank'] is Json ? BankLinkDetails.fromJson(json['bank'] as Json) : null,
-    );
-  }
-
-  final String id;
-  final String name;
-  final AccountType type;
-  final Cents initialBalanceCents;
-  final DateTime? initialBalanceDate;
-  final Cents balanceCents;
-  final Cents clearedBalanceCents;
-  final Cents pendingCents;
-  final Cents? creditLimitCents;
-  final int? statementDay;
-  final int? paymentDay;
-  final Cents? usedCreditCents;
-  final Cents? availableCreditCents;
-  final String? color;
-  final String? icon;
-  final bool includeInNetWorth;
-  final bool archived;
-  final BankLinkDetails? bank;
-
-  bool get isCreditCard => type == AccountType.creditCard;
-
-  String get iconName => icon ?? accountTypeIcon(type);
-
-  String get typeLabel => accountTypeLabel(type);
-}
-
-class AccountsOverview {
-  const AccountsOverview({required this.all, required this.netWorthCents});
-
-  final List<AccountDetails> all;
-  final Cents? netWorthCents;
-
-  List<AccountDetails> get active => [
-    for (final account in all)
-      if (!account.archived) account,
-  ];
-
-  List<AccountDetails> get archived => [
-    for (final account in all)
-      if (account.archived) account,
-  ];
-
-  AccountDetails? find(String id) => all.where((account) => account.id == id).firstOrNull;
-}
 
 class ReconcileResult {
   const ReconcileResult({
@@ -168,13 +25,13 @@ class ReconcileResult {
   });
 
   factory ReconcileResult.fromJson(Json json) => ReconcileResult(
-    account: AccountDetails.fromJson(json['account'] as Json),
+    account: Account.fromJson(json['account'] as Json),
     adjustment: json['adjustment'] is Json ? Transaction.fromJson(json['adjustment'] as Json) : null,
     differenceCents: intOf(json['difference_cents']),
     balanceCents: intOf(json['balance_cents']),
   );
 
-  final AccountDetails account;
+  final Account account;
   final Transaction? adjustment;
   final Cents differenceCents;
   final Cents balanceCents;
@@ -209,7 +66,7 @@ class AccountInput {
     final card = type == AccountType.creditCard;
     return {
       'name': name.trim(),
-      'type': accountTypeApi(type),
+      'type': type.api,
       'initial_balance_cents': initialBalanceCents,
       'initial_balance_date': initialBalanceDate == null ? null : isoDate(initialBalanceDate!),
       'credit_limit_cents': card ? creditLimitCents : null,
@@ -249,7 +106,7 @@ List<BalancePoint> balanceHistory(Cents currentBalance, List<Transaction> transa
   return points.reversed.toList();
 }
 
-String? cardSchedule(AccountDetails account) {
+String? cardSchedule(Account account) {
   final parts = [
     if (account.statementDay case final day?) 'Corte día $day',
     if (account.paymentDay case final day?) 'se carga el día $day',
@@ -257,14 +114,14 @@ String? cardSchedule(AccountDetails account) {
   return parts.isEmpty ? null : parts.join(' · ');
 }
 
-String accountsSummaryLabel(List<AccountDetails> active) {
+String accountsSummaryLabel(List<Account> active) {
   final label = active.length == 1 ? '1 cuenta' : '${active.length} cuentas';
   return active.any((account) => account.isCreditCard) ? '$label · las tarjetas de crédito restan' : label;
 }
 
 String archivedAccountsLabel(int count) => count == 1 ? '1 cuenta archivada' : '$count cuentas archivadas';
 
-Cents reconcileStartingBalance(AccountDetails account) => account.bank?.balanceCents ?? account.clearedBalanceCents;
+Cents reconcileStartingBalance(Account account) => account.bank?.balanceCents ?? account.clearedBalanceCents;
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
@@ -294,7 +151,7 @@ class BankBalanceSummary {
   final String? updated;
 }
 
-BankBalanceSummary? bankBalanceSummary(BankLinkDetails? link, {DateTime? now}) {
+BankBalanceSummary? bankBalanceSummary(AccountBankLink? link, {DateTime? now}) {
   if (link == null) return null;
   final difference = link.differenceCents;
   return BankBalanceSummary(
@@ -315,23 +172,13 @@ class AccountsAdminApi {
 
   static const _base = '/v1/finance/accounts';
 
-  Future<AccountsOverview> list() async {
-    final response = await _dio.get<Json>(_base, queryParameters: {'include_archived': '1'});
-    final body = response.data!;
-    return AccountsOverview(
-      all: parseList(body['data'], AccountDetails.fromJson),
-      netWorthCents: intOrNull((body['meta'] as Json?)?['net_worth_cents']),
-    );
-  }
+  Future<Account> get(String id) async => Account.fromJson((await _dio.get<Json>('$_base/$id')).data!['data'] as Json);
 
-  Future<AccountDetails> get(String id) async =>
-      AccountDetails.fromJson((await _dio.get<Json>('$_base/$id')).data!['data'] as Json);
+  Future<Account> create(Json input) async =>
+      Account.fromJson((await _dio.post<Json>(_base, data: input)).data!['data'] as Json);
 
-  Future<AccountDetails> create(Json input) async =>
-      AccountDetails.fromJson((await _dio.post<Json>(_base, data: input)).data!['data'] as Json);
-
-  Future<AccountDetails> update(String id, Json input) async =>
-      AccountDetails.fromJson((await _dio.patch<Json>('$_base/$id', data: input)).data!['data'] as Json);
+  Future<Account> update(String id, Json input) async =>
+      Account.fromJson((await _dio.patch<Json>('$_base/$id', data: input)).data!['data'] as Json);
 
   Future<void> delete(String id) => _dio.delete<Object?>('$_base/$id');
 
@@ -354,24 +201,23 @@ class AccountsRepository {
   final AccountsAdminApi _api;
   final FinanceChanges _changes;
 
-  Future<AccountDetails> create(AccountInput input) async {
+  Future<Account> create(AccountInput input) async {
     final account = await _api.create(input.toJson());
     _changes.notify(const [FinanceScope.accounts]);
     return account;
   }
 
-  Future<AccountDetails> update(String id, Json changes) async {
+  Future<Account> update(String id, Json changes) async {
     final account = await _api.update(id, changes);
     _changes.notify(const [FinanceScope.accounts]);
     return account;
   }
 
-  Future<AccountDetails> save(String id, AccountInput input) => update(id, input.toJson());
+  Future<Account> save(String id, AccountInput input) => update(id, input.toJson());
 
-  Future<AccountDetails> setArchived(String id, bool archived) => update(id, {'archived': archived});
+  Future<Account> setArchived(String id, bool archived) => update(id, {'archived': archived});
 
-  Future<AccountDetails> setIncludedInNetWorth(String id, bool include) =>
-      update(id, {'include_in_net_worth': include});
+  Future<Account> setIncludedInNetWorth(String id, bool include) => update(id, {'include_in_net_worth': include});
 
   Future<void> remove(String id) async {
     await _api.delete(id);
@@ -385,13 +231,8 @@ class AccountsRepository {
   }
 }
 
-final accountsOverviewProvider = FutureProvider<AccountsOverview>((ref) async {
-  ref.watchFinance(const [FinanceScope.accounts]);
-  return ref.watch(accountsAdminApiProvider).list();
-});
-
-final accountDetailsProvider = FutureProvider.family<AccountDetails, String>((ref, id) async {
-  final overview = await ref.watch(accountsOverviewProvider.future);
+final accountDetailsProvider = FutureProvider.family<Account, String>((ref, id) async {
+  final overview = await ref.watch(accountsProvider.future);
   return overview.find(id) ?? await ref.watch(accountsAdminApiProvider).get(id);
 });
 

@@ -15,14 +15,11 @@ import '../../../../ui/select.dart';
 import '../../../../ui/toast.dart';
 import '../../data/debts.dart';
 import '../../data/finance_providers.dart';
-import '../../data/goals.dart' show addMonths;
 import '../../data/models.dart';
 import '../../ui/transaction_extras.dart';
-import '../goals/full_sheet.dart';
-import '../transaction_sheet.dart' show accountTypeIconName;
+import '../../../../ui/full_sheet.dart';
 import '../transaction_tools.dart' show DateField;
 
-const noContact = '__none';
 const newContact = '__new';
 
 Future<Debt?> showDebtSheet(BuildContext context, {Debt? debt}) =>
@@ -36,7 +33,7 @@ String? preferredDebtAccountId(List<Account> accounts) {
 List<CarliOption<String>> debtAccountOptions(List<Account> accounts) => [
   for (final account in accounts)
     if (!account.archived)
-      CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type))),
+      CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? account.type.icon)),
 ];
 
 class DebtSheet extends ConsumerStatefulWidget {
@@ -52,7 +49,7 @@ class _DebtSheetState extends ConsumerState<DebtSheet> {
   late var _direction = widget.debt?.direction ?? DebtDirection.iOwe;
   late int? _principal = widget.debt?.principalCents;
   late final _name = TextEditingController(text: widget.debt?.name ?? '');
-  late var _contact = widget.debt?.contactId ?? noContact;
+  late String? _contact = widget.debt?.contactId;
   final _contactName = TextEditingController();
   late var _startDate = widget.debt?.startDate ?? today();
   late var _hasDue = widget.debt?.dueDate != null;
@@ -106,7 +103,6 @@ class _DebtSheetState extends ConsumerState<DebtSheet> {
     final repository = ref.read(debtsRepositoryProvider);
     try {
       final contactId = switch (_contact) {
-        noContact => null,
         newContact => (await repository.createContact(_contactName.text.trim())).id,
         final id => id,
       };
@@ -202,14 +198,14 @@ class _DebtSheetState extends ConsumerState<DebtSheet> {
               const SizedBox(height: CarliSpace.s16),
               CarliField(
                 label: _owesMe ? 'Quién te lo debe' : 'A quién se lo debes',
-                child: CarliSelect<String>(
+                child: CarliSelect<String?>(
                   title: _owesMe ? 'Quién te lo debe' : 'A quién se lo debes',
                   options: [
-                    CarliOption(noContact, 'Sin contacto', icon: carliIconNamed('user')),
+                    CarliOption<String?>(null, 'Sin contacto', icon: carliIconNamed('user')),
                     for (final contact in contacts)
                       if (!contact.archived || contact.id == _contact)
-                        CarliOption(contact.id, contact.name, icon: carliIconNamed('user')),
-                    CarliOption(newContact, 'Nuevo contacto…', icon: carliIconNamed('user-plus')),
+                        CarliOption<String?>(contact.id, contact.name, icon: carliIconNamed('user')),
+                    CarliOption<String?>(newContact, 'Nuevo contacto…', icon: carliIconNamed('user-plus')),
                   ],
                   value: _contact,
                   onChanged: (value) => setState(() => _contact = value),
@@ -313,16 +309,20 @@ class _DebtSheetState extends ConsumerState<DebtSheet> {
                         if (!_owesMe)
                           CarliField(
                             label: 'Categoría',
-                            child: CarliSelect<String>(
+                            child: CarliSelect<String?>(
                               title: 'Categoría',
                               placeholder: 'Sin categoría',
                               options: [
-                                CarliOption('', 'Sin categoría', icon: carliIconNamed('circle')),
+                                CarliOption<String?>(null, 'Sin categoría', icon: carliIconNamed('circle')),
                                 for (final entry in categories?.selectable(CategoryKind.expense) ?? const [])
-                                  CarliOption(entry.category.id, entry.label, icon: carliIconNamed(entry.icon)),
+                                  CarliOption<String?>(
+                                    entry.category.id,
+                                    entry.label,
+                                    icon: carliIconNamed(entry.icon),
+                                  ),
                               ],
-                              value: _planCategoryId ?? '',
-                              onChanged: (id) => setState(() => _planCategoryId = id.isEmpty ? null : id),
+                              value: _planCategoryId,
+                              onChanged: (id) => setState(() => _planCategoryId = id),
                             ),
                           ),
                         Text(

@@ -20,7 +20,6 @@ import '../../data/bank.dart';
 import '../../data/finance_providers.dart';
 import '../../data/json.dart';
 import '../../data/models.dart';
-import '../transaction_sheet.dart';
 import '../transaction_tools.dart';
 
 class _LinkRow {
@@ -118,7 +117,7 @@ class _BankLinkScreenState extends ConsumerState<BankLinkScreen> {
             'sync_from_date': isoDate(row.from.isAfter(current) ? current : row.from),
             if (row.target == newAccountTarget) ...{
               'name': row.name.text.trim().isEmpty ? null : row.name.text.trim(),
-              'type': accountTypeApi(row.type),
+              'type': row.type.api,
             },
           },
     ];
@@ -160,7 +159,7 @@ class _BankLinkScreenState extends ConsumerState<BankLinkScreen> {
         CarliOption<String?>(
           account.id,
           account.name,
-          icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type)),
+          icon: carliIconNamed(account.icon ?? account.type.icon),
           subtitle:
               account.bank != null && !(_connection?.linkedAccounts.any((linked) => linked.id == account.id) ?? false)
               ? 'Ya vinculada a ${account.bank!.aspspName}'
@@ -169,8 +168,7 @@ class _BankLinkScreenState extends ConsumerState<BankLinkScreen> {
       CarliOption<String?>(null, 'No importar', icon: carliIconNamed('eye-off')),
     ];
     final typeOptions = [
-      for (final type in AccountType.values)
-        CarliOption(type, accountTypeLabels[type]!, icon: carliIconNamed(accountTypeIconName(type))),
+      for (final type in AccountType.values) CarliOption(type, type.label, icon: carliIconNamed(type.icon)),
     ];
 
     Widget body;
@@ -220,7 +218,7 @@ class _BankLinkScreenState extends ConsumerState<BankLinkScreen> {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(color: colors.surface2, shape: BoxShape.circle),
                         child: CarliIcon(
-                          carliIconNamed(accountTypeIconName(row.candidate.suggestedAccountType)),
+                          carliIconNamed(row.candidate.suggestedAccountType.icon),
                           size: 20,
                           color: colors.text,
                         ),

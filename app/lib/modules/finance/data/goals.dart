@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,12 +23,6 @@ const goalIcons = [
 ];
 
 const defaultGoalIcon = 'piggy-bank';
-
-DateTime addMonths(DateTime date, int months) {
-  final first = DateTime(date.year, date.month + months);
-  final lastDay = DateTime(first.year, first.month + 1, 0).day;
-  return DateTime(first.year, first.month, math.min(date.day, lastDay));
-}
 
 class SavingsGoal {
   const SavingsGoal({

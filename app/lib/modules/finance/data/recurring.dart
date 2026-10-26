@@ -273,11 +273,6 @@ class RecurringApi {
     final response = await _dio.post<Json>('$_base/$id/confirm', data: payload);
     return ConfirmRecurringResult.fromJson(response.data!['data'] as Json);
   }
-
-  Future<int> reminderDays() async {
-    final response = await _dio.get<Json>('/v1/finance/settings');
-    return intOf((response.data!['data'] as Json)['remind_days_before']);
-  }
 }
 
 final recurringRulesProvider = FutureProvider<RecurringRules>((ref) async {
@@ -291,9 +286,8 @@ final recurringRulesProvider = FutureProvider<RecurringRules>((ref) async {
 });
 
 final recurringReminderDaysProvider = FutureProvider<int?>((ref) async {
-  ref.watchFinance(const [FinanceScope.settings]);
   try {
-    return await ref.watch(recurringApiProvider).reminderDays();
+    return (await ref.watch(financeSettingsProvider.future)).remindDaysBefore;
   } on Object {
     return null;
   }
@@ -450,19 +444,6 @@ String recurringIconName(RecurringRule rule) =>
 
 String subscriptionsCountLabel(int count) => count == 1 ? '1 activa' : '$count activas';
 
-DateTime addMonths(DateTime value, int months) {
-  final target = DateTime(value.year, value.month + months);
-  final lastDay = DateTime(target.year, target.month + 1, 0).day;
-  return DateTime(target.year, target.month, value.day > lastDay ? lastDay : value.day);
-}
-
-String accountTypeIcon(AccountType type) => switch (type) {
-  AccountType.checking => 'landmark',
-  AccountType.savings => 'piggy-bank',
-  AccountType.creditCard => 'credit-card',
-  AccountType.cash => 'banknote',
-};
-
 class RecurringOption {
   const RecurringOption({required this.id, required this.label, required this.icon});
 
@@ -474,7 +455,7 @@ class RecurringOption {
 List<RecurringOption> recurringAccountOptions(List<Account> accounts) => [
   for (final account in accounts)
     if (!account.archived)
-      RecurringOption(id: account.id, label: account.name, icon: account.icon ?? accountTypeIcon(account.type)),
+      RecurringOption(id: account.id, label: account.name, icon: account.icon ?? account.type.icon),
 ];
 
 String _sortable(String text) {

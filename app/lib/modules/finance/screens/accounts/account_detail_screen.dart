@@ -42,7 +42,7 @@ class AccountDetailScreen extends ConsumerWidget {
     await ref.read(accountDetailsProvider(accountId).future).then((_) {}, onError: (_) {});
   }
 
-  Future<void> _openMenu(BuildContext context, WidgetRef ref, AccountDetails account) async {
+  Future<void> _openMenu(BuildContext context, WidgetRef ref, Account account) async {
     final action = await showAccountMenu(
       context,
       account,
@@ -126,7 +126,7 @@ class AccountDetailScreen extends ConsumerWidget {
 class _DetailBody extends ConsumerWidget {
   const _DetailBody({required this.account});
 
-  final AccountDetails account;
+  final Account account;
 
   void _openAll(BuildContext context, WidgetRef ref) {
     ref

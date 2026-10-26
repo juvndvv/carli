@@ -17,9 +17,8 @@ import '../../data/finance_providers.dart';
 import '../../data/goals.dart';
 import '../../data/models.dart';
 import '../../ui/transaction_extras.dart';
-import '../transaction_sheet.dart' show accountTypeIconName;
 import '../transaction_tools.dart' show DateField;
-import 'full_sheet.dart';
+import '../../../../ui/full_sheet.dart';
 
 enum GoalSheetOutcome { saved, deleted }
 
@@ -230,11 +229,7 @@ class _GoalSheetState extends ConsumerState<GoalSheet> {
                     invalid: _submitted && accountId == null,
                     options: [
                       for (final account in choices)
-                        CarliOption(
-                          account.id,
-                          account.name,
-                          icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type)),
-                        ),
+                        CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? account.type.icon)),
                     ],
                     value: accountId,
                     onChanged: (id) => setState(() => _accountId = id),

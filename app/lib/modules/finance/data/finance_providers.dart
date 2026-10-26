@@ -38,17 +38,10 @@ class CategoryIndex {
   List<Category> topLevel(CategoryKind kind) => [
     for (final category in tree)
       if (category.kind == kind && !category.archived)
-        Category(
-          id: category.id,
-          name: category.name,
-          kind: category.kind,
-          icon: category.icon,
-          archived: false,
-          children: [
-            for (final child in category.children)
-              if (!child.archived) child,
-          ],
-        ),
+        category.withChildren([
+          for (final child in category.children)
+            if (!child.archived) child,
+        ]),
   ];
 
   List<CategoryEntry> selectable(CategoryKind kind) => [
@@ -66,6 +59,11 @@ class AccountsData {
   List<Account> get active => [
     for (final account in all)
       if (!account.archived) account,
+  ];
+
+  List<Account> get archived => [
+    for (final account in all)
+      if (account.archived) account,
   ];
 
   Account? find(String? id) => id == null ? null : all.where((account) => account.id == id).firstOrNull;

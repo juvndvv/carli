@@ -23,7 +23,6 @@ import '../data/models.dart';
 import '../data/transaction_filters.dart';
 import '../data/transaction_form.dart';
 import '../data/transactions_repository.dart';
-import 'transaction_sheet.dart';
 
 typedef MoreFilters = ({TransactionStatus? status, Cents? min, Cents? max, DateTime? from, DateTime? to});
 
@@ -357,11 +356,7 @@ class _BulkEditSheetState extends ConsumerState<_BulkEditSheet> {
                 onChanged: (id) => setState(() => _account = id),
                 options: [
                   for (final account in accounts?.active ?? const <Account>[])
-                    CarliOption(
-                      account.id,
-                      account.name,
-                      icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type)),
-                    ),
+                    CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? account.type.icon)),
                 ],
               ),
             ),

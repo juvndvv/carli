@@ -65,3 +65,9 @@ String formatRelativeDay(DateTime value, {DateTime? now, RelativeDateStyle style
   };
   return offset.abs() <= 1 || style == RelativeDateStyle.title ? capitalize(label) : label;
 }
+
+DateTime addMonths(DateTime date, int months) {
+  final first = DateTime(date.year, date.month + months);
+  final lastDay = DateTime(first.year, first.month + 1, 0).day;
+  return DateTime(first.year, first.month, date.day > lastDay ? lastDay : date.day);
+}

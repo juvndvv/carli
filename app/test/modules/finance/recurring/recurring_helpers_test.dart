@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carli/modules/finance/data/finance_providers.dart';
 import 'package:carli/modules/finance/data/models.dart';
+import 'package:carli/core/format/dates.dart';
 import 'package:carli/modules/finance/data/recurring.dart';
 
 import 'recurring_fixtures.dart';

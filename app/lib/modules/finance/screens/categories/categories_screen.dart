@@ -32,7 +32,7 @@ enum _CategoryAction { edit, addChild, archive, delete }
 
 enum _TagAction { rename, merge, delete }
 
-String _childrenLabel(AdminCategory category) => switch (category.children.length) {
+String _childrenLabel(Category category) => switch (category.children.length) {
   0 => '',
   1 => '1 subcategoría',
   final count => '$count subcategorías',
@@ -71,13 +71,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     }
   }
 
-  Future<void> _edit(AdminCategory category) async {
+  Future<void> _edit(Category category) async {
     if (await showCategoryForm(context, kind: category.kind, category: category) != null) {
       _toasts.show('Categoría actualizada');
     }
   }
 
-  Future<void> _setArchived(AdminCategory category, bool archived) async {
+  Future<void> _setArchived(Category category, bool archived) async {
     final repository = ref.read(categoriesAdminRepositoryProvider);
     try {
       await repository.setArchived(category.id, archived);
@@ -90,11 +90,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     }
   }
 
-  Future<void> _remove(AdminCategory category) async {
+  Future<void> _remove(Category category) async {
     if (await showDeleteCategory(context, category)) _toasts.show('Categoría eliminada');
   }
 
-  Future<void> _categoryMenu(AdminCategory category, {required bool child}) async {
+  Future<void> _categoryMenu(Category category, {required bool child}) async {
     final action = await _showActions<_CategoryAction>(context, category.name, [
       (_CategoryAction.edit, 'Editar', false),
       if (!child) (_CategoryAction.addChild, 'Añadir subcategoría', false),
@@ -200,7 +200,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 : AsyncView(
                     value: tree,
                     errorTitle: 'No se han podido cargar las categorías',
-                    onRetry: () => ref.invalidate(adminCategoriesProvider),
+                    onRetry: () => ref.invalidate(categoriesProvider),
                     loading: const _ListSkeleton(rows: 2),
                     data: (tree) => _CategoryList(
                       categories: tree.visible(_kind, showArchived: _showArchived),
@@ -249,12 +249,12 @@ class _CategoryList extends StatelessWidget {
     required this.onMenu,
   });
 
-  final List<AdminCategory> categories;
+  final List<Category> categories;
   final int archivedCount;
   final bool showArchived;
   final VoidCallback onToggleArchived;
   final VoidCallback onCreate;
-  final Future<void> Function(AdminCategory category, {required bool child}) onMenu;
+  final Future<void> Function(Category category, {required bool child}) onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +335,7 @@ class _CategoryRow extends StatelessWidget {
     this.child = false,
   });
 
-  final AdminCategory category;
+  final Category category;
   final String icon;
   final String subtitle;
   final bool child;

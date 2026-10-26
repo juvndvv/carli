@@ -437,11 +437,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
     final accountOptions = [
       for (final account in accounts?.all ?? const <Account>[])
         if (!account.archived || involved.contains(account.id))
-          CarliOption(
-            account.id,
-            account.name,
-            icon: carliIconNamed(account.icon ?? accountTypeIconName(account.type)),
-          ),
+          CarliOption(account.id, account.name, icon: carliIconNamed(account.icon ?? account.type.icon)),
     ];
 
     final selectable = categories?.selectable(_categoryKind) ?? const <CategoryEntry>[];
@@ -808,13 +804,6 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
     );
   }
 }
-
-String accountTypeIconName(AccountType type) => switch (type) {
-  AccountType.checking => 'landmark',
-  AccountType.savings => 'piggy-bank',
-  AccountType.creditCard => 'credit-card',
-  AccountType.cash => 'banknote',
-};
 
 class _Header extends StatelessWidget {
   const _Header({required this.title, required this.saving, required this.onCancel, required this.onSave});

@@ -33,22 +33,19 @@ void main() {
   });
 
   test('starts reconciling from the bank balance on linked accounts', () {
-    expect(reconcileStartingBalance(AccountDetails.fromJson(fullAccountJson())), 342865);
-    expect(reconcileStartingBalance(AccountDetails.fromJson(fullAccountJson(bank: bankLinkJson()))), 343365);
-    expect(
-      reconcileStartingBalance(AccountDetails.fromJson(fullAccountJson(bank: bankLinkJson(balance: null)))),
-      342865,
-    );
+    expect(reconcileStartingBalance(Account.fromJson(fullAccountJson())), 342865);
+    expect(reconcileStartingBalance(Account.fromJson(fullAccountJson(bank: bankLinkJson()))), 343365);
+    expect(reconcileStartingBalance(Account.fromJson(fullAccountJson(bank: bankLinkJson(balance: null)))), 342865);
   });
 
   test('describes card schedules and account summaries', () {
-    final card = AccountDetails.fromJson(
+    final card = Account.fromJson(
       fullAccountJson(type: 'credit_card', balance: -12000, creditLimit: 300000, statementDay: 5, paymentDay: 10),
     );
     expect(cardSchedule(card), 'Corte día 5 · se carga el día 10');
-    expect(cardSchedule(AccountDetails.fromJson(fullAccountJson())), isNull);
+    expect(cardSchedule(Account.fromJson(fullAccountJson())), isNull);
     expect(accountsSummaryLabel([card]), '1 cuenta · las tarjetas de crédito restan');
-    expect(accountsSummaryLabel([AccountDetails.fromJson(fullAccountJson()), card]).startsWith('2 cuentas'), isTrue);
+    expect(accountsSummaryLabel([Account.fromJson(fullAccountJson()), card]).startsWith('2 cuentas'), isTrue);
     expect(archivedAccountsLabel(1), '1 cuenta archivada');
     expect(archivedAccountsLabel(3), '3 cuentas archivadas');
   });
@@ -56,7 +53,7 @@ void main() {
   test('summarises the linked bank balance', () {
     final now = DateTime(2026, 10, 26, 12);
     final off = bankBalanceSummary(
-      BankLinkDetails.fromJson(bankLinkJson(balanceAt: DateTime(2026, 10, 26, 9, 5).toIso8601String())),
+      AccountBankLink.fromJson(bankLinkJson(balanceAt: DateTime(2026, 10, 26, 9, 5).toIso8601String())),
       now: now,
     )!;
     expect(off.balance, '3.433,65$nbsp€');
@@ -64,7 +61,7 @@ void main() {
     expect(off.matches, isFalse);
     expect(off.updated, 'hoy a las 09:05');
 
-    final matching = bankBalanceSummary(BankLinkDetails.fromJson(bankLinkJson(difference: 0)))!;
+    final matching = bankBalanceSummary(AccountBankLink.fromJson(bankLinkJson(difference: 0)))!;
     expect(matching.matches, isTrue);
     expect(matching.difference, isNull);
     expect(formatDateTime(DateTime(2026, 10, 25, 18, 30), now: now), 'ayer a las 18:30');

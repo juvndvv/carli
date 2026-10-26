@@ -3,23 +3,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:carli/modules/finance/data/categories_admin.dart';
 import 'package:carli/modules/finance/data/models.dart';
 
-AdminCategory category(
-  String id, {
-  String kind = 'expense',
-  bool archived = false,
-  List<AdminCategory> children = const [],
-}) => AdminCategory(
-  id: id,
-  name: id,
-  kind: CategoryKind.of(kind),
-  parentId: null,
-  icon: null,
-  color: null,
-  sortOrder: 0,
-  opensPeriod: false,
-  archived: archived,
-  children: children,
-);
+Category category(String id, {String kind = 'expense', bool archived = false, List<Category> children = const []}) =>
+    Category(
+      id: id,
+      name: id,
+      kind: CategoryKind.of(kind),
+      parentId: null,
+      icon: null,
+      color: null,
+      sortOrder: 0,
+      opensPeriod: false,
+      archived: archived,
+      children: children,
+    );
 
 void main() {
   test('normalizes tag names', () {
