@@ -8,6 +8,7 @@ use App\Modules\Finance\BankSync\Services\BankConnectionService;
 use App\Modules\Finance\Domain\Enums\BankConnectionStatus;
 use App\Modules\Finance\Http\Requests\BankAspspsRequest;
 use App\Modules\Finance\Http\Requests\LinkBankAccountsRequest;
+use App\Modules\Finance\Http\Requests\RenewBankConnectionRequest;
 use App\Modules\Finance\Http\Requests\StoreBankConnectionRequest;
 use App\Modules\Finance\Http\Resources\BankConnectionResource;
 use App\Modules\Finance\Jobs\SyncBankConnection;
@@ -49,6 +50,7 @@ final class BankConnectionController extends FinanceController
             $request->financeUser(),
             (string) $request->validated('aspsp_name'),
             strtoupper((string) $request->validated('aspsp_country')),
+            $request->returnTarget(),
         );
 
         return response()->json(['data' => ['auth_url' => $url]], 201);
@@ -123,7 +125,7 @@ final class BankConnectionController extends FinanceController
         return $ip === null ? null : new PsuContext($ip, $request->userAgent());
     }
 
-    public function renew(BankConnection $bankConnection): JsonResponse
+    public function renew(RenewBankConnectionRequest $request, BankConnection $bankConnection): JsonResponse
     {
         $this->authorizeOwner('update', $bankConnection);
 
@@ -131,7 +133,7 @@ final class BankConnectionController extends FinanceController
             throw ValidationException::withMessages(['connection' => 'Esta conexión está desconectada. Conecta el banco de nuevo.']);
         }
 
-        return response()->json(['data' => ['auth_url' => $this->connections->renew($bankConnection)]]);
+        return response()->json(['data' => ['auth_url' => $this->connections->renew($bankConnection, $request->returnTarget())]]);
     }
 
     public function destroy(BankConnection $bankConnection): Response
