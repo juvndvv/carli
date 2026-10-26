@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Http\Controllers\AccessTokenController;
 use App\Core\Http\Controllers\MeController;
 use App\Core\Http\Controllers\ModuleController;
 use App\Core\Http\Controllers\NotificationController;
@@ -10,7 +11,13 @@ use App\Core\Http\Controllers\SearchController;
 use App\Core\Http\Controllers\SessionController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('v1/auth/token', [AccessTokenController::class, 'store'])
+    ->middleware('throttle:login')
+    ->name('auth.token.store');
+
 Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
+    Route::delete('auth/token', [AccessTokenController::class, 'destroy'])->name('auth.token.destroy');
+
     Route::get('me', [MeController::class, 'show'])->name('me.show');
     Route::patch('me', [MeController::class, 'update'])->name('me.update');
     Route::patch('me/preferences', [MeController::class, 'updatePreferences'])->name('me.preferences.update');
