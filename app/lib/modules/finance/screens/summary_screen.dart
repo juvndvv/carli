@@ -117,6 +117,8 @@ class SummaryScreen extends ConsumerWidget {
                         icon: carliIconNamed('wallet'),
                         title: 'Empieza por tus cuentas',
                         message: 'Añade tu cuenta corriente, tus tarjetas o el efectivo y apunta tu primer movimiento para ver aquí tu resumen.',
+                        actionLabel: 'Añadir cuenta',
+                        onAction: () => context.push(Routes.accounts),
                       ),
                     )
                   : _SummaryBody(data: data, accounts: accounts.value),

@@ -1,6 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum FinanceScope { transactions, accounts, categories, tags, budgets, periods, settings, contacts, bank, rules }
+enum FinanceScope {
+  transactions,
+  accounts,
+  categories,
+  tags,
+  budgets,
+  periods,
+  settings,
+  contacts,
+  bank,
+  rules,
+  recurring,
+}
 
 const transactionSideEffects = [
   FinanceScope.transactions,

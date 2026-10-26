@@ -46,7 +46,8 @@ abstract final class Routes {
   static String account(String id) => '$accounts/$id';
   static String goal(String id) => '$goals/$id';
   static String contact(String id) => '$shared/$id';
-  static String bankLink(String connectionId) => '$banks/$connectionId/vincular';
+  static String bankLink(String connectionId, {bool renewed = false}) =>
+      '$banks/$connectionId/vincular${renewed ? '?renovado=1' : ''}';
   static const catalog = '/dev/catalogo';
 }
 
@@ -119,7 +120,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                         routes: [
                           GoRoute(
                             path: ':id/vincular',
-                            builder: (context, state) => BankLinkScreen(connectionId: state.pathParameters['id']!),
+                            builder: (context, state) => BankLinkScreen(
+                              connectionId: state.pathParameters['id']!,
+                              renewed: state.uri.queryParameters['renovado'] == '1',
+                            ),
                           ),
                         ],
                       ),

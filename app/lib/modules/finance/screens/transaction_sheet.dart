@@ -24,6 +24,7 @@ import '../data/json.dart';
 import '../data/models.dart';
 import '../data/quick_categories.dart';
 import '../data/recent_categories.dart';
+import '../data/similar_categorization.dart';
 import '../data/transaction_form.dart';
 import '../data/transactions_repository.dart';
 import '../ui/transaction_extras.dart';
@@ -285,6 +286,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
     setState(() => _saving = true);
     final repository = ref.read(transactionsRepositoryProvider);
     final toasts = ref.read(toastControllerProvider.notifier);
+    final offerSimilar = ref.read(similarCategorizationProvider);
     final status = _pending ? TransactionStatus.pending.api : TransactionStatus.cleared.api;
     _addTags();
     final tags = _tags;
@@ -362,6 +364,7 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
         final saved = await repository.update(original.id, input);
         _close(const SheetSaved());
         toasts.show(withPeriodsNotice('Cambios guardados', saved.periodsChanged));
+        if (categorizedImport(_original, saved.value)) offerSimilar(saved.value.id, saved.value.categoryId!).ignore();
       } else {
         final saved = await repository.create(input);
         _close(const SheetSaved());
