@@ -137,11 +137,12 @@ import { UiLogo } from '@ui/logo/logo';
       text-decoration: none;
     }
     .nav-item:hover {
-      background: var(--primary-soft);
+      background: var(--surface-2);
     }
     .nav-item.active {
       background: var(--primary-soft);
-      font-weight: 500;
+      color: var(--brand-ink);
+      font-weight: 600;
     }
     .nav-item.sub {
       padding-left: 38px;

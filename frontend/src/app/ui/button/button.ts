@@ -37,9 +37,9 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       gap: 8px;
       height: 40px;
       padding: 0 18px;
-      border-radius: var(--r-full);
+      border-radius: var(--r-control);
       border: 1px solid transparent;
-      font-weight: 500;
+      font-weight: 600;
       font-size: 15px;
       line-height: 1;
       cursor: pointer;
@@ -54,8 +54,10 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       font-size: 14px;
     }
     :host(.size-lg) {
-      height: 48px;
-      padding: 0 22px;
+      height: 52px;
+      padding: 0 24px;
+      border-radius: 16px;
+      font-size: 17px;
     }
     :host(.icon-only) {
       width: 40px;
@@ -79,7 +81,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       background: var(--primary-hover);
     }
     :host(.variant-secondary) {
-      background: var(--surface);
+      background: transparent;
       border-color: var(--border);
       color: var(--text);
     }
@@ -87,7 +89,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       background: var(--surface-2);
     }
     :host(.variant-ghost) {
-      background: none;
+      background: var(--surface-2);
       color: var(--text);
     }
     :host(.variant-ghost:hover) {
@@ -101,6 +103,10 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       filter: brightness(0.95);
     }
     :host(:focus-visible) {
+      border-radius: var(--r-control);
+    }
+    :host(.icon-only),
+    :host(.icon-only:focus-visible) {
       border-radius: var(--r-full);
     }
     :host([disabled]),

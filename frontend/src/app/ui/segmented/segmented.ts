@@ -36,7 +36,7 @@ export interface UiSegmentedOption<T = string> {
     :host {
       display: inline-flex;
       background: var(--surface-2);
-      border-radius: var(--r-full);
+      border-radius: var(--r-control);
       padding: 3px;
       gap: 2px;
       width: 100%;
@@ -52,19 +52,19 @@ export interface UiSegmentedOption<T = string> {
       border: 0;
       background: none;
       height: 34px;
-      border-radius: var(--r-full);
+      border-radius: 9px;
       color: var(--text-2);
-      font-weight: 500;
+      font-weight: 600;
       white-space: nowrap;
       transition: background var(--motion-fast);
     }
     button.on {
-      background: var(--bg);
-      color: var(--text);
-      box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+      background: var(--seg-on, #ffffff);
+      color: var(--seg-on-text, #1f1f1f);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
     }
     button:focus-visible {
-      border-radius: var(--r-full);
+      border-radius: 9px;
       box-shadow: 0 0 0 3px var(--focus-ring);
     }
   `,

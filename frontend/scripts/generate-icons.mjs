@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FACE_SIZE, INK, markPainter, markSvg, SUN } from './lib/carli-mark.mjs';
+import { EMBER, FACE_SIZE, INK, markPainter, markSvg, PAPER } from './lib/carli-mark.mjs';
 import { encodePng } from './lib/png.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,16 +14,16 @@ const opaque = (color) => [...color, 255];
 const faceOnly = (size) => ({
   channels: 4,
   background: transparent,
-  face: opaque(SUN),
-  eyes: opaque(INK),
+  face: opaque(EMBER),
+  eyes: opaque(PAPER),
   markSize: (size * 100) / FACE_SIZE,
 });
 
 const faceOnTile = (size, faceShare, channels = 4) => ({
   channels,
   background: opaque(INK),
-  face: opaque(SUN),
-  eyes: opaque(INK),
+  face: opaque(EMBER),
+  eyes: opaque(PAPER),
   markSize: (size * faceShare * 100) / FACE_SIZE,
 });
 

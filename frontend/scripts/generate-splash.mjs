@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FACE_SIZE, INK, markPainter, NIGHT, PAPER, SUN, SUN_NIGHT } from './lib/carli-mark.mjs';
+import { EMBER, FACE_SIZE, markPainter, MIST, NIGHT, PAPER } from './lib/carli-mark.mjs';
 import { encodePng } from './lib/png.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,8 +13,8 @@ const iosSplashSize = 2732;
 const iosSplashScale = 3;
 
 const themes = {
-  light: { background: PAPER, face: SUN, eyes: INK },
-  dark: { background: NIGHT, face: SUN_NIGHT, eyes: INK },
+  light: { background: MIST, face: EMBER, eyes: PAPER },
+  dark: { background: NIGHT, face: EMBER, eyes: PAPER },
 };
 
 const render = (width, height, facePixels, theme) =>

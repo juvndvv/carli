@@ -48,7 +48,9 @@ const pathOf = (url: string): string => url.split(/[?#]/)[0];
       left: 0;
       right: 0;
       bottom: 0;
-      background: var(--surface);
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-top: 1px solid var(--border);
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
       z-index: 20;
@@ -67,8 +69,8 @@ const pathOf = (url: string): string => url.split(/[?#]/)[0];
       text-decoration: none;
     }
     a.active {
-      color: var(--text);
-      font-weight: 500;
+      color: var(--brand-ink);
+      font-weight: 600;
     }
     .glyph {
       position: relative;

@@ -54,8 +54,8 @@ import { UiIcon } from '../icon/icon';
     }
     input {
       width: 100%;
-      height: 48px;
-      border-radius: var(--r-full);
+      height: 44px;
+      border-radius: var(--r-control);
       background: var(--surface-2);
       border: 1px solid transparent;
       padding: 0 44px;
@@ -74,7 +74,7 @@ import { UiIcon } from '../icon/icon';
     }
     input:focus-visible {
       box-shadow: 0 0 0 3px var(--focus-ring);
-      border-radius: var(--r-full);
+      border-radius: var(--r-control);
     }
     .clear {
       position: absolute;

@@ -26,7 +26,7 @@ import { UiIcon } from '../icon/icon';
       gap: 6px;
       height: 32px;
       padding: 0 12px;
-      border-radius: var(--r-full);
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: var(--surface);
       font-size: 13px;
@@ -46,7 +46,7 @@ import { UiIcon } from '../icon/icon';
       font-weight: 500;
     }
     :host(:focus-visible) {
-      border-radius: var(--r-full);
+      border-radius: 8px;
     }
   `,
 })

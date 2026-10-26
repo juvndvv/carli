@@ -6,8 +6,8 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="description" content="Tu asistente personal: finanzas y más módulos.">
-  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1C1B19" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="carli">
@@ -56,10 +56,10 @@
   <script src="theme-init.js"></script>
   <style>
     .launch {
-      --launch-bg: #FFFFFF;
-      --launch-face: #FFC933;
-      --launch-eye: #141413;
-      --launch-word: #141413;
+      --launch-bg: #F5F5F7;
+      --launch-face: #E5063F;
+      --launch-eye: #FFFFFF;
+      --launch-word: #1F1F1F;
       position: fixed;
       inset: 0;
       z-index: 1001;
@@ -67,9 +67,9 @@
       transition: opacity 240ms ease-out;
     }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .launch { --launch-bg: #1C1B19; --launch-face: #FFD24D; --launch-word: #EDEBE6; }
+      :root:not([data-theme="light"]) .launch { --launch-bg: #000000; --launch-word: #FFFFFF; }
     }
-    :root[data-theme="dark"] .launch { --launch-bg: #1C1B19; --launch-face: #FFD24D; --launch-word: #EDEBE6; }
+    :root[data-theme="dark"] .launch { --launch-bg: #000000; --launch-word: #FFFFFF; }
     .launch-mark {
       position: absolute;
       top: 50%;
@@ -88,7 +88,7 @@
       right: 0;
       text-align: center;
       color: var(--launch-word);
-      font: 650 26px/32px ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+      font: 650 26px/32px 'Geist', ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
       letter-spacing: -0.03em;
       opacity: 0;
     }
