@@ -78,7 +78,7 @@ El primer módulo es **Finanzas**: registrar manualmente ingresos y gastos, sabe
 | SH-09 | Bandeja de notificaciones dentro de la app (campana) con historial. | Should |
 | SH-10 | Búsqueda global (Ctrl/⌘ + K) que cada módulo alimenta. | Could |
 | SH-11 | Ajustes de perfil: nombre, email, contraseña, sesiones activas, cierre de sesión en otros dispositivos. | Must |
-| SH-12 | **Pendientes**: sección general del shell con todo lo que requiere una acción del usuario, aportado por cada módulo (en Finanzas: movimientos sin categoría y recurrentes por confirmar). Agrupada por módulo y tipo, con acción rápida en línea (p. ej. elegir categoría) sin salir de la lista. Contador en la navegación y tarjeta en Inicio cuando hay elementos. Llega en F2 con los recurrentes por confirmar; F3 añade los movimientos importados sin categoría. | Must |
+| SH-12 | **Pendientes**: sección general del shell con todo lo que requiere una acción del usuario, aportado por cada módulo (en Finanzas: movimientos sin categoría, recurrentes por confirmar y posibles transferencias entre cuentas propias). Agrupada por módulo y tipo, con acción rápida en línea (p. ej. elegir categoría) sin salir de la lista. Contador en la navegación y tarjeta en Inicio cuando hay elementos. Llega en F2 con los recurrentes por confirmar; F3 añade los movimientos importados sin categoría. | Must |
 | SH-13 | Resumen diario por push (20:00) solo si hay pendientes: "Tienes 7 movimientos por categorizar". Uno al día como máximo, nunca uno por elemento ni por sincronización. Configurable en preferencias de notificaciones. | Should |
 
 ### 6.2 Contrato de un módulo (visión de producto)
@@ -210,16 +210,19 @@ Complementa la entrada manual, no la sustituye. Proveedor: Enable Banking (agreg
 | FI-BK-09 | Desconectar un banco: revoca el consentimiento; los movimientos ya importados se conservan. | Must |
 | FI-BK-10 | Reglas de autocategorización por texto del comercio ("MERCADONA" → Supermercado). Al categorizar un importado, ofrecer "Aplicar a los N parecidos y recordar". Los que casan con una regla entran ya categorizados y no pasan por Pendientes. | Should |
 | FI-BK-11 | Mientras haya gastos sin categoría en el periodo, Presupuestos y dashboard muestran **"X € sin categorizar"**, porque ese gasto aún no cuenta en ningún presupuesto. | Must |
+| FI-BK-12 | **Detección automática de transferencias** entre cuentas conectadas: al terminar cada sincronización, un gasto importado en una cuenta y un ingreso importado en otra, con el mismo importe y a 3 días o menos, son pareja candidata. Si es el **único** candidato en ambos sentidos y hay al menos una señal fuerte (IBAN de la contraparte = la otra cuenta, contraparte = el titular, o concepto de traspaso propio / nombre del otro banco), y ninguno de los dos tiene categoría, se convierten solos en transferencia (no cuentan como gasto ni ingreso). Se marcan como "Detectada" y se pueden **deshacer**: vuelven a gasto e ingreso sin categoría y esa pareja no se vuelve a proponer. Tras "Sincronizar ahora" se avisa de cuántas se han detectado. | Must |
+| FI-BK-13 | Las parejas dudosas (solo importe y fecha, varios candidatos o algún movimiento ya categorizado) aparecen en Pendientes como **"¿Es una transferencia entre BBVA y Revolut?"** con *Confirmar* y *No es transferencia* (que se recuerda). Mientras un movimiento esté propuesto como transferencia no aparece además como "sin categoría" en Pendientes. | Must |
+| FI-BK-14 | Transferencia con una cuenta **sin conexión** (p. ej. MyInvestor manual): en el detalle de un gasto o ingreso importado, "Es una transferencia a/desde…" eligiendo una cuenta manual. El importado pasa a ser una pata y se crea la otra en la cuenta manual. Deshacer borra la pata creada. Importe, fecha y cuenta del importado siguen sin poder cambiarse. | Should |
 
 Notas:
 - Sin deduplicación automática: si un gasto se apunta a mano y luego llega del banco, cuenta dos veces hasta que el usuario borre uno. FI-BK-07 hace visible la diferencia.
-- Una transferencia entre dos bancos conectados (p. ej. BBVA → MyInvestor) llega como gasto en una cuenta e ingreso en la otra; convertirla en transferencia es manual.
+- Una transferencia entre dos bancos conectados (p. ej. BBVA → Revolut) llega como gasto en una cuenta e ingreso en la otra; se detecta y convierte sola cuando la pareja es clara (FI-BK-12) o se propone en Pendientes (FI-BK-13). Con una cuenta manual se enlaza a mano (FI-BK-14).
 - Un ingreso importado no abre periodo (§7.5) hasta que el usuario le asigna la categoría Nómina.
 
 ### 7.3 Flujos principales
 
 1. **Apuntar gasto en móvil**: abrir PWA → "+" → teclear importe → elegir categoría (cuadrícula de recientes) → Guardar. Cuenta y fecha por defecto.
-2. **Revisión de pendientes**: aviso diario o contador → Pendientes → elegir categoría en línea (y "aplicar a parecidos") → confirmar recurrentes → Conciliar cuentas.
+2. **Revisión de pendientes**: aviso diario o contador → Pendientes → confirmar o descartar posibles transferencias → elegir categoría en línea (y "aplicar a parecidos") → confirmar recurrentes → Conciliar cuentas.
 3. **Planificar el mes**: Presupuestos → "Copiar del mes anterior" → ajustar importes.
 4. **Recibir aviso de suscripción**: push "Netflix 13,99 € pasado mañana" → abrir → confirmar o cancelar suscripción.
 5. **Cena compartida**: gasto 80 € → "Compartir" → Ana 50 % → saldo Ana: te debe 40 €.

@@ -108,7 +108,7 @@ Reglas:
 **Sincronización bancaria (F3)** dentro de `Finance/BankSync/`:
 - `Contracts/BankDataProvider`: `listAspsps()`, `startAuth(aspsp, redirectUrl)`, `completeAuth(code)`, `listAccounts(session)`, `fetchTransactions(accountUid, from, to)`, `fetchBalance(accountUid)`, `revoke(session)`.
 - `Providers/EnableBankingProvider`: JWT RS256 firmado con la clave privada de la aplicación (TTL ≤ 24 h), cliente HTTP con reintentos y backoff.
-- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. Aplica las reglas de autocategorización (PRD FI-BK-10); lo que no casa entra sin categoría. No toca periodos.
+- `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. Aplica las reglas de autocategorización (PRD FI-BK-10); lo que no casa entra sin categoría. Al final llama a `TransferDetector` (§4.1.2). No toca periodos.
 
 ### 4.1.1 Pendientes (contrato de Core)
 
@@ -121,13 +121,36 @@ interface PendingItemsProvider {
     public function items(User $user, ?string $type, ?string $cursor): PendingPage;
 }
 // PendingItem: { module, type, id, title, subtitle, amount_cents?, date, route }
-// tipos de Finanzas: 'uncategorized_transaction', 'recurring_to_confirm'
+// tipos de Finanzas: 'transfer_suggestion', 'uncategorized_transaction', 'recurring_to_confirm'
 ```
 
 - Los módulos registran su provider en su ServiceProvider (`PendingRegistry::register(...)`); Core no conoce a los módulos, igual que con `ModuleRegistry`.
 - **Pendiente es un estado calculado, no se guarda** (ADR-009). Finanzas: `category_id IS NULL AND kind IN ('expense','income') AND deleted_at IS NULL` (índice parcial de §5.3) y recurrentes con `status = 'pending'`. Un elemento sale de Pendientes en cuanto se resuelve, sin sincronizar nada.
 - No se reutiliza `transactions.status = 'pending'` para "sin categoría": ese estado ya significa "recurrente sin confirmar" y afecta al saldo.
+- `transfer_suggestion` también es calculado: son las parejas que devuelve `TransferDetector::candidates()` (§4.1.2). `id` = id del gasto; `meta` lleva `outgoing_transaction_id`, `incoming_transaction_id`, las dos cuentas, las fechas, `signals` y `unique`. `amount_cents` es el importe en positivo (la app lo pinta neutro). Los movimientos de una sugerencia se quitan de `uncategorized_transaction` para no pedir dos veces lo mismo; en Movimientos siguen marcados "Por revisar".
 - Validación: `StoreTransactionRequest` exige `category_id` para `expense`/`income` salvo `source = 'bank'`.
+
+### 4.1.2 Detección de transferencias entre cuentas propias (PRD FI-BK-12..14)
+
+`Domain/Services/TransferDetector` + `TransferConversionService`. Solo mira movimientos `source = 'bank'`, no borrados, `cleared`, de tipo `expense`/`income`, sin `transfer_group_id`, deuda, recurrente, splits ni partes compartidas.
+
+1. **Parejas** (una consulta SQL): gasto `o` y ingreso `i` del mismo usuario, `i.amount_cents = -o.amount_cents`, `o.account_id <> i.account_id`, `|i.date − o.date| ≤ 3` y sin fila en `transfer_exclusions` para `(o, i)`.
+2. **Unicidad**: la pareja es única si `o` solo casa con `i` **y** `i` solo casa con `o`.
+3. **Señales fuertes** (`signals`):
+   - `iban`: el IBAN de la contraparte del raw (`creditor_account` del gasto / `debtor_account` del ingreso; claves `iban`, `bban` u `other.identification`) coincide con el IBAN de la otra cuenta. Solo se guarda el IBAN enmascarado de cada cuenta (`ES75 •••• 7919` en `bank_connections.accounts`), así que se comparan país + dígitos de control + últimos 4; si el banco también lo enmascara (`ES******7919`), país + últimos 4. No se guardan ni se exponen IBAN completos.
+   - `holder`: el nombre de la contraparte (`creditor.name` del gasto / `debtor.name` del ingreso, o `payee`) es el titular. Titulares = `users.name` y el nombre del lado propio del raw de ambas patas (`debtor` del gasto, `creditor` del ingreso), porque el perfil puede no tener el nombre real. Comparación con `MerchantText::normalize` (sin acentos, mayúsculas, solo letras): el nombre con menos palabras (≥ 2) debe estar contenido en el otro, en cualquier orden.
+   - `concept`: payee, concepto o `bank_transaction_code.code` contienen `TOP UP`/`TOPUP`, `RECARGA`, `TRASPASO`, `CUENTA(S) PROPIA(S)`, `ENTRE CUENTAS`, `MISMO TITULAR` o el nombre del banco de la otra cuenta (si es distinto del propio).
+4. **Selección**: se ordenan (claras primero, más señales, menos días de diferencia, más recientes) y cada movimiento entra en una sola pareja.
+5. **Clara** = única + ≥ 1 señal. Se convierte sola si además las dos patas están **sin categoría** (respeta lo que el usuario ya decidió) y, durante la sincronización, si la fecha más reciente cae en los últimos 30 días. El resto son sugerencias.
+
+Conversión (`convert`): en una transacción, ambas filas pasan a `kind = 'transfer'`, `category_id = NULL`, mismo `transfer_group_id` nuevo, `transfer_source` (`auto` o `confirmed`) y `transfer_detected_at`. Importe, fecha, cuenta, payee y raw no cambian. Si el ingreso era una nómina que abrió periodo, `PeriodService::rebuild()`.
+Deshacer (`undo`, solo con `transfer_source` no nulo): las patas del banco vuelven a `expense`/`income` según el signo, sin categoría ni grupo; las patas creadas a mano se borran del todo; si eran dos patas del banco se guarda la exclusión.
+Cuenta sin conexión (`link`): la cuenta destino debe ser propia, no archivada y sin conexión bancaria. El importado pasa a pata (`transfer_source = 'linked'`) y se crea la contraparte `source = 'manual'` con importe opuesto, misma fecha y el nombre de la cuenta del banco como payee.
+Inmutabilidad: `PATCH` sigue rechazando cambios de cuenta, tipo, importe o fecha de un importado; `TransferService::update` además rechaza importe y fecha si alguna pata es del banco. El tipo solo cambia por estas vías.
+
+Cuándo corre: al final de `BankSyncService::sync()` (ventana de 30 días, guarda el número de conversiones en `bank_connections.last_sync_transfers`) y con `php artisan finance:detect-transfers [--dry-run] [--user=]` sobre todo el histórico. Es idempotente: lo convertido ya no es candidato y lo excluido no vuelve.
+
+Las transferencias ya quedan fuera de ingresos, gastos, presupuestos y periodos porque todos filtran por `kind IN ('expense','income')` y `PeriodService::isPayroll()` exige `kind = 'income'`.
 
 ### 4.2 Registro de módulos
 
@@ -286,6 +309,19 @@ bank_connections (
 --   raw jsonb NULL,                               -- payload original, para depurar
 --   UNIQUE (account_id, external_id)              -- idempotencia entre sincronizaciones
 --   índice parcial para la bandeja: WHERE category_id IS NULL AND kind IN ('expense','income')
+--   transfer_source text NULL CHECK (transfer_source IN ('auto','confirmed','linked')),  -- §4.1.2; NULL = transferencia creada a mano
+--   transfer_detected_at timestamptz NULL,
+--   índice parcial de candidatas: (user_id, amount_cents, date) WHERE source = 'bank' AND kind IN ('expense','income') AND deleted_at IS NULL
+
+-- bank_connections añade: last_sync_transfers int DEFAULT 0
+
+transfer_exclusions (                            -- parejas que no son transferencia (descartadas o deshechas)
+  id uuid PK, user_id uuid FK,
+  outgoing_transaction_id uuid FK transactions ON DELETE CASCADE,
+  incoming_transaction_id uuid FK transactions ON DELETE CASCADE,
+  timestamps,
+  UNIQUE (outgoing_transaction_id, incoming_transaction_id)
+)
 ```
 
 Reglas de importación (F3):
@@ -349,6 +385,10 @@ Los endpoints `me/password`, `me/two-factor*` y `me/tokens*` sustituyen a las ru
 | POST | `/accounts/{id}/reconcile` | `{ actual_balance_cents }` → crea ajuste |
 | CRUD | `/transactions` | Filtros: `from,to,account_id[],category_id[],tag[],kind,min,max,q,status`; cursor |
 | POST | `/transfers` | `{ from_account_id, to_account_id, amount_cents, date }` crea 2 filas atómicas |
+| POST | `/transfers/suggestions/confirm` | `{ outgoing_transaction_id, incoming_transaction_id }` convierte la pareja (`transfer_source = 'confirmed'`); 201 con `{ transfer_group_id, from, to }` |
+| POST | `/transfers/suggestions/dismiss` | Mismo cuerpo; guarda la exclusión |
+| POST | `/transactions/{id}/convert-to-transfer` | `{ account_id }` de una cuenta manual; crea la contraparte (`linked`) |
+| POST | `/transactions/{id}/undo-transfer` | Deshace una transferencia detectada, confirmada o enlazada; devuelve los movimientos del banco restaurados |
 | PATCH | `/transactions/bulk` | Edición masiva |
 | GET | `/transactions/export.csv` | Mismos filtros |
 | GET | `/payees/suggest?q=` | Autocompletado + categoría sugerida |
@@ -370,7 +410,7 @@ Los endpoints `me/password`, `me/two-factor*` y `me/tokens*` sustituyen a las ru
 | POST | `/bank/connections/{id}/renew` | Nuevo `auth_url` conservando las vinculaciones; también con `return_to: 'app'` |
 | DELETE | `/bank/connections/{id}` | Revoca y marca `revoked` |
 
-En F3, `GET /transactions` añade los filtros `source` y `uncategorized=1`.
+En F3, `GET /transactions` añade los filtros `source` y `uncategorized=1`, y cada movimiento lleva `transfer_source`, `transfer_detected_at` y `transfer_undoable`. `GET /bank/connections` lleva `last_sync_transfers`.
 
 Ejemplo de movimiento:
 
@@ -507,7 +547,8 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 | Listener `PayrollRegistered` | Evento | Si el ingreso es de una categoría `opens_period`, está confirmado y han pasado ≥ N días desde el inicio del periodo abierto: cierra el actual (`end_date = fecha − 1`), abre uno nuevo y copia presupuestos, todo en una transacción. Al editar o borrar esa nómina, `PeriodService::rebuild()` recalcula límites. |
 | `finance:payroll-overdue` | Diario 09:00 | Si hoy > `expected_end_date` + 1 y no hay periodo nuevo: push de aviso (PRD FI-PE-07) |
 | `finance:weekly-summary` | Lunes 09:00 | Opcional |
-| `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. |
+| `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. Después detecta transferencias de los últimos 30 días (§4.1.2). |
+| `finance:detect-transfers` (F3) | A mano | Reprocesa todo lo importado; `--dry-run` lista lo que convertiría y lo que quedaría como sugerencia |
 | `core:pending-digest` | Diario 20:00 | Si `PendingRegistry` suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
@@ -584,3 +625,4 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 - ADR-009 Pendientes como estado calculado y contrato de Core (`PendingItemsProvider`), sin tabla propia ni flag en `transactions`.
 - ADR-010 Cliente nativo iOS en Flutter en lugar de la PWA Angular, con token de Sanctum por dispositivo. El frontend Angular se retiró del repo el 2026-10-26.
 - ADR-011 Aviso diario como notificación local mientras no haya APNs.
+- ADR-012 Transferencias entre cuentas propias detectadas por emparejamiento (§4.1.2). Contexto: una recarga BBVA → Revolut entraba como gasto + ingreso e inflaba ambos. Decisión: convertir solo parejas claras (importe exacto, ≤ 3 días, candidato único en ambos sentidos, al menos una señal fuerte, sin categoría) y proponer el resto en Pendientes como estado calculado (coherente con ADR-009); las únicas filas nuevas son las exclusiones, para que deshacer y "No es transferencia" sean definitivos. El IBAN se compara enmascarado para no guardar IBAN completos. Descartado: emparejar por importe y fecha sin señales (falsos positivos con Bizums y devoluciones) y guardar sugerencias en tabla (se quedarían obsoletas al borrar o categorizar).
