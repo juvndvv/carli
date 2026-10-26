@@ -48,6 +48,7 @@ class CarliPage extends StatelessWidget {
             transitionBetweenRoutes: false,
           ),
           if (onRefresh case final refresh?) CupertinoSliverRefreshControl(onRefresh: refresh),
+          const SliverToBoxAdapter(child: SizedBox(height: CarliSpace.s12)),
           ...slivers,
           SliverPadding(padding: EdgeInsets.only(bottom: bottomInset + MediaQuery.paddingOf(context).bottom)),
         ],
