@@ -13,4 +13,5 @@ parameters:
     excludePaths:
         - app/Modules/Finance/tests
         - app/Modules/Tasks/tests
+        - app/Modules/Notes/tests
     tmpDir: storage/framework/phpstan

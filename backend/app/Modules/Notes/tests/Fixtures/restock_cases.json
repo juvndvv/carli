@@ -1,0 +1,171 @@
+{
+    "namespace": "6f0b5c3e-2d4a-5b8e-9c1f-7a3d2e1b0c9d",
+    "timezone": "Europe/Madrid",
+    "cases": [
+        {
+            "name": "every trip is due right after a purchase",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "every_trip",
+            "restock_interval_days": null,
+            "last_bought_at": "2026-10-24T10:00:00Z",
+            "today": "2026-10-24",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1792836000",
+            "item_id": "9c2da33f-44e2-5dc5-b537-700c1b48744f"
+        },
+        {
+            "name": "none is never due",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "none",
+            "restock_interval_days": null,
+            "last_bought_at": "2026-10-01T10:00:00Z",
+            "today": "2026-10-24",
+            "due": false,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1790848800",
+            "item_id": "d96f3567-5c62-5271-a9c5-553d5523117d"
+        },
+        {
+            "name": "never bought is not due",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "every_trip",
+            "restock_interval_days": null,
+            "last_bought_at": null,
+            "today": "2026-10-24",
+            "due": false,
+            "cycle_key": null,
+            "item_id": null
+        },
+        {
+            "name": "interval due on the exact day",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 7,
+            "last_bought_at": "2026-10-17T10:00:00Z",
+            "today": "2026-10-24",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1792231200",
+            "item_id": "2de3639f-7971-520d-9a48-cf3275c0bbaf"
+        },
+        {
+            "name": "interval not due the day before",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 7,
+            "last_bought_at": "2026-10-17T10:00:00Z",
+            "today": "2026-10-23",
+            "due": false,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1792231200",
+            "item_id": "2de3639f-7971-520d-9a48-cf3275c0bbaf"
+        },
+        {
+            "name": "interval uses the Madrid date, not the UTC date (not yet)",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 1,
+            "last_bought_at": "2026-10-24T22:30:00Z",
+            "today": "2026-10-25",
+            "due": false,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1792881000",
+            "item_id": "c083e604-f4a6-5549-a9ee-b21929ace54b"
+        },
+        {
+            "name": "interval uses the Madrid date, not the UTC date (due)",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 1,
+            "last_bought_at": "2026-10-24T22:30:00Z",
+            "today": "2026-10-26",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1792881000",
+            "item_id": "c083e604-f4a6-5549-a9ee-b21929ace54b"
+        },
+        {
+            "name": "interval across the spring DST change (not yet)",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 2,
+            "last_bought_at": "2026-03-28T23:30:00Z",
+            "today": "2026-03-30",
+            "due": false,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1774740600",
+            "item_id": "64fcc599-8a5a-5ac5-93c1-5c99212bada0"
+        },
+        {
+            "name": "interval across the spring DST change (due)",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 2,
+            "last_bought_at": "2026-03-28T23:30:00Z",
+            "today": "2026-03-31",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1774740600",
+            "item_id": "64fcc599-8a5a-5ac5-93c1-5c99212bada0"
+        },
+        {
+            "name": "interval across the autumn DST change",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 1,
+            "last_bought_at": "2026-10-24T23:30:00Z",
+            "today": "2026-10-26",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1792884600",
+            "item_id": "81aa85fa-b5a6-5c3c-aab3-78c4a779b8e6"
+        },
+        {
+            "name": "interval of three weeks crossing a month end",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 21,
+            "last_bought_at": "2026-01-31T12:00:00Z",
+            "today": "2026-02-21",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1769860800",
+            "item_id": "a7180009-e80e-52cd-b8df-9134cbbb30a3"
+        },
+        {
+            "name": "interval without days is never due",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": null,
+            "last_bought_at": "2026-10-01T10:00:00Z",
+            "today": "2026-10-24",
+            "due": false,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1790848800",
+            "item_id": "d96f3567-5c62-5271-a9c5-553d5523117d"
+        },
+        {
+            "name": "interval crossing the new year in Madrid (not yet)",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 30,
+            "last_bought_at": "2026-12-31T23:59:59Z",
+            "today": "2027-01-30",
+            "due": false,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1798761599",
+            "item_id": "ac31750e-6d8f-59e2-a303-407259724250"
+        },
+        {
+            "name": "interval crossing the new year in Madrid (due)",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 30,
+            "last_bought_at": "2026-12-31T23:59:59Z",
+            "today": "2027-01-31",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1798761599",
+            "item_id": "ac31750e-6d8f-59e2-a303-407259724250"
+        },
+        {
+            "name": "long overdue interval stays due",
+            "product_id": "01928f3a-7b1c-7d2e-8f90-123456789abc",
+            "restock_mode": "interval",
+            "restock_interval_days": 7,
+            "last_bought_at": "2026-06-01T08:00:00Z",
+            "today": "2026-10-24",
+            "due": true,
+            "cycle_key": "01928f3a-7b1c-7d2e-8f90-123456789abc:1780300800",
+            "item_id": "cc203393-aa4c-5b40-a537-fe3a3e3c699f"
+        }
+    ]
+}

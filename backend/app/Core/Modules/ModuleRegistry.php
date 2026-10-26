@@ -12,7 +12,6 @@ final class ModuleRegistry
     private const array COMING_SOON = [
         ['id' => 'health', 'name' => 'Salud', 'icon' => 'heart-pulse', 'route' => '/salud', 'description' => 'Peso, sueño, actividad y citas médicas.'],
         ['id' => 'habits', 'name' => 'Hábitos', 'icon' => 'repeat', 'route' => '/habitos', 'description' => 'Rachas y seguimiento diario de hábitos.'],
-        ['id' => 'notes', 'name' => 'Notas', 'icon' => 'notebook-pen', 'route' => '/notas', 'description' => 'Notas rápidas y documentos personales.'],
     ];
 
     /** @var array<string, ModuleManifest>|null */
