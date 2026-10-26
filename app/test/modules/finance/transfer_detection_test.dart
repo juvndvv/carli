@@ -73,6 +73,24 @@ void main() {
     expect(manual.canBecomeTransfer, isFalse);
   });
 
+  test('names new accounts after the bank account label', () {
+    BankAccountCandidate candidate(Json extra) => BankAccountCandidate.fromJson({
+      'external_account_uid': 'uid',
+      'name': 'Juan Daniel Forner Garriga',
+      'iban': null,
+      'currency': 'EUR',
+      'suggested_account_type': 'savings',
+      'linked_account': null,
+      ...extra,
+    });
+
+    final pocket = candidate({'short_name': 'Gastos', 'suggested_name': 'Revolut · Gastos'});
+    expect(candidateTitle(pocket), 'Gastos');
+    expect(defaultNewAccountName('Revolut', pocket), 'Revolut · Gastos');
+    expect(candidateTitle(candidate(const {})), 'Juan Daniel Forner Garriga');
+    expect(defaultNewAccountName('Revolut', candidate(const {})), 'Revolut Juan Daniel Forner Garriga');
+  });
+
   test('mentions detected transfers after a sync', () {
     BankConnection connection(int transfers) => BankConnection.fromJson({
       'id': 'conn-1',

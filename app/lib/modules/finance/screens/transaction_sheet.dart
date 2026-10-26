@@ -87,7 +87,9 @@ Future<void> showTransactionSheet(
 }
 
 String transferNotice(TransferSource source) => switch (source) {
-  TransferSource.auto => 'Detectada como transferencia entre tus cuentas: no cuenta como gasto ni como ingreso.',
+  TransferSource.auto =>
+    'Detectada como transferencia entre tus cuentas (mismo importe y fecha, y la contraparte, el titular o el concepto '
+        'apuntan a tu otra cuenta): no cuenta como gasto ni como ingreso.',
   TransferSource.confirmed => 'Confirmaste que es una transferencia entre tus cuentas.',
   TransferSource.linked => 'Transferencia con una cuenta sin conexión al banco.',
 };

@@ -109,6 +109,8 @@ class BankAccountCandidate {
     required this.linkedAccountId,
     required this.linkedAccountName,
     required this.linkedSyncFromDate,
+    this.shortName,
+    this.suggestedName,
   });
 
   factory BankAccountCandidate.fromJson(Json json) {
@@ -122,6 +124,8 @@ class BankAccountCandidate {
       linkedAccountId: linked?['id'] as String?,
       linkedAccountName: linked?['name'] as String?,
       linkedSyncFromDate: parseIsoDateOrNull(linked?['sync_from_date']),
+      shortName: json['short_name'] as String?,
+      suggestedName: json['suggested_name'] as String?,
     );
   }
 
@@ -133,6 +137,8 @@ class BankAccountCandidate {
   final String? linkedAccountId;
   final String? linkedAccountName;
   final DateTime? linkedSyncFromDate;
+  final String? shortName;
+  final String? suggestedName;
 }
 
 class CategoryRule {
@@ -225,7 +231,7 @@ String? maskIban(String? iban) {
 }
 
 String candidateTitle(BankAccountCandidate candidate) {
-  final name = candidate.name?.trim();
+  final name = (candidate.shortName ?? candidate.name)?.trim();
   return name == null || name.isEmpty ? candidate.suggestedAccountType.label : name;
 }
 
@@ -239,6 +245,8 @@ bool isEuroAccount(BankAccountCandidate candidate) =>
     candidate.currency == null || candidate.currency!.toUpperCase() == 'EUR';
 
 String defaultNewAccountName(String bank, BankAccountCandidate candidate) {
+  final suggested = candidate.suggestedName?.trim();
+  if (suggested != null && suggested.isNotEmpty) return suggested;
   final name = candidate.name?.trim();
   return name != null && name.isNotEmpty
       ? '$bank $name'
