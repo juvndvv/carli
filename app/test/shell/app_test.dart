@@ -6,18 +6,29 @@ import 'package:carli/app.dart';
 import 'package:carli/core/auth/auth_controller.dart';
 import 'package:carli/core/router/router.dart';
 import 'package:carli/modules/finance/screens/transaction_sheet.dart';
+import 'package:carli/modules/finance/ui/finance_home_card.dart';
 import 'package:carli/shell/app_shell.dart';
+import 'package:carli/shell/more/more_screen.dart';
 
+import '../core/notifications/notification_fixtures.dart';
 import '../core/pending/pending_fixtures.dart';
 import '../support/fake_api.dart';
 import '../support/finance_fixtures.dart';
 import '../support/test_app.dart';
+import 'settings/settings_fixtures.dart';
 
 Future<FakeApi> pumpApp(WidgetTester tester, FakeApi api, {Map<String, String> storage = const {}}) async {
   final container = testContainer(api, storage: storage);
   await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const CarliApp()));
   await tester.pumpAndSettle();
   return api;
+}
+
+Finder navLabel(String label) => find.descendant(of: find.byType(CarliBottomNav), matching: find.text(label));
+
+Future<void> openFinance(WidgetTester tester) async {
+  await tester.tap(navLabel('Finanzas'));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -121,14 +132,117 @@ void main() {
       storage: {'auth_token': 'stored'},
     );
 
-    for (final label in ['Resumen', 'Movimientos', 'Presupuestos', 'Más']) {
-      expect(find.descendant(of: find.byType(CarliBottomNav), matching: find.text(label)), findsOneWidget);
+    await openFinance(tester);
+    for (final label in ['Inicio', 'Resumen', 'Movimientos', 'Presupuestos', 'Más']) {
+      expect(navLabel(label), findsOneWidget);
     }
 
-    await tester.tap(find.descendant(of: find.byType(CarliBottomNav), matching: find.text('Presupuestos')));
+    await tester.tap(navLabel('Presupuestos'));
     await tester.pumpAndSettle();
 
     expect(find.text('Presupuestos'), findsNWidgets(2));
+  });
+
+  testWidgets('lists the modules beside a pinned Inicio on the home screen', (tester) async {
+    await pumpApp(
+      tester,
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+        'GET /v1/modules': (_) => (200, {'data': modulesJson()}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+
+    expect(navLabel('Inicio'), findsOneWidget);
+    expect(navLabel('Finanzas'), findsOneWidget);
+    expect(find.bySemanticsLabel('Tareas, próximamente'), findsOneWidget);
+    expect(navLabel('Resumen'), findsNothing);
+    expect(find.bySemanticsLabel('Nuevo movimiento'), findsNothing);
+
+    await openFinance(tester);
+
+    expect(navLabel('Resumen'), findsOneWidget);
+    expect(navLabel('Finanzas'), findsNothing);
+    expect(find.bySemanticsLabel('Nuevo movimiento'), findsOneWidget);
+
+    await tester.tap(navLabel('Inicio'));
+    await tester.pumpAndSettle();
+
+    expect(navLabel('Finanzas'), findsOneWidget);
+    expect(navLabel('Resumen'), findsNothing);
+  });
+
+  testWidgets('scrolls the tabs beside Inicio on a phone-sized screen', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpApp(
+      tester,
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+        'GET /v1/modules': (_) => (200, {'data': modulesJson()}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+
+    await openFinance(tester);
+    await tester.tap(navLabel('Más'));
+    await tester.pumpAndSettle();
+
+    final nav = tester.getRect(find.byType(CarliBottomNav));
+    expect(nav.contains(tester.getCenter(navLabel('Más'))), isTrue);
+    expect(tester.getCenter(navLabel('Inicio')).dx, lessThan(tester.getCenter(navLabel('Más')).dx));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('leaves the modules the user turned off out of the home tabs', (tester) async {
+    await pumpApp(
+      tester,
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+        'GET /v1/modules': (_) => (200, {'data': modulesJson(financeEnabled: false)}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+
+    expect(navLabel('Finanzas'), findsNothing);
+    expect(navLabel('Tareas'), findsOneWidget);
+  });
+
+  testWidgets('opens a coming soon module from the home tabs', (tester) async {
+    await pumpApp(
+      tester,
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+        'GET /v1/modules': (_) => (200, {'data': modulesJson()}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+
+    await tester.tap(navLabel('Tareas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Próximamente'), findsOneWidget);
+    expect(find.text('Listas, recordatorios y proyectos personales.'), findsOneWidget);
+    expect(navLabel('Finanzas'), findsOneWidget);
+  });
+
+  testWidgets('puts the recent notifications first on the home screen only when there are some', (tester) async {
+    Future<double> notificationsOffset(List<Map<String, Object?>> items) async {
+      await pumpApp(
+        tester,
+        FakeApi({
+          'GET /v1/me': (_) => (200, {'data': testUser}),
+          ...notificationRoutes(items: items),
+        }),
+        storage: {'auth_token': 'stored'},
+      );
+      return tester.getTopLeft(find.text('Notificaciones recientes')).dy -
+          tester.getTopLeft(find.byType(FinanceHomeCard)).dy;
+    }
+
+    expect(await notificationsOffset([notificationJson('1')]), isNegative);
+    expect(await notificationsOffset(const []), isPositive);
   });
 
   testWidgets('shows pending and unread counts in the tab bar, Inicio and Más', (tester) async {
@@ -142,11 +256,13 @@ void main() {
       storage: {'auth_token': 'stored'},
     );
 
-    expect(find.bySemanticsLabel('Más, 3 pendientes'), findsOneWidget);
     expect(find.text('3 elementos por revisar'), findsOneWidget);
     expect(find.bySemanticsLabel('Notificaciones (2 sin leer)'), findsOneWidget);
 
-    await tester.tap(find.descendant(of: find.byType(CarliBottomNav), matching: find.text('Más')));
+    await openFinance(tester);
+    expect(find.bySemanticsLabel('Más, 3 pendientes'), findsOneWidget);
+
+    await tester.tap(navLabel('Más'));
     await tester.pumpAndSettle();
 
     expect(find.text('3 elementos por revisar'), findsOneWidget);
@@ -163,10 +279,12 @@ void main() {
       storage: {'auth_token': 'stored'},
     );
 
-    await tester.tap(find.descendant(of: find.byType(CarliBottomNav), matching: find.text('Más')));
+    await openFinance(tester);
+    await tester.tap(navLabel('Más'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Cerrar sesión'), 200);
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    final page = find.descendant(of: find.byType(MoreScreen), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('Cerrar sesión'), 200, scrollable: page);
+    await tester.drag(page, const Offset(0, -300));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
@@ -184,6 +302,7 @@ void main() {
       storage: {'auth_token': 'stored'},
     );
 
+    await openFinance(tester);
     await tester.tap(find.bySemanticsLabel('Nuevo movimiento'));
     await tester.pumpAndSettle();
 

@@ -36,10 +36,10 @@ class HomeScreen extends ConsumerWidget {
     };
     final moment = now ?? DateTime.now();
     final greeting = greetingFor(moment.hour);
+    final hasNotifications = ref.watch(notificationsProvider).value?.items.isNotEmpty ?? false;
 
     return CarliPage(
       title: firstName == null || firstName.isEmpty ? greeting : '$greeting, $firstName',
-      moduleSwitcher: true,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: CarliSpace.s4,
@@ -68,14 +68,14 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Text(formatLongDate(moment), style: CarliType.small.copyWith(color: colors.text2)),
               const SizedBox(height: CarliSpace.s16),
+              if (hasNotifications) ...[const NotificationsHomeCard(), const SizedBox(height: CarliSpace.s16)],
               PendingHomeCard(
                 bottomGap: CarliSpace.s16,
                 onOpen: (filter) => context.push(Routes.pendingFor(filter.queryParameters)),
               ),
               FinanceHomeCard(onTap: () => context.go(Routes.summary)),
               const UpcomingModulesCard(),
-              const SizedBox(height: CarliSpace.s16),
-              const NotificationsHomeCard(),
+              if (!hasNotifications) ...[const SizedBox(height: CarliSpace.s16), const NotificationsHomeCard()],
             ],
           ),
         ),

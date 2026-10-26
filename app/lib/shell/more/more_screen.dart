@@ -65,7 +65,6 @@ class MoreScreen extends ConsumerWidget {
 
     return CarliPage(
       title: 'Más',
-      moduleSwitcher: true,
       slivers: [
         SliverList.list(
           children: [

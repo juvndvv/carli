@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/tokens.dart';
 import '../core/theme/typography.dart';
-import 'module_switcher.dart';
 import 'pressable.dart';
 
 class CarliPage extends StatelessWidget {
@@ -12,7 +11,6 @@ class CarliPage extends StatelessWidget {
     required this.title,
     required this.slivers,
     this.leading,
-    this.moduleSwitcher = false,
     this.trailing,
     this.onRefresh,
     this.bottomInset = 150,
@@ -21,9 +19,6 @@ class CarliPage extends StatelessWidget {
   final String title;
   final List<Widget> slivers;
   final Widget? leading;
-
-  /// Tab roots show the module switcher at the top left.
-  final bool moduleSwitcher;
   final Widget? trailing;
   final Future<void> Function()? onRefresh;
   final double bottomInset;
@@ -31,7 +26,6 @@ class CarliPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final leading = this.leading ?? (moduleSwitcher ? const ModuleSwitcher() : null);
     return Scaffold(
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),

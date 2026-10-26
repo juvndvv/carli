@@ -94,7 +94,6 @@ class SummaryScreen extends ConsumerWidget {
 
     return CarliPage(
       title: 'Resumen',
-      moduleSwitcher: true,
       trailing: const _ProfileButton(),
       onRefresh: () async {
         ref.read(financeChangesProvider.notifier).refreshAll();

@@ -112,9 +112,12 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 
 Solo iPhone, una columna, gutter 16 pt.
 
-- **Tab bar** (`CarliBottomNav`): cápsula flotante separada 16 pt de los bordes, `surface` al 72 % con desenfoque, borde de 0,5 pt y sombra suave. 4 pestañas de Finanzas: Resumen, Movimientos, Presupuestos y Más; la activa lleva una píldora `text` al 8 % e icono y texto en `brandInk`. Más lleva el contador de Pendientes.
-- **Botón "+"** redondo de 62 pt en `primary`, a la derecha de la cápsula: nuevo movimiento desde cualquier pestaña.
-- **Selector de módulo** (`ModuleSwitcher`, en `CarliPage(moduleSwitcher: true)` de cada pestaña): píldora `surface2` arriba a la izquierda con el icono y el nombre del módulo. Abre un sheet con Inicio (pendientes, avisos y módulos; ya no tiene pestaña), los módulos activos y los próximos atenuados.
+- **Tab bar** (`CarliBottomNav`): cápsula flotante separada 16 pt de los bordes y de 62 pt de alto, `surface` al 72 % con desenfoque, borde de 0,5 pt y sombra suave. Inicio va siempre fijo a la izquierda; el resto de pestañas se desplaza en horizontal, con su texto completo y un fundido en el borde cuando queda más por ver, y la pestaña activa se trae a la vista. Las pestañas dependen del contexto (`shellContextFor`):
+  - **Inicio** (`/`, Pendientes, Notificaciones, Buscar): una pestaña por módulo. Los activos abren su pantalla principal; los desactivados por el usuario no salen; los próximos salen al 50 % y abren una pantalla "Próximamente".
+  - **Finanzas** (el resto): Resumen, Movimientos, Presupuestos y Más, que lleva el contador de Pendientes.
+
+  La activa lleva una píldora `text` al 8 % e icono y texto en `brandInk`.
+- **Botón "+"** redondo de 62 pt en `primary`, a la derecha de la cápsula, solo dentro de Finanzas: nuevo movimiento. En Inicio la cápsula ocupa todo el ancho.
 - **Avatar** arriba a la derecha en el Resumen: abre Ajustes.
 - **Páginas** (`CarliPage`): `CupertinoSliverNavigationBar` con título grande `h1` que se compacta a `h2`; fondo `bg` al 85 % y borde inferior de 0,5 pt; pull-to-refresh nativo.
 - Altas y edición en sheets inferiores (`showCarliSheet`) o a altura completa (`showFullSheet` con `FullSheetHeader`: "Cancelar" a la izquierda, título y "Guardar" a la derecha).

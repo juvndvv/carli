@@ -21,6 +21,7 @@ import '../../modules/finance/screens/shared/shared_screen.dart';
 import '../../modules/finance/screens/summary_screen.dart';
 import '../../modules/finance/screens/transactions_screen.dart';
 import '../../shell/app_shell.dart';
+import '../../shell/home/coming_soon_module_screen.dart';
 import '../../shell/home/home_screen.dart';
 import '../../shell/launch/launch_screen.dart';
 import '../../shell/login/login_screen.dart';
@@ -44,6 +45,7 @@ abstract final class Routes {
   static const pending = '/pendientes';
   static const notifications = '/notificaciones';
   static const search = '/buscar';
+  static const comingSoon = '/proximamente';
   static const summary = '/finanzas';
   static const transactions = '/finanzas/movimientos';
   static const budgets = '/finanzas/presupuestos';
@@ -62,6 +64,7 @@ abstract final class Routes {
 
   static String pendingFor(Map<String, String> query) =>
       Uri(path: pending, queryParameters: query.isEmpty ? null : query).toString();
+  static String comingSoonModule(String moduleId) => '$comingSoon/$moduleId';
   static String account(String id) => '$accounts/$id';
   static String goal(String id) => '$goals/$id';
   static String contact(String id) => '$shared/$id';
@@ -93,7 +96,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.login, builder: (context, state) => const LoginScreen()),
       if (kDebugMode) GoRoute(path: Routes.catalog, builder: (context, state) => const CatalogScreen()),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell, location: state.uri.path),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -110,6 +114,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(path: 'notificaciones', builder: (context, state) => const NotificationsScreen()),
                   GoRoute(path: 'buscar', builder: (context, state) => const GlobalSearchScreen()),
+                  GoRoute(
+                    path: 'proximamente/:id',
+                    builder: (context, state) => ComingSoonModuleScreen(moduleId: state.pathParameters['id']!),
+                  ),
                 ],
               ),
             ],
