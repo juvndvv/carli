@@ -121,6 +121,13 @@ final class EnableBankingProvider implements BankDataProvider
         );
     }
 
+    public function fetchAccount(string $accountUid): ?BankAccount
+    {
+        $details = $this->json(fn () => $this->request()->get('/accounts/'.rawurlencode($accountUid).'/details'), 'consultar la cuenta');
+
+        return $this->account([...$details, 'uid' => $accountUid]);
+    }
+
     public function listAccounts(string $sessionId): array
     {
         $body = $this->json(fn () => $this->request()->get('/sessions/'.rawurlencode($sessionId)), 'consultar la sesión');
@@ -331,16 +338,17 @@ final class EnableBankingProvider implements BankDataProvider
 
         $identification = is_array($account['account_id'] ?? null) ? $account['account_id'] : [];
         $iban = is_string($identification['iban'] ?? null) ? $identification['iban'] : null;
-        $name = collect([$account['name'] ?? null, $account['product'] ?? null, $account['details'] ?? null])
-            ->first(fn (mixed $value) => is_string($value) && $value !== '');
+        $text = fn (string $key): ?string => is_string($account[$key] ?? null) && trim($account[$key]) !== '' ? trim($account[$key]) : null;
 
         return new BankAccount(
             uid: $account['uid'],
             identificationHash: is_string($account['identification_hash'] ?? null) ? $account['identification_hash'] : null,
-            name: is_string($name) ? $name : null,
+            name: $text('name'),
             iban: BankAccount::maskIban($iban),
             currency: is_string($account['currency'] ?? null) ? $account['currency'] : null,
             type: is_string($account['cash_account_type'] ?? null) ? $account['cash_account_type'] : null,
+            details: $text('details'),
+            product: $text('product'),
         );
     }
 

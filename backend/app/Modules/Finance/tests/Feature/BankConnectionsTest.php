@@ -148,7 +148,7 @@ describe('managing', function () {
         $card = Account::query()->ownedBy($this->user)->where('external_account_uid', 'uid-2')->sole();
         expect($this->account->refresh()->sync_from_date->toDateString())->toBe('2026-10-24')
             ->and($this->account->external_account_hash)->toBe('hash-1')
-            ->and($card->name)->toBe('Tarjeta')
+            ->and($card->name)->toBe('BBVA · Tarjeta')
             ->and($card->type->value)->toBe('credit_card')
             ->and($card->sync_from_date->toDateString())->toBe('2026-10-01');
         Queue::assertPushed(SyncBankConnection::class, fn (SyncBankConnection $job) => $job->connectionId === $this->connection->id && $job->psuIpAddress === '127.0.0.1');

@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $session_id
  * @property CarbonImmutable $valid_until
  * @property BankConnectionStatus $status
- * @property list<array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null}>|null $accounts
+ * @property list<array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null, details?: string|null, product?: string|null}>|null $accounts
  * @property int|null $expiry_notice_days
  * @property int $last_sync_transfers
  * @property CarbonImmutable|null $last_synced_at
@@ -91,7 +91,7 @@ class BankConnection extends Model
     }
 
     /**
-     * @return array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null}|null
+     * @return array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null, details?: string|null, product?: string|null}|null
      */
     public function bankAccount(string $uid): ?array
     {

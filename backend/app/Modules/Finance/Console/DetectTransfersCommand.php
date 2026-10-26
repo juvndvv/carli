@@ -27,14 +27,28 @@ final class DetectTransfersCommand extends Command
 
         $converted = 0;
         $suggested = 0;
+        $linked = 0;
 
         foreach ($userIds as $userId) {
             $result = $detector->detect((string) $userId, null, $dryRun);
             $converted += count($result['converted']);
             $suggested += count($result['suggested']);
+            $linked += count($result['linked']);
 
             foreach ($result['converted'] as $candidate) {
                 $this->line(($dryRun ? '[dry-run] Convertiría: ' : 'Convertida: ').$this->describe($candidate));
+            }
+
+            foreach ($result['linked'] as $link) {
+                $this->line(sprintf(
+                    '%s%s %s %s %s · %s',
+                    $dryRun ? '[dry-run] Enlazaría: ' : 'Enlazada: ',
+                    $link['transaction']->date->toDateString(),
+                    $link['transaction']->account->name,
+                    $link['transaction']->amount_cents < 0 ? '→' : '←',
+                    $link['account']->name,
+                    Money::ofCents($link['transaction']->amount_cents)->abs()->format(),
+                ));
             }
 
             foreach ($result['suggested'] as $candidate) {
@@ -42,7 +56,7 @@ final class DetectTransfersCommand extends Command
             }
         }
 
-        $this->info(($dryRun ? 'Transferencias que se convertirían: ' : 'Transferencias convertidas: ')."{$converted} · Sugerencias en Pendientes: {$suggested}");
+        $this->info(($dryRun ? 'Transferencias que se convertirían: ' : 'Transferencias convertidas: ')."{$converted} · Enlazadas con cuentas manuales: {$linked} · Sugerencias en Pendientes: {$suggested}");
 
         return self::SUCCESS;
     }

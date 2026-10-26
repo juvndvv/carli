@@ -39,6 +39,11 @@ interface BankDataProvider
     public function listAccounts(string $sessionId): array;
 
     /**
+     * @throws BankProviderException
+     */
+    public function fetchAccount(string $accountUid): ?BankAccount;
+
+    /**
      * @return list<array<string, mixed>>
      *
      * @throws BankProviderException

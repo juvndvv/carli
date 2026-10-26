@@ -228,7 +228,7 @@ describe('no match', function () {
         importedMovement($this->bbva, -5000, '2026-10-10', 'Personal Revolut');
         importedMovement($this->revolut, 5000, '2026-10-14', 'Top-up');
 
-        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => []]);
+        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []]);
     });
 
     it('accepts pairs exactly three days apart', function () {
@@ -242,14 +242,14 @@ describe('no match', function () {
         importedMovement($this->bbva, -5000, '2026-10-10', 'Personal Revolut');
         importedMovement($this->revolut, 5001, '2026-10-10', 'Top-up');
 
-        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => []]);
+        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []]);
     });
 
     it('ignores movements in the same account', function () {
         importedMovement($this->revolut, -30000, '2026-10-23', 'To Cuenta Remunerada');
         importedMovement($this->revolut, 30000, '2026-10-23', 'From Cuenta Remunerada');
 
-        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => []]);
+        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []]);
     });
 
     it('ignores manual movements, deleted rows and existing transfers', function () {
@@ -259,7 +259,7 @@ describe('no match', function () {
         importedMovement($this->revolut, 8000, '2026-10-10', 'Top-up');
         F::transfer($this->user, $this->bbva, $this->revolut, 9000, '2026-10-10');
 
-        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => []]);
+        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []]);
     });
 });
 
@@ -279,7 +279,7 @@ describe('undo', function () {
         expect([$out->kind->value, $in->kind->value])->toBe(['expense', 'income'])
             ->and([$out->category_id, $out->transfer_source, $in->transfer_detected_at])->toBe([null, null, null])
             ->and(TransferExclusion::query()->where('outgoing_transaction_id', $out->id)->where('incoming_transaction_id', $in->id)->exists())->toBeTrue()
-            ->and(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => []])
+            ->and(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []])
             ->and(pendingOfType($this, 'uncategorized_transaction'))->toHaveCount(2);
     });
 
@@ -298,7 +298,7 @@ describe('idempotency', function () {
         detectTransfers($this->user);
         $group = $in->refresh()->transfer_group_id;
 
-        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => []])
+        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []])
             ->and($in->refresh()->transfer_group_id)->toBe($group);
     });
 
@@ -310,7 +310,7 @@ describe('idempotency', function () {
 
         $this->artisan('finance:detect-transfers --dry-run')
             ->expectsOutputToContain('[dry-run] Convertiría: 2026-10-10 BBVA Cuenta → 2026-10-10 Revolut Personal · 50,00 € · concept')
-            ->expectsOutputToContain('Transferencias que se convertirían: 1 · Sugerencias en Pendientes: 1')
+            ->expectsOutputToContain('Transferencias que se convertirían: 1 · Enlazadas con cuentas manuales: 0 · Sugerencias en Pendientes: 1')
             ->assertSuccessful();
         expect($out->refresh()->kind->value)->toBe('expense');
 

@@ -64,7 +64,7 @@ final class TransferConversionService
     /**
      * @return array{from: Transaction, to: Transaction}
      */
-    public function link(Transaction $imported, string $accountId): array
+    public function link(Transaction $imported, string $accountId, TransferSource $source = TransferSource::Linked): array
     {
         $this->assertConvertible($imported, 'transaction');
 
@@ -85,7 +85,7 @@ final class TransferConversionService
             throw ValidationException::withMessages(['account_id' => $error]);
         }
 
-        return DB::transaction(function () use ($imported, $account): array {
+        return DB::transaction(function () use ($imported, $account, $source): array {
             $rebuild = $this->opensPeriod($imported);
             $groupId = (string) Str::uuid7();
 
@@ -102,11 +102,11 @@ final class TransferConversionService
             ]);
             $counterpart->source = TransactionSource::Manual;
             $counterpart->transfer_group_id = $groupId;
-            $counterpart->transfer_source = TransferSource::Linked;
+            $counterpart->transfer_source = $source;
             $counterpart->transfer_detected_at = CarbonImmutable::now();
             $counterpart->save();
 
-            $this->markAsLeg($imported, $groupId, TransferSource::Linked);
+            $this->markAsLeg($imported, $groupId, $source);
 
             if ($rebuild) {
                 $this->periods->rebuild($imported->user_id);
@@ -138,6 +138,7 @@ final class TransferConversionService
                 ->get();
 
             $imported = $legs->filter(fn (Transaction $each) => $each->source === TransactionSource::Bank)->values();
+            $createdAutomatically = $leg->transfer_source === TransferSource::Auto && $legs->contains(fn (Transaction $each) => $each->source !== TransactionSource::Bank);
 
             foreach ($legs as $each) {
                 if ($each->source !== TransactionSource::Bank) {
@@ -160,6 +161,11 @@ final class TransferConversionService
             $incoming = $imported->first(fn (Transaction $each) => $each->amount_cents > 0);
             if ($outgoing !== null && $incoming !== null) {
                 $this->exclude($leg->user_id, $outgoing->id, $incoming->id);
+            }
+
+            $only = $imported->count() === 1 ? $imported->first() : null;
+            if ($createdAutomatically && $only !== null) {
+                $this->exclude($leg->user_id, $only->id, $only->id);
             }
 
             return array_values($imported->map(fn (Transaction $each) => $each->refresh())->all());

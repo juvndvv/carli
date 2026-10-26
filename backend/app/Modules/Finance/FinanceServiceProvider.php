@@ -13,6 +13,7 @@ use App\Modules\Finance\Console\BankSyncCommand;
 use App\Modules\Finance\Console\DetectTransfersCommand;
 use App\Modules\Finance\Console\MaterializeRecurringCommand;
 use App\Modules\Finance\Console\PayrollOverdueCommand;
+use App\Modules\Finance\Console\RefreshBankAccountNamesCommand;
 use App\Modules\Finance\Console\UpcomingChargesCommand;
 use App\Modules\Finance\Console\WeeklySummaryCommand;
 use App\Modules\Finance\Domain\Services\AccountService;
@@ -141,6 +142,7 @@ class FinanceServiceProvider extends ServiceProvider
                 BankSyncCommand::class,
                 BankConsentExpiryCommand::class,
                 DetectTransfersCommand::class,
+                RefreshBankAccountNamesCommand::class,
             ]);
         }
 

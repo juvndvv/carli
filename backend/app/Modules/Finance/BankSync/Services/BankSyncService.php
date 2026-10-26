@@ -106,7 +106,7 @@ final class BankSyncService
         $this->evaluateAlerts($connection->user_id, $imported);
         $detected = $this->transfers->detect($connection->user_id, SpanishCalendar::today()->subDays(TransferDetector::SYNC_WINDOW_DAYS));
 
-        return ['imported' => $imported->count(), 'accounts' => $accounts->count(), 'transfers' => count($detected['converted'])];
+        return ['imported' => $imported->count(), 'accounts' => $accounts->count(), 'transfers' => count($detected['converted']) + count($detected['linked'])];
     }
 
     /**

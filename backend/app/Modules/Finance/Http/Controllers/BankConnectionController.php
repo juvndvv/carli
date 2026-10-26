@@ -73,13 +73,15 @@ final class BankConnectionController extends FinanceController
             ->get()
             ->keyBy('external_account_uid');
 
-        $accounts = array_map(function (array $item) use ($linked): array {
+        $accounts = array_map(function (array $item) use ($linked, $bankConnection): array {
             $bankAccount = BankAccount::fromArray($item);
             $account = $linked->get($bankAccount->uid);
 
             return [
                 'external_account_uid' => $bankAccount->uid,
                 'name' => $bankAccount->name,
+                'short_name' => $bankAccount->shortName(),
+                'suggested_name' => $bankAccount->suggestedName($bankConnection->aspsp_name),
                 'iban' => $bankAccount->iban,
                 'currency' => $bankAccount->currency,
                 'type' => $bankAccount->type,

@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Domain\Services;
 
 use App\Models\User;
+use App\Modules\Finance\BankSync\Data\BankAccount;
 use App\Modules\Finance\Domain\Enums\TransferSource;
 use App\Modules\Finance\Domain\Support\MerchantText;
 use App\Modules\Finance\Domain\Support\TransferCandidate;
@@ -23,23 +24,32 @@ final class TransferDetector
 
     public const string SIGNAL_CONCEPT = 'concept';
 
+    public const string SIGNAL_INTERNAL = 'internal';
+
     private const array OWN_TRANSFER_WORDS = ['TOP UP', 'TOPUP', 'RECARGA', 'TRASPASO', 'CUENTA PROPIA', 'CUENTAS PROPIAS', 'ENTRE CUENTAS', 'MISMO TITULAR'];
 
     private const int MIN_NAME_TOKENS = 2;
 
     private const int IBAN_EDGE = 4;
 
+    private const int MIN_ACCOUNT_LABEL = 3;
+
+    private const string MOVE_PATTERN = '/^(?<direction>TO|FROM|HACIA|DESDE) (?<target>.+)$/';
+
+    private const array OUTGOING_WORDS = ['TO', 'HACIA'];
+
     public function __construct(private readonly TransferConversionService $conversions) {}
 
     /**
-     * @return array{converted: list<TransferCandidate>, suggested: list<TransferCandidate>}
+     * @return array{converted: list<TransferCandidate>, suggested: list<TransferCandidate>, linked: list<array{transaction: Transaction, account: Account}>}
      */
     public function detect(User|string $user, ?CarbonImmutable $since = null, bool $dryRun = false): array
     {
         $converted = [];
         $suggested = [];
+        $candidates = $this->candidates($user);
 
-        foreach ($this->candidates($user) as $candidate) {
+        foreach ($candidates as $candidate) {
             if (! $candidate->isAutoConvertible() || ($since !== null && $candidate->latestDate()->lessThan($since))) {
                 $suggested[] = $candidate;
 
@@ -53,7 +63,154 @@ final class TransferDetector
             $converted[] = $candidate;
         }
 
-        return ['converted' => $converted, 'suggested' => $suggested];
+        $linked = $this->manualCounterparts($user instanceof User ? $user->id : $user, $candidates, $since);
+
+        if (! $dryRun) {
+            foreach ($linked as $link) {
+                $this->conversions->link($link['transaction'], $link['account']->id, TransferSource::Auto);
+            }
+        }
+
+        return ['converted' => $converted, 'suggested' => $suggested, 'linked' => $linked];
+    }
+
+    /**
+     * @param  list<TransferCandidate>  $candidates
+     * @return list<array{transaction: Transaction, account: Account}>
+     */
+    private function manualCounterparts(string $userId, array $candidates, ?CarbonImmutable $since): array
+    {
+        $manual = Account::query()->ownedBy($userId)->whereNull('bank_connection_id')->whereNull('archived_at')->get();
+
+        if ($manual->isEmpty()) {
+            return [];
+        }
+
+        $paired = [];
+        foreach ($candidates as $candidate) {
+            $paired[$candidate->outgoing->id] = $paired[$candidate->incoming->id] = true;
+        }
+
+        $eligible = $this->eligibleSql('t');
+        $ids = array_column(DB::select(<<<SQL
+            SELECT t.id FROM finance.transactions t
+            WHERE t.user_id = ?
+              AND t.kind IN ('expense', 'income')
+              AND t.category_id IS NULL
+              AND (?::date IS NULL OR t.date >= ?::date)
+              AND {$eligible}
+              AND NOT EXISTS (
+                SELECT 1 FROM finance.transfer_exclusions x
+                WHERE x.outgoing_transaction_id = t.id AND x.incoming_transaction_id = t.id
+              )
+            SQL, [$userId, $since?->toDateString(), $since?->toDateString()]), 'id');
+
+        $links = [];
+        $transactions = Transaction::query()->ownedBy($userId)->with('account')->whereIn('id', array_diff($ids, array_keys($paired)))->orderBy('date')->get();
+
+        foreach ($transactions as $transaction) {
+            if ($this->hasCounterparty($transaction)) {
+                continue;
+            }
+
+            $target = $this->moveTarget($transaction);
+            if ($target === null) {
+                continue;
+            }
+
+            $matches = $manual->filter(fn (Account $account) => $account->id !== $transaction->account_id && $this->namesAccount($target, $account));
+
+            $match = $matches->count() === 1 ? $matches->first() : null;
+            if ($match !== null) {
+                $links[] = ['transaction' => $transaction, 'account' => $match];
+            }
+        }
+
+        return $links;
+    }
+
+    private function moveTarget(Transaction $transaction): ?string
+    {
+        foreach ([$transaction->description, $transaction->payee] as $text) {
+            if (preg_match(self::MOVE_PATTERN, MerchantText::normalize($text), $match) !== 1) {
+                continue;
+            }
+
+            $outgoing = in_array($match['direction'], self::OUTGOING_WORDS, true);
+            if ($outgoing === $transaction->amount_cents < 0) {
+                return $match['target'];
+            }
+        }
+
+        return null;
+    }
+
+    private function namesAccount(string $target, Account $account): bool
+    {
+        foreach ($this->accountLabels($account) as $label) {
+            $shorter = strlen($label) <= strlen($target) ? $label : $target;
+            $longer = $shorter === $label ? $target : $label;
+
+            if ($target === $label || (count(explode(' ', $shorter)) >= self::MIN_NAME_TOKENS && MerchantText::contains($longer, $shorter))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function accountLabels(Account $account): array
+    {
+        $labels = [MerchantText::normalize($account->name)];
+
+        if (str_contains($account->name, BankAccount::NAME_SEPARATOR)) {
+            $labels[] = MerchantText::normalize(substr($account->name, strrpos($account->name, BankAccount::NAME_SEPARATOR) + strlen(BankAccount::NAME_SEPARATOR)));
+        }
+
+        if ($account->isBankLinked()) {
+            $entry = $account->bankConnection?->bankAccount((string) $account->external_account_uid);
+            $labels[] = MerchantText::normalize($entry === null ? null : BankAccount::fromArray($entry)->shortName());
+        }
+
+        return array_values(array_unique(array_filter($labels, fn (string $label) => strlen($label) >= self::MIN_ACCOUNT_LABEL)));
+    }
+
+    private function hasCounterparty(Transaction $transaction): bool
+    {
+        $outgoing = $transaction->amount_cents < 0;
+        $account = $transaction->raw[$outgoing ? 'creditor_account' : 'debtor_account'] ?? null;
+
+        return $this->partyName($transaction, $outgoing ? 'creditor' : 'debtor') !== null
+            || (is_array($account) && array_filter($account) !== []);
+    }
+
+    private function isInternalMove(Transaction $outgoing, Transaction $incoming): bool
+    {
+        if ($outgoing->account->bank_connection_id === null || $outgoing->account->bank_connection_id !== $incoming->account->bank_connection_id) {
+            return false;
+        }
+
+        if ($this->hasCounterparty($outgoing) || $this->hasCounterparty($incoming)) {
+            return false;
+        }
+
+        return $this->mentionsAccount($outgoing, $incoming->account) || $this->mentionsAccount($incoming, $outgoing->account);
+    }
+
+    private function mentionsAccount(Transaction $transaction, Account $other): bool
+    {
+        $text = MerchantText::normalize(implode(' ', array_filter([$transaction->payee, $transaction->description])));
+
+        foreach ($this->accountLabels($other) as $label) {
+            if (MerchantText::contains($text, $label)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -113,16 +270,7 @@ final class TransferDetector
      */
     private function pairs(string $userId): array
     {
-        $eligible = fn (string $alias): string => <<<SQL
-            {$alias}.deleted_at IS NULL
-            AND {$alias}.source = 'bank'
-            AND {$alias}.status = 'cleared'
-            AND {$alias}.transfer_group_id IS NULL
-            AND {$alias}.debt_id IS NULL
-            AND {$alias}.recurring_rule_id IS NULL
-            AND NOT EXISTS (SELECT 1 FROM finance.transaction_splits s WHERE s.transaction_id = {$alias}.id)
-            AND NOT EXISTS (SELECT 1 FROM finance.shared_expense_shares sh WHERE sh.transaction_id = {$alias}.id OR sh.settlement_transaction_id = {$alias}.id)
-            SQL;
+        $eligible = fn (string $alias): string => $this->eligibleSql($alias);
 
         /** @var list<object{outgoing_id: string, incoming_id: string}> $rows */
         $rows = DB::select(<<<SQL
@@ -146,6 +294,20 @@ final class TransferDetector
             SQL, [self::MAX_DAYS_APART, $userId]);
 
         return array_map(fn (object $row) => ['outgoing_id' => (string) $row->outgoing_id, 'incoming_id' => (string) $row->incoming_id], $rows);
+    }
+
+    private function eligibleSql(string $alias): string
+    {
+        return <<<SQL
+            {$alias}.deleted_at IS NULL
+            AND {$alias}.source = 'bank'
+            AND {$alias}.status = 'cleared'
+            AND {$alias}.transfer_group_id IS NULL
+            AND {$alias}.debt_id IS NULL
+            AND {$alias}.recurring_rule_id IS NULL
+            AND NOT EXISTS (SELECT 1 FROM finance.transaction_splits s WHERE s.transaction_id = {$alias}.id)
+            AND NOT EXISTS (SELECT 1 FROM finance.shared_expense_shares sh WHERE sh.transaction_id = {$alias}.id OR sh.settlement_transaction_id = {$alias}.id)
+            SQL;
     }
 
     /**
@@ -181,6 +343,10 @@ final class TransferDetector
 
         if ($this->mentionsOwnTransfer($outgoing, $incoming->account) || $this->mentionsOwnTransfer($incoming, $outgoing->account)) {
             $signals[] = self::SIGNAL_CONCEPT;
+        }
+
+        if ($this->isInternalMove($outgoing, $incoming)) {
+            $signals[] = self::SIGNAL_INTERNAL;
         }
 
         return $signals;

@@ -35,6 +35,7 @@ final class BankConnectionService
     public function __construct(
         private readonly BankDataProvider $provider,
         private readonly AccountService $accounts,
+        private readonly BankAccountNameService $names,
     ) {}
 
     /**
@@ -151,7 +152,7 @@ final class BankConnectionService
 
                 $account = $item['account_id'] === 'new'
                     ? $this->accounts->create($user, [
-                        'name' => $item['name'] ?? $bankAccount->name ?? $connection->aspsp_name,
+                        'name' => $item['name'] ?? $bankAccount->suggestedName($connection->aspsp_name),
                         'type' => $item['type'] ?? $bankAccount->suggestedAccountType()->value,
                     ])
                     : Account::query()->ownedBy($user)->whereKey($item['account_id'])->first();
@@ -337,6 +338,8 @@ final class BankConnectionService
                 'expiry_notice_days' => null,
                 'last_error' => null,
             ])->save();
+
+            $this->names->renameDefaults($connection);
         });
 
         if ($previousSession !== null && $previousSession !== $session->sessionId) {

@@ -8,6 +8,10 @@ final readonly class BankAccount
 {
     public const string CURRENCY = 'EUR';
 
+    public const string NAME_SEPARATOR = ' · ';
+
+    private const string JOINT_HOLDERS = ' & ';
+
     public function __construct(
         public string $uid,
         public ?string $identificationHash = null,
@@ -15,7 +19,49 @@ final readonly class BankAccount
         public ?string $iban = null,
         public ?string $currency = null,
         public ?string $type = null,
+        public ?string $details = null,
+        public ?string $product = null,
     ) {}
+
+    public function shortName(): ?string
+    {
+        foreach ([$this->details, $this->product] as $label) {
+            if ($label !== null && trim($label) !== '') {
+                return self::readable($label);
+            }
+        }
+
+        return null;
+    }
+
+    public function suggestedName(string $bank): string
+    {
+        $label = $this->shortName() ?? match (true) {
+            str_contains($this->name ?? '', self::JOINT_HOLDERS) => 'Compartida',
+            $this->suggestedAccountType() === AccountType::CreditCard => 'Tarjeta',
+            $this->suggestedAccountType() === AccountType::Savings => 'Ahorro',
+            default => 'Principal',
+        };
+
+        return $bank.self::NAME_SEPARATOR.$label;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function legacyNames(string $bank): array
+    {
+        $name = trim($this->name ?? '');
+
+        return $name === '' ? [] : ["{$bank} {$name}", $name];
+    }
+
+    public static function readable(string $label): string
+    {
+        $clean = trim(preg_replace('/\s+/', ' ', $label) ?? $label);
+
+        return mb_strtoupper($clean) === $clean ? mb_convert_case(mb_strtolower($clean), MB_CASE_TITLE) : $clean;
+    }
 
     public static function maskIban(?string $iban): ?string
     {
@@ -43,7 +89,7 @@ final readonly class BankAccount
     }
 
     /**
-     * @param  array{uid: string, identification_hash?: string|null, name?: string|null, iban?: string|null, currency?: string|null, type?: string|null}  $data
+     * @param  array{uid: string, identification_hash?: string|null, name?: string|null, iban?: string|null, currency?: string|null, type?: string|null, details?: string|null, product?: string|null}  $data
      */
     public static function fromArray(array $data): self
     {
@@ -54,11 +100,13 @@ final readonly class BankAccount
             iban: $data['iban'] ?? null,
             currency: $data['currency'] ?? null,
             type: $data['type'] ?? null,
+            details: $data['details'] ?? null,
+            product: $data['product'] ?? null,
         );
     }
 
     /**
-     * @return array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null}
+     * @return array{uid: string, identification_hash: string|null, name: string|null, iban: string|null, currency: string|null, type: string|null, details: string|null, product: string|null}
      */
     public function toArray(): array
     {
@@ -69,6 +117,8 @@ final readonly class BankAccount
             'iban' => $this->iban,
             'currency' => $this->currency,
             'type' => $this->type,
+            'details' => $this->details,
+            'product' => $this->product,
         ];
     }
 }
