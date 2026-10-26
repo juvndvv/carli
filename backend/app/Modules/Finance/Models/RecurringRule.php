@@ -110,6 +110,11 @@ class RecurringRule extends Model
         return $this->cancelled_at === null && $this->next_occurrence !== null;
     }
 
+    public function awaitsBank(): bool
+    {
+        return $this->account->isBankLinked();
+    }
+
     public function displayName(): string
     {
         return $this->payee ?? $this->description ?? 'Recurrente';

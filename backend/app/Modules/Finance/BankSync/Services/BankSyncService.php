@@ -16,6 +16,7 @@ use App\Modules\Finance\Domain\Services\BudgetService;
 use App\Modules\Finance\Domain\Services\CategoryRuleService;
 use App\Modules\Finance\Domain\Services\GoalService;
 use App\Modules\Finance\Domain\Services\PeriodService;
+use App\Modules\Finance\Domain\Services\RecurringBankMatcher;
 use App\Modules\Finance\Domain\Services\TransferDetector;
 use App\Modules\Finance\Domain\Support\SpanishCalendar;
 use App\Modules\Finance\Models\Account;
@@ -45,6 +46,7 @@ final class BankSyncService
         private readonly GoalService $goals,
         private readonly PeriodService $periods,
         private readonly TransferDetector $transfers,
+        private readonly RecurringBankMatcher $recurring,
     ) {}
 
     /**
@@ -231,6 +233,13 @@ final class BankSyncService
 
             foreach ($rows as $row) {
                 if ($known->has($row['external_id'])) {
+                    continue;
+                }
+
+                $match = $this->recurring->match($account, $row['kind'], $row['amount_cents'], $row['date'], $row['payee'], $row['description']);
+                if ($match !== null) {
+                    $created->push($this->recurring->absorb($match, $account, $row['external_id'], $row['amount_cents'], $row['date'], $row['payee'], $row['description'], $row['raw']));
+
                     continue;
                 }
 

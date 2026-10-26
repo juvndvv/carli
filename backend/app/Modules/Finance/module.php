@@ -21,7 +21,7 @@ return [
         ],
         'recurring_pending' => [
             'label' => 'Recurrente pendiente de confirmar',
-            'description' => 'El día del cargo, a las 09:00.',
+            'description' => 'El día del cargo, a las 09:00. En cuentas conectadas al banco, si el cargo no ha entrado 6 días después.',
             'push' => true,
             'in_app' => true,
         ],

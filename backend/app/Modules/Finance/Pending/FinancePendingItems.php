@@ -8,7 +8,9 @@ use App\Core\Pending\PendingPage;
 use App\Models\User;
 use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
+use App\Modules\Finance\Domain\Services\RecurringBankMatcher;
 use App\Modules\Finance\Domain\Services\TransferDetector;
+use App\Modules\Finance\Domain\Support\SpanishCalendar;
 use App\Modules\Finance\Domain\Support\TransferCandidate;
 use App\Modules\Finance\Models\Account;
 use App\Modules\Finance\Models\Transaction;
@@ -152,9 +154,14 @@ final class FinancePendingItems implements PendingItemsProvider
      */
     private function recurring(User $user): Builder
     {
+        $graceStart = SpanishCalendar::today()->subDays(RecurringBankMatcher::WINDOW_DAYS)->toDateString();
+
         return Transaction::query()->ownedBy($user)
             ->whereNotNull('recurring_rule_id')
-            ->where('status', TransactionStatus::Pending->value);
+            ->where('status', TransactionStatus::Pending->value)
+            ->where(fn (Builder $query) => $query
+                ->where('date', '<', $graceStart)
+                ->orWhereNotIn('account_id', Account::query()->withoutGlobalScopes()->whereNotNull('bank_connection_id')->whereNotNull('external_account_uid')->select('id')));
     }
 
     private function uncategorizedPage(User $user, ?string $cursor): PendingPage
@@ -206,7 +213,7 @@ final class FinancePendingItems implements PendingItemsProvider
             title: $transaction->recurringRule?->displayName() ?? $transaction->payee ?? $transaction->description ?? 'Recurrente',
             date: $transaction->date->toDateString(),
             route: self::RECURRING_ROUTE,
-            subtitle: $transaction->account->name.' · Por confirmar',
+            subtitle: $transaction->account->name.($transaction->account->isBankLinked() ? ' · No ha entrado en el banco' : ' · Por confirmar'),
             amountCents: $transaction->amount_cents,
             meta: [
                 'transaction_id' => $transaction->id,

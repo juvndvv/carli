@@ -127,12 +127,13 @@ final class RecurringService
 
             $created = 0;
             $schedule = self::schedule($rule);
+            $status = $rule->mode === RecurringMode::Auto && ! $rule->awaitsBank() ? TransactionStatus::Cleared : TransactionStatus::Pending;
 
             while ($rule->next_occurrence !== null && $rule->next_occurrence->lessThanOrEqualTo($until)) {
                 $date = $rule->next_occurrence;
 
                 if (! $this->occurrenceExists($rule, $date)) {
-                    $this->createOccurrence($rule, $date, $rule->mode === RecurringMode::Auto ? TransactionStatus::Cleared : TransactionStatus::Pending, $rule->amount_cents);
+                    $this->createOccurrence($rule, $date, $status, $rule->amount_cents);
                     $created++;
                 }
 

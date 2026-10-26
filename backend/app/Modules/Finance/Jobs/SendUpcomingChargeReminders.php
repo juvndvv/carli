@@ -6,11 +6,13 @@ use App\Models\User;
 use App\Modules\Finance\Domain\Enums\RecurringMode;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use App\Modules\Finance\Domain\Services\FinanceSettingsService;
+use App\Modules\Finance\Domain\Services\RecurringBankMatcher;
 use App\Modules\Finance\Domain\Support\SpanishCalendar;
 use App\Modules\Finance\Models\Debt;
 use App\Modules\Finance\Models\RecurringRule;
 use App\Modules\Finance\Models\Transaction;
 use App\Modules\Finance\Notifications\DebtReminder;
+use App\Modules\Finance\Notifications\RecurringNotReceived;
 use App\Modules\Finance\Notifications\RecurringPending;
 use App\Modules\Finance\Notifications\UpcomingCharge;
 use Carbon\CarbonImmutable;
@@ -60,16 +62,34 @@ final class SendUpcomingChargeReminders implements ShouldQueue
             ->whereNotNull('recurring_rule_id')
             ->where('status', TransactionStatus::Pending->value)
             ->where('date', $today->toDateString())
-            ->with('recurringRule')
+            ->with(['recurringRule', 'account'])
             ->get();
 
         foreach ($pending as $transaction) {
             $rule = $transaction->recurringRule;
-            if (! $rule instanceof RecurringRule || $rule->mode !== RecurringMode::Confirm) {
+            if (! $rule instanceof RecurringRule || $rule->mode !== RecurringMode::Confirm || $transaction->account->isBankLinked()) {
                 continue;
             }
 
             $user($transaction->user_id)?->notify(new RecurringPending($rule->id, $transaction->id, $rule->displayName(), $transaction->amount_cents));
+            $this->sent++;
+        }
+
+        $notReceived = Transaction::query()->withoutGlobalScopes()
+            ->whereNull('deleted_at')
+            ->whereNotNull('recurring_rule_id')
+            ->where('status', TransactionStatus::Pending->value)
+            ->where('date', $today->subDays(RecurringBankMatcher::WINDOW_DAYS + 1)->toDateString())
+            ->with(['recurringRule', 'account'])
+            ->get();
+
+        foreach ($notReceived as $transaction) {
+            $rule = $transaction->recurringRule;
+            if (! $rule instanceof RecurringRule || ! $transaction->account->isBankLinked()) {
+                continue;
+            }
+
+            $user($transaction->user_id)?->notify(new RecurringNotReceived($rule->id, $transaction->id, $rule->displayName(), $transaction->amount_cents, $transaction->date->toDateString()));
             $this->sent++;
         }
 
