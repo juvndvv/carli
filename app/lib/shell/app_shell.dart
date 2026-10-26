@@ -13,6 +13,8 @@ import '../core/theme/tokens.dart';
 import '../core/theme/typography.dart';
 import '../core/pending/pending_providers.dart';
 import '../modules/finance/screens/transaction_sheet.dart';
+import '../modules/notes/notes_paths.dart';
+import '../modules/notes/notes_shell.dart';
 import '../modules/tasks/screens/new_task_sheet.dart';
 import '../modules/tasks/ui/tasks_routes.dart';
 import '../ui/icon.dart';
@@ -21,11 +23,12 @@ import '../ui/pressable.dart';
 import 'pending/pending_badge.dart';
 
 /// Which set of tabs the bar shows: carli's general home lists the modules, a module lists its own screens.
-enum ShellContext { home, finance, tasks }
+enum ShellContext { home, finance, tasks, notes }
 
 ShellContext shellContextFor(String location) => switch (location) {
   _ when location == Routes.home || _homeChildren.any(location.startsWith) => ShellContext.home,
   _ when location.startsWith(TasksRoutes.root) => ShellContext.tasks,
+  _ when NotesPaths.owns(location) => ShellContext.notes,
   _ => ShellContext.finance,
 };
 
@@ -104,21 +107,29 @@ class AppShell extends ConsumerWidget {
             showsPending: destination.showsPending,
           ),
       ],
+      ShellContext.notes => notesShellTabs(navigationShell, location),
     };
 
     return Scaffold(
       extendBody: true,
       body: navigationShell,
-      bottomNavigationBar: CarliBottomNav(
-        home: home,
-        tabs: tabs,
-        onAdd: switch (shellContext) {
-          ShellContext.home => null,
-          ShellContext.finance => () => showTransactionSheet(context),
-          ShellContext.tasks => () => showNewTaskSheet(context),
-        },
-        addLabel: shellContext == ShellContext.tasks ? 'Nueva tarea' : 'Nuevo movimiento',
-      ),
+      bottomNavigationBar: NotesPaths.coversShellBar(location)
+          ? null
+          : CarliBottomNav(
+              home: home,
+              tabs: tabs,
+              onAdd: switch (shellContext) {
+                ShellContext.home => null,
+                ShellContext.finance => () => showTransactionSheet(context),
+                ShellContext.tasks => () => showNewTaskSheet(context),
+                ShellContext.notes => () => onNotesAdd(context, ref, location),
+              },
+              addLabel: switch (shellContext) {
+                ShellContext.tasks => 'Nueva tarea',
+                ShellContext.notes => notesAddLabel(location),
+                _ => 'Nuevo movimiento',
+              },
+            ),
     );
   }
 

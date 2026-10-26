@@ -29,6 +29,7 @@ import '../../modules/tasks/screens/templates_screen.dart';
 import '../../modules/tasks/screens/today_screen.dart';
 import '../../modules/tasks/screens/upcoming_screen.dart';
 import '../../modules/tasks/ui/tasks_routes.dart';
+import '../../modules/notes/notes_routes.dart';
 import '../../shell/app_shell.dart';
 import '../../shell/home/coming_soon_module_screen.dart';
 import '../../shell/home/home_screen.dart';
@@ -271,6 +272,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           _branch(TasksRoutes.templates, const TemplatesScreen()),
+          ...notesBranches,
         ],
       ),
     ],

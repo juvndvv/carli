@@ -18,6 +18,7 @@ import '../../modules/finance/ui/finance_home_card.dart';
 import '../../modules/tasks/data/tasks_providers.dart';
 import '../../modules/tasks/ui/tasks_home_card.dart';
 import '../../modules/tasks/ui/tasks_routes.dart';
+import '../../modules/notes/ui/notes_home_card.dart';
 import '../../ui/button.dart';
 import '../../ui/icon_names.dart';
 import '../../ui/page.dart';
@@ -90,6 +91,7 @@ class HomeScreen extends ConsumerWidget {
                   onOpenTask: (task) => context.push(TasksRoutes.task(task.id)),
                 ),
               ],
+              const NotesHomeCard(),
               const UpcomingModulesCard(),
               if (!hasNotifications) ...[const SizedBox(height: CarliSpace.s16), const NotificationsHomeCard()],
             ],

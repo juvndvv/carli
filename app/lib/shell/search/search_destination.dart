@@ -89,8 +89,7 @@ String? nativeLocationOf(String url) {
     ['ajustes'] => SettingsPaths.root,
     ['ajustes', 'modulo', final moduleId] => moduleSettingsLocationOf(moduleId),
     ['ajustes', final section] => _settingsSections[section],
-    ['mas', ...] => '/${segments.join('/')}',
-    ['tareas', ...] => '/${segments.join('/')}',
+    ['mas', ...] || ['tareas', ...] || ['notas', ...] || ['compra', ...] => '/${segments.join('/')}',
     _ => null,
   };
 }

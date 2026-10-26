@@ -49,7 +49,15 @@ const searchSections = [
   SearchSection('Objetivos', 'target', Routes.goals, subtitle: 'Finanzas', moduleId: AppModuleIds.finance),
   SearchSection('Deudas', 'hand-coins', Routes.debts, subtitle: 'Finanzas', moduleId: AppModuleIds.finance),
   SearchSection('Compartidos', 'users', Routes.shared, subtitle: 'Finanzas', moduleId: AppModuleIds.finance),
-  SearchSection('Ajustes de Finanzas', 'settings', Routes.financeSettings, subtitle: 'Finanzas', moduleId: AppModuleIds.finance),
+  SearchSection(
+    'Ajustes de Finanzas',
+    'settings',
+    Routes.financeSettings,
+    subtitle: 'Finanzas',
+    moduleId: AppModuleIds.finance,
+  ),
+  SearchSection('Notas', 'notebook-pen', '/notas', subtitle: 'Notas', moduleId: AppModuleIds.notes),
+  SearchSection('Lista de la compra', 'shopping-cart', '/compra', subtitle: 'Notas', moduleId: AppModuleIds.notes),
   SearchSection('Ajustes', 'settings', SettingsPaths.root, subtitle: 'Cuenta'),
 ];
 

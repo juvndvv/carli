@@ -56,7 +56,7 @@ void main() {
     for (final url in [
       '/finanzas/desconocido',
       '/finanzas/deudas/debt-1',
-      '/ajustes/modulo/notes',
+      '/ajustes/modulo/health',
       'https://example.com/finanzas',
     ]) {
       test('has no native location for "$url"', () => expect(nativeLocationOf(url), isNull));
@@ -80,7 +80,7 @@ void main() {
     });
 
     test('has no destination for an unknown route', () {
-      expect(searchDestinationOf(result(module: 'notes', type: 'note', url: '/notas/1')), isNull);
+      expect(searchDestinationOf(result(module: 'health', type: 'weight', url: '/salud/1')), isNull);
     });
   });
 
@@ -112,14 +112,14 @@ void main() {
         results: [
           result(),
           result(type: 'transaction', id: 'tx-1', title: 'Bar Pepe', url: '/finanzas/movimientos?q=ba'),
-          result(module: 'notes', moduleName: null, type: 'note', title: 'Baño', url: '/notas/1'),
+          result(module: 'notes', moduleName: null, type: 'note', title: 'Baño', url: '/notas/n/1'),
         ],
       );
       final groups = groupSearchEntries(entries);
 
       expect(groups.map((group) => group.$1), ['Finanzas', resultsGroup]);
       expect(groups.first.$2.map((entry) => entry.title), ['BBVA', 'Bar Pepe']);
-      expect(groups.last.$2.single.destination, isNull);
+      expect(groups.last.$2.single.destination, const OpenLocation('/notas/n/1'));
     });
   });
 
