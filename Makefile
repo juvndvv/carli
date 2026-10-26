@@ -5,10 +5,10 @@ ARGS ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup env keys build up down restart ps logs migrate seed-demo create-user test-backend test-frontend test-e2e shell backup
+.PHONY: help setup env keys build up down restart ps logs migrate seed-demo create-user test-backend test-app shell backup
 
 help:
-	@echo "Targets: setup build up down restart ps logs migrate seed-demo create-user test-backend test-frontend test-e2e shell backup"
+	@echo "Targets: setup build up down restart ps logs migrate seed-demo create-user test-backend test-app shell backup"
 
 setup: env build keys
 	@echo "Setup complete. Run 'make up' and open $$(grep -E '^APP_URL=' .env | cut -d= -f2-)"
@@ -61,11 +61,8 @@ create-user:
 test-backend:
 	$(COMPOSE) --profile test run --rm --build backend-test php artisan test $(ARGS)
 
-test-frontend:
-	$(COMPOSE) --profile test run --rm --build frontend-test npx ng test --watch=false $(ARGS)
-
-test-e2e:
-	cd frontend && npx playwright install chromium && E2E_BASE_URL=$$(grep -E '^APP_URL=' ../.env | cut -d= -f2-) npx playwright test $(ARGS)
+test-app:
+	cd app && flutter analyze && flutter test $(ARGS)
 
 shell:
 	$(COMPOSE) exec app sh

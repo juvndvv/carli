@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Finance\BankSync\Contracts\BankDataProvider;
 use App\Modules\Finance\BankSync\Data\Aspsp;
 use App\Modules\Finance\BankSync\Data\BankAccount;
+use App\Modules\Finance\BankSync\Data\BankReturnTarget;
 use App\Modules\Finance\BankSync\Data\BankSession;
 use App\Modules\Finance\BankSync\Data\PsuContext;
 use App\Modules\Finance\BankSync\Exceptions\BankProviderException;
@@ -58,20 +59,20 @@ final class BankConnectionService
         return array_map(fn (array $item) => new Aspsp($item['name'], $item['country'], $item['logo'], $item['maximum_consent_validity']), $cached);
     }
 
-    public function start(User $user, string $aspspName, string $country): string
+    public function start(User $user, string $aspspName, string $country, BankReturnTarget $returnTo = BankReturnTarget::Web): string
     {
-        return $this->authorize($user, $this->aspsp($aspspName, $country), null);
+        return $this->authorize($user, $this->aspsp($aspspName, $country), null, $returnTo);
     }
 
-    public function renew(BankConnection $connection): string
+    public function renew(BankConnection $connection, BankReturnTarget $returnTo = BankReturnTarget::Web): string
     {
         $user = User::query()->findOrFail($connection->user_id);
 
-        return $this->authorize($user, $this->aspsp($connection->aspsp_name, $connection->aspsp_country), $connection->id);
+        return $this->authorize($user, $this->aspsp($connection->aspsp_name, $connection->aspsp_country), $connection->id, $returnTo);
     }
 
     /**
-     * @return array{connection: BankConnection, renewed: bool}
+     * @return array{connection: BankConnection, renewed: bool, return_to: BankReturnTarget}
      */
     public function complete(string $state, string $code): array
     {
@@ -88,7 +89,7 @@ final class BankConnectionService
             $connection = BankConnection::query()->ownedBy($user)->whereKey($payload['connection_id'])->first();
 
             if ($connection !== null && $connection->status !== BankConnectionStatus::Revoked) {
-                return ['connection' => $this->applyRenewal($connection, $session), 'renewed' => true];
+                return ['connection' => $this->applyRenewal($connection, $session), 'renewed' => true, 'return_to' => $payload['return_to']];
             }
         }
 
@@ -103,7 +104,7 @@ final class BankConnectionService
         $connection->accounts = array_map(fn (BankAccount $account) => $account->toArray(), $session->accounts);
         $connection->save();
 
-        return ['connection' => $connection, 'renewed' => false];
+        return ['connection' => $connection, 'renewed' => false, 'return_to' => $payload['return_to']];
     }
 
     /**
@@ -219,20 +220,26 @@ final class BankConnectionService
         return is_string($configured) && $configured !== '' ? $configured : route('finance.bank.callback');
     }
 
-    public function encodeState(string $userId, string $aspspName, string $country, ?string $connectionId): string
-    {
+    public function encodeState(
+        string $userId,
+        string $aspspName,
+        string $country,
+        ?string $connectionId,
+        BankReturnTarget $returnTo = BankReturnTarget::Web,
+    ): string {
         return Crypt::encryptString((string) json_encode([
             'u' => $userId,
             'c' => $connectionId,
             'a' => $aspspName,
             'k' => $country,
+            'r' => $returnTo->value,
             'n' => Str::random(32),
             'x' => CarbonImmutable::now()->addMinutes(self::STATE_TTL_MINUTES)->getTimestamp(),
         ]));
     }
 
     /**
-     * @return array{user_id: string, connection_id: string|null, aspsp_name: string, aspsp_country: string}
+     * @return array{user_id: string, connection_id: string|null, aspsp_name: string, aspsp_country: string, return_to: BankReturnTarget}
      */
     public function decodeState(string $state): array
     {
@@ -258,12 +265,28 @@ final class BankConnectionService
             'connection_id' => is_string($payload['c'] ?? null) ? $payload['c'] : null,
             'aspsp_name' => $payload['a'],
             'aspsp_country' => $payload['k'],
+            'return_to' => BankReturnTarget::tryFrom((string) ($payload['r'] ?? '')) ?? BankReturnTarget::Web,
         ];
     }
 
-    private function authorize(User $user, Aspsp $aspsp, ?string $connectionId): string
+    public function returnTargetOf(mixed $state): BankReturnTarget
     {
-        $state = $this->encodeState($user->id, $aspsp->name, $aspsp->country, $connectionId);
+        if (! is_string($state) || $state === '') {
+            return BankReturnTarget::Web;
+        }
+
+        try {
+            $payload = json_decode(Crypt::decryptString($state), true);
+        } catch (DecryptException) {
+            return BankReturnTarget::Web;
+        }
+
+        return BankReturnTarget::tryFrom(is_array($payload) ? (string) ($payload['r'] ?? '') : '') ?? BankReturnTarget::Web;
+    }
+
+    private function authorize(User $user, Aspsp $aspsp, ?string $connectionId, BankReturnTarget $returnTo): string
+    {
+        $state = $this->encodeState($user->id, $aspsp->name, $aspsp->country, $connectionId, $returnTo);
         $validUntil = CarbonImmutable::now()->addDays($aspsp->consentDays());
 
         return $this->provider->startAuth($aspsp, $this->redirectUrl(), $state, $validUntil);

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Finance\Http\Controllers;
 
+use App\Modules\Finance\BankSync\Data\BankReturnTarget;
 use App\Modules\Finance\BankSync\Exceptions\BankProviderException;
 use App\Modules\Finance\BankSync\Exceptions\InvalidBankState;
 use App\Modules\Finance\BankSync\Services\BankConnectionService;
@@ -13,36 +14,50 @@ final class BankCallbackController
 {
     public const string SETTINGS_PATH = '/finanzas/ajustes/bancos';
 
+    public const string APP_CALLBACK = 'carli://bank/callback';
+
     public function __invoke(Request $request, BankConnectionService $connections): RedirectResponse
     {
         $state = $request->query('state');
         $code = $request->query('code');
 
+        $target = $connections->returnTargetOf($state);
+
         if ($request->filled('error')) {
-            return $this->failed('cancelado');
+            return $this->failed($target, 'cancelado');
         }
 
         if (! is_string($state) || $state === '' || ! is_string($code) || $code === '') {
-            return $this->failed('estado');
+            return $this->failed($target, 'estado');
         }
 
         try {
             $result = $connections->complete($state, $code);
         } catch (InvalidBankState) {
-            return $this->failed('estado');
+            return $this->failed($target, 'estado');
         } catch (BankProviderException $exception) {
             Log::warning('Bank authorization could not be completed.', ['error' => $exception->getMessage()]);
 
-            return $this->failed('proveedor');
+            return $this->failed($target, 'proveedor');
         }
 
-        $path = self::SETTINGS_PATH.'/'.$result['connection']->id.'/vincular';
+        $connectionId = $result['connection']->id;
+
+        if ($result['return_to'] === BankReturnTarget::App) {
+            $query = ['connection' => $connectionId] + ($result['renewed'] ? ['renovado' => '1'] : []);
+
+            return redirect()->away(self::APP_CALLBACK.'?'.http_build_query($query));
+        }
+
+        $path = self::SETTINGS_PATH.'/'.$connectionId.'/vincular';
 
         return redirect()->to($result['renewed'] ? $path.'?renovado=1' : $path);
     }
 
-    private function failed(string $reason): RedirectResponse
+    private function failed(BankReturnTarget $target, string $reason): RedirectResponse
     {
-        return redirect()->to(self::SETTINGS_PATH.'?error='.$reason);
+        return $target === BankReturnTarget::App
+            ? redirect()->away(self::APP_CALLBACK.'?error='.$reason)
+            : redirect()->to(self::SETTINGS_PATH.'?error='.$reason);
     }
 }
