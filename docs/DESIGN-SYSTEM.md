@@ -111,7 +111,7 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 | `ui-card` | `--surface` sobre `--bg`, borde 1 px, radio 22, sin sombra |
 | `ui-stat` | Etiqueta pequeña, valor 24/600, variación con icono + texto |
 | `ui-progress` | 8 px. La barra nunca cambia de color por estado: `--text` en presupuestos y `--primary-strong` en objetivos y deudas. El aviso (80–100 %) y el exceso se marcan en la **cifra** ("141 / 150 €") con `--warning` o `--negative`, icono y peso 600 |
-| `ui-badge` | neutral, positive, warning, negative |
+| `ui-badge` | neutral (por defecto), primary, positive, warning, negative. Los avisos de estado (pendiente, por revisar, % de presupuesto, consentimiento de banco) van en **neutral** con icono; el color de estado se reserva para la cifra. Los avisos en bloque (sin categoría, banco) usan `--surface-2` con texto `--text-2` |
 | `ui-list-item` | Icono circular monocromo, título, subtítulo, valor a la derecha; hover `--surface-2` |
 | `ui-dialog` / `ui-sheet` | Mismo contenido; sheet inferior en móvil con radio 28 |
 | `ui-toast` | Píldora invertida (`--text` de fondo) con acción "Deshacer" |

@@ -44,8 +44,8 @@ export function uncategorizedMessage(summary: UncategorizedSummary | null | unde
       gap: 12px;
       padding: 12px 16px;
       border-radius: var(--r-md);
-      background: var(--warning-soft);
-      color: var(--warning);
+      background: var(--surface-2);
+      color: var(--text-2);
     }
     .body {
       flex: 1;
@@ -56,7 +56,7 @@ export function uncategorizedMessage(summary: UncategorizedSummary | null | unde
     }
     strong {
       font-weight: 600;
-      color: var(--warning);
+      color: var(--text);
     }
     .link {
       color: var(--text);

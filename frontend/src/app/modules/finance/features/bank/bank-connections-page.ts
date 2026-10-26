@@ -155,8 +155,8 @@ export function linkedAccountLabel(account: BankLinkedAccount): string {
       padding: 8px 8px 8px 16px;
       margin-bottom: 16px;
       border-radius: var(--r-md);
-      background: var(--warning-soft);
-      color: var(--warning);
+      background: var(--surface-2);
+      color: var(--text-2);
     }
     .notice .body {
       flex: 1;

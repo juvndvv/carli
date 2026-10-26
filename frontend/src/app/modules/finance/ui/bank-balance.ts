@@ -64,10 +64,10 @@ export function bankBalanceSummary(link: AccountBankLink | null | undefined, now
       color: var(--text-2);
     }
     .bank.off {
-      color: var(--warning);
+      color: var(--text-2);
     }
     .bank.off b {
-      color: var(--warning);
+      color: var(--text);
     }
     b {
       font-weight: 600;

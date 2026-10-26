@@ -58,7 +58,7 @@ export function transactionIcon(transaction: Transaction): string {
       @if (hasBadges()) {
         <span badges class="badges">
             @if (transaction().uncategorized) {
-              <ui-badge tone="warning" icon="circle-dashed">Por revisar</ui-badge>
+              <ui-badge icon="circle-dashed">Por revisar</ui-badge>
             }
             @if (transaction().source === 'bank') {
               <ui-badge icon="landmark" class="origin" title="Importado del banco">
@@ -66,7 +66,7 @@ export function transactionIcon(transaction: Transaction): string {
               </ui-badge>
             }
             @if (transaction().status === 'pending') {
-              <ui-badge tone="warning" icon="clock">Pendiente</ui-badge>
+              <ui-badge icon="clock">Pendiente</ui-badge>
             }
             @if (transaction().shares.length > 0) {
               <ui-badge tone="primary" icon="users">Compartido</ui-badge>

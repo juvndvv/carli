@@ -29,10 +29,10 @@ import { FinPeriodSelector } from '../../ui/period-selector';
 import { FinUncategorizedNotice } from '../../ui/uncategorized-notice';
 import { BudgetEditorData, BudgetEditorDialog } from './budget-editor-dialog';
 
-const STATUS_BADGES: Record<BudgetStatus, { tone: 'positive' | 'warning' | 'negative'; icon: string }> = {
-  ok: { tone: 'positive', icon: 'check' },
-  warning: { tone: 'warning', icon: 'triangle-alert' },
-  exceeded: { tone: 'negative', icon: 'circle-x' },
+const STATUS_ICONS: Record<BudgetStatus, string> = {
+  ok: 'check',
+  warning: 'triangle-alert',
+  exceeded: 'circle-x',
 };
 
 @Component({
@@ -91,7 +91,7 @@ const STATUS_BADGES: Record<BudgetStatus, { tone: 'positive' | 'warning' | 'nega
                 <span class="ico"><ui-icon [name]="row.category.icon ?? fallbackIcon" /></span>
                 <fin-budget-line class="body" [row]="row" [warnAt]="warnAt()" [showProjection]="data.meta.period.is_current" />
                 <span class="badge-col">
-                  <ui-badge [tone]="badge(row).tone" [icon]="badge(row).icon">{{ percent(row) }}</ui-badge>
+                  <ui-badge [icon]="statusIcon(row)">{{ percent(row) }}</ui-badge>
                 </span>
               </button>
             }
@@ -240,8 +240,8 @@ export class BudgetsPage {
     return budgetUsageLabel(row);
   }
 
-  protected badge(row: BudgetRow): { tone: 'positive' | 'warning' | 'negative'; icon: string } {
-    return STATUS_BADGES[row.status];
+  protected statusIcon(row: BudgetRow): string {
+    return STATUS_ICONS[row.status];
   }
 
   protected selectPeriod(id: string | null): void {
