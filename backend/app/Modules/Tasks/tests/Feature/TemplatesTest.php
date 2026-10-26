@@ -59,6 +59,7 @@ describe('editor', function () {
             ->assertJsonPath('data.frequency_text', 'Cada lunes y jueves')
             ->assertJsonPath('data.dtstart', '2026-10-26')
             ->assertJsonPath('data.next_date', '2026-10-26')
+            ->assertJsonPath('data.open_task_id', Task::query()->value('id'))
             ->assertJsonPath('data.upcoming_dates', ['2026-10-29', '2026-11-02', '2026-11-05', '2026-11-09', '2026-11-12']);
 
         $this->getJson('/api/v1/tasks/today')

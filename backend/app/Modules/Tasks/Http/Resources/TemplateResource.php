@@ -3,6 +3,7 @@
 namespace App\Modules\Tasks\Http\Resources;
 
 use App\Core\Recurrence\RecurrenceDescriber;
+use App\Modules\Tasks\Domain\Enums\TaskStatus;
 use App\Modules\Tasks\Domain\Services\TemplateService;
 use App\Modules\Tasks\Domain\Support\TaskCalendar;
 use App\Modules\Tasks\Models\TaskTemplate;
@@ -48,6 +49,7 @@ final class TemplateResource extends JsonResource
             'frequency_text' => TemplateService::describe($template),
             'ending_text' => RecurrenceDescriber::ending($template->until, $template->count),
             'next_date' => $service->nextDate($template)?->toDateString(),
+            'open_task_id' => $template->tasks()->where('status', TaskStatus::Open->value)->orderBy('due_date')->value('id'),
             'upcoming_dates' => array_map(fn ($date) => $date->toDateString(), $service->upcomingDates($template)),
             'skipped_dates' => array_values($template->exceptions
                 ->filter(fn (TaskTemplateException $exception) => $exception->date->gte($today))

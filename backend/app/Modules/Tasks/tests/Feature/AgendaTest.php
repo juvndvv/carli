@@ -73,7 +73,7 @@ describe('pending', function () {
                 'type' => 'overdue_task',
                 'id' => $overdue,
                 'title' => 'Pagar multa',
-                'subtitle' => 'Bandeja · Vencida hace 2 días',
+                'subtitle' => 'Bandeja',
                 'amount_cents' => null,
                 'date' => '2026-10-24',
                 'route' => '/tareas/hoy',

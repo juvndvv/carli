@@ -82,7 +82,6 @@ final readonly class TasksPendingItems implements DailyDigestContributor, Pendin
     private function present(Task $task, CarbonImmutable $today): PendingItem
     {
         $due = $task->due_date ?? $today;
-        $days = (int) $due->diffInDays($today);
 
         return new PendingItem(
             module: self::MODULE,
@@ -91,7 +90,7 @@ final readonly class TasksPendingItems implements DailyDigestContributor, Pendin
             title: $task->title,
             date: $due->toDateString(),
             route: self::ROUTE,
-            subtitle: $task->list->name.' · '.($days === 1 ? 'Vencida ayer' : "Vencida hace {$days} días"),
+            subtitle: $task->list->name,
             meta: [
                 'task_id' => $task->id,
                 'list_id' => $task->list_id,
