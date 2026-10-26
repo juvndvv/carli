@@ -5,10 +5,13 @@ use App\Core\Http\Controllers\MeController;
 use App\Core\Http\Controllers\ModuleController;
 use App\Core\Http\Controllers\NotificationController;
 use App\Core\Http\Controllers\NotificationPreferenceController;
+use App\Core\Http\Controllers\PasswordController;
 use App\Core\Http\Controllers\PendingController;
+use App\Core\Http\Controllers\PersonalAccessTokenController;
 use App\Core\Http\Controllers\PushSubscriptionController;
 use App\Core\Http\Controllers\SearchController;
 use App\Core\Http\Controllers\SessionController;
+use App\Core\Http\Controllers\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('v1/auth/token', [AccessTokenController::class, 'store'])
@@ -25,6 +28,22 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::get('me/sessions', [SessionController::class, 'index'])->name('me.sessions.index');
     Route::post('me/sessions/logout-others', [SessionController::class, 'destroyOthers'])->name('me.sessions.logout-others');
     Route::delete('me/sessions/{session}', [SessionController::class, 'destroy'])->name('me.sessions.destroy');
+
+    Route::get('me/tokens', [PersonalAccessTokenController::class, 'index'])->name('me.tokens.index');
+    Route::delete('me/tokens/{token}', [PersonalAccessTokenController::class, 'destroy'])
+        ->whereNumber('token')
+        ->name('me.tokens.destroy');
+
+    Route::middleware('throttle:10,1')->group(function (): void {
+        Route::put('me/password', [PasswordController::class, 'update'])->name('me.password.update');
+        Route::post('me/tokens/logout-others', [PersonalAccessTokenController::class, 'destroyOthers'])->name('me.tokens.logout-others');
+
+        Route::post('me/two-factor', [TwoFactorController::class, 'store'])->name('me.two-factor.store');
+        Route::post('me/two-factor/confirm', [TwoFactorController::class, 'confirm'])->name('me.two-factor.confirm');
+        Route::delete('me/two-factor', [TwoFactorController::class, 'destroy'])->name('me.two-factor.destroy');
+        Route::post('me/two-factor/recovery-codes', [TwoFactorController::class, 'recoveryCodes'])->name('me.two-factor.recovery-codes.show');
+        Route::post('me/two-factor/recovery-codes/regenerate', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('me.two-factor.recovery-codes.regenerate');
+    });
 
     Route::get('modules', [ModuleController::class, 'index'])->name('modules.index');
     Route::patch('modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
