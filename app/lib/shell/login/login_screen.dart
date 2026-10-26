@@ -218,10 +218,7 @@ class _Brand extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'carli',
-              style: CarliType.h1.copyWith(fontSize: 20, height: 1.2, color: colors.text, letterSpacing: -0.6),
-            ),
+            Text('carli', style: CarliType.wordmark(20).copyWith(color: colors.text)),
             Text('Tu asistente personal', style: CarliType.small.copyWith(color: colors.text3)),
           ],
         ),

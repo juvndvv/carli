@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/format/money.dart';
 import '../../../core/router/router.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../ui/async_view.dart';
+import '../../../ui/avatar.dart';
 import '../../../ui/card.dart';
 import '../../../ui/chart.dart';
 import '../../../ui/empty_state.dart';
@@ -15,12 +17,15 @@ import '../../../ui/list_item.dart';
 import '../../../ui/page.dart';
 import '../../../ui/pressable.dart';
 import '../../../ui/skeleton.dart';
+import '../../../ui/metric_card.dart';
 import '../../../ui/stat.dart';
+import '../data/activity_rings.dart';
 import '../data/finance_changes.dart';
 import '../data/finance_format.dart';
 import '../data/finance_providers.dart';
 import '../data/models.dart';
 import '../data/transaction_filters.dart';
+import '../ui/activity_rings_card.dart';
 import '../ui/budget_line.dart';
 import '../ui/period_selector.dart';
 import '../ui/transaction_row.dart';
@@ -89,6 +94,8 @@ class SummaryScreen extends ConsumerWidget {
 
     return CarliPage(
       title: 'Resumen',
+      moduleSwitcher: true,
+      trailing: const _ProfileButton(),
       onRefresh: () async {
         ref.read(financeChangesProvider.notifier).refreshAll();
         await ref.read(dashboardProvider(periodId).future).then((_) {}, onError: (_) {});
@@ -163,68 +170,81 @@ class _SummaryBody extends ConsumerWidget {
       context.go(Routes.budgets);
     }
 
+    final savingsTarget = ref.watch(financeSettingsProvider).value?.savingsTargetPercent ?? 20;
+    final rings = ActivityRings.of(data, savingsTargetPercent: savingsTarget);
+    final history = data.history;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: CarliSpace.s12,
       children: [
         Text(
-          period.isCurrent
-              ? '${period.name} · ${daysLeftLabel(period.daysRemaining)}'
-              : '${period.name} (${period.rangeLabel})',
-          style: CarliType.small.copyWith(color: colors.text2),
+          (period.isCurrent
+                  ? '${period.name} · ${daysLeftLabel(period.daysRemaining)}'
+                  : '${period.name} · ${period.rangeLabel}')
+              .toUpperCase(),
+          style: CarliType.eyebrow.copyWith(color: colors.text2),
         ),
+        ActivityRingsCard(rings: rings, onTap: openBudgets),
+        UncategorizedNotice(summary: data.uncategorized, onReview: reviewUncategorized),
         _StatGrid(
           children: [
-            CarliStat(
-              label: 'Patrimonio neto',
-              icon: carliIconNamed('landmark'),
+            CarliMetricCard(
+              label: 'Patrimonio',
               value: formatMoney(data.netWorthCents),
-              delta: netDelta == null
+              note: netDelta == null
                   ? null
                   : '${formatMoney(netDelta, display: MoneyDisplay.signed)}${previous == null ? '' : ' vs $previous'}',
-              deltaIcon: carliIconNamed((netDelta ?? 0) >= 0 ? 'trending-up' : 'trending-down'),
-              deltaTone: (netDelta ?? 0) >= 0 ? CarliTone.positive : CarliTone.negative,
+              noteIcon: carliIconNamed(netDelta == null || netDelta >= 0 ? 'trending-up' : 'trending-down'),
+              noteTone: (netDelta ?? 0) >= 0 ? CarliTone.positive : CarliTone.negative,
+              trend: [for (final point in history) point.netWorthCents],
+              onTap: () => context.push(Routes.accounts),
             ),
-            CarliStat(
+            CarliMetricCard(
               label: 'Ingresos',
-              icon: carliIconNamed('arrow-down-left'),
-              tone: CarliTone.positive,
               value: formatMoney(data.incomeCents),
-              delta: _percentDelta(data.incomeDeltaBp),
-              deltaIcon: carliIconNamed(deltaIconName(data.incomeDeltaBp)),
-              deltaTone: deltaTone(data.incomeDeltaBp, higherIsBetter: true),
+              tone: CarliTone.positive,
+              note: _percentDelta(data.incomeDeltaBp),
+              noteIcon: carliIconNamed(deltaIconName(data.incomeDeltaBp)),
+              noteTone: deltaTone(data.incomeDeltaBp, higherIsBetter: true),
+              trend: [for (final point in history) point.incomeCents],
             ),
-            CarliStat(
+            CarliMetricCard(
               label: 'Gastos',
-              icon: carliIconNamed('arrow-up-right'),
               value: formatMoney(data.expenseCents),
-              delta: _percentDelta(data.expenseDeltaBp),
-              deltaIcon: carliIconNamed(deltaIconName(data.expenseDeltaBp)),
-              deltaTone: deltaTone(data.expenseDeltaBp, higherIsBetter: false),
+              note: _percentDelta(data.expenseDeltaBp),
+              noteIcon: carliIconNamed(deltaIconName(data.expenseDeltaBp)),
+              noteTone: deltaTone(data.expenseDeltaBp, higherIsBetter: false),
+              trend: [for (final point in history) point.expenseCents],
+              onTap: () {
+                ref
+                    .read(transactionFiltersProvider.notifier)
+                    .replace(const TransactionFilters().withPeriod(pastPeriod));
+                context.go(Routes.transactions);
+              },
             ),
-            CarliStat(
-              label: 'Ahorro del periodo',
-              icon: carliIconNamed('piggy-bank'),
-              tone: data.savingsCents < 0 ? CarliTone.negative : CarliTone.normal,
+            CarliMetricCard(
+              label: 'Ahorro',
               value: formatMoney(data.savingsCents),
-              delta: data.savingsRateBp == null
+              tone: data.savingsCents < 0 ? CarliTone.negative : CarliTone.normal,
+              note: data.savingsRateBp == null
                   ? 'Sin ingresos este periodo'
-                  : 'Tasa de ahorro ${formatBasisPoints(data.savingsRateBp)}',
+                  : 'Tasa ${formatBasisPoints(data.savingsRateBp)}',
+              trend: [for (final point in history) point.incomeCents - point.expenseCents],
             ),
           ],
         ),
-        UncategorizedNotice(summary: data.uncategorized, onReview: reviewUncategorized),
         _Section(
           title: 'Ingresos y gastos',
-          child: data.history.isEmpty
+          child: history.isEmpty
               ? const _Muted('Aún no hay periodos anteriores con los que comparar.')
               : CarliChart(
                   type: CarliChartType.bar,
                   semanticLabel: 'Ingresos y gastos de los últimos periodos',
-                  labels: [for (final point in data.history) point.label],
+                  labels: [for (final point in history) point.label],
                   series: [
-                    CarliSeries('Ingresos', [for (final point in data.history) point.incomeCents]),
-                    CarliSeries('Gastos', [for (final point in data.history) point.expenseCents]),
+                    CarliSeries('Ingresos', [for (final point in history) point.incomeCents]),
+                    CarliSeries('Gastos', [for (final point in history) point.expenseCents]),
                   ],
                 ),
         ),
@@ -258,10 +278,7 @@ class _SummaryBody extends ConsumerWidget {
                           Container(
                             width: 10,
                             height: 10,
-                            decoration: BoxDecoration(
-                              color: slice.color(colors),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
+                            decoration: BoxDecoration(color: slice.color(colors), shape: BoxShape.circle),
                           ),
                           Expanded(
                             child: Text(slice.label, style: CarliType.small.copyWith(color: colors.text)),
@@ -345,15 +362,15 @@ class _SummaryBody extends ConsumerWidget {
                 ),
         ),
         _Section(
-          title: 'Patrimonio · 12 periodos',
-          child: data.history.length > 1
+          title: 'Patrimonio',
+          child: history.length > 1
               ? CarliChart(
                   type: CarliChartType.line,
                   showLegend: false,
                   semanticLabel: 'Evolución del patrimonio',
-                  labels: [for (final point in data.history) point.label],
+                  labels: [for (final point in history) point.label],
                   series: [
-                    CarliSeries('Patrimonio', [for (final point in data.history) point.netWorthCents]),
+                    CarliSeries('Patrimonio', [for (final point in history) point.netWorthCents]),
                   ],
                 )
               : const _Muted('La evolución aparecerá cuando tengas más de un periodo.'),
@@ -400,39 +417,43 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final header = Padding(
-      padding: EdgeInsets.fromLTRB(
-        padded ? 0 : CarliSpace.s16,
-        padded ? 0 : CarliSpace.s16,
-        padded ? 0 : CarliSpace.s16,
-        CarliSpace.s12,
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.only(top: CarliSpace.s12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: CarliSpace.s8,
         children: [
-          Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(title, style: CarliType.h2.copyWith(color: colors.text)),
-            ),
+          CarliSectionHeader(title: title, actionLabel: actionLabel, onAction: onAction),
+          CarliCard(
+            padding: padded
+                ? const EdgeInsets.all(CarliSpace.s16)
+                : const EdgeInsets.symmetric(vertical: CarliSpace.s4),
+            child: child,
           ),
-          if (actionLabel case final label?)
-            Semantics(
-              button: true,
-              child: Pressable(
-                onTap: onAction,
-                child: Text(
-                  label,
-                  style: CarliType.small.copyWith(fontWeight: FontWeight.w600, color: colors.brandInk),
-                ),
-              ),
-            ),
         ],
       ),
     );
-    return CarliCard(
-      padding: padded ? const EdgeInsets.all(CarliSpace.s16) : const EdgeInsets.only(bottom: CarliSpace.s4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [header, child]),
+  }
+}
+
+/// Avatar at the top right, as in Fitness: opens Ajustes.
+class _ProfileButton extends ConsumerWidget {
+  const _ProfileButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name = switch (ref.watch(authControllerProvider)) {
+      SignedIn(:final user?) => user.name,
+      _ => '',
+    };
+    return Semantics(
+      button: true,
+      label: 'Ajustes',
+      excludeSemantics: true,
+      child: Pressable(
+        onTap: () => context.push(Routes.settings),
+        child: CarliAvatar(name: name, size: 32),
+      ),
     );
   }
 }

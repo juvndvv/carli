@@ -71,7 +71,7 @@ void main() {
 
     expect(find.text('Buscar'), findsWidgets);
     expect(find.text('Inicio'), findsOneWidget);
-    expect(find.text('SECCIONES'), findsOneWidget);
+    expect(find.text('Secciones'), findsOneWidget);
 
     await typeQuery(tester, 'x');
     await settle(tester);
@@ -104,7 +104,7 @@ void main() {
     await settle(tester);
 
     expect(searchQueries(api), ['bb']);
-    expect(find.text('FINANZAS'), findsOneWidget);
+    expect(find.text('Finanzas'), findsOneWidget);
     expect(find.text('BBVA Nómina'), findsOneWidget);
     expect(find.text('Mercadona'), findsOneWidget);
   });

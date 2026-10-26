@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $period_min_days
  * @property PeriodMode $period_mode
  * @property int $remind_days_before
+ * @property int $savings_target_percent
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  */
@@ -32,6 +33,7 @@ class FinanceSetting extends Model
         'period_min_days' => 20,
         'period_mode' => 'payroll',
         'remind_days_before' => 2,
+        'savings_target_percent' => 20,
     ];
 
     protected function casts(): array
@@ -41,6 +43,7 @@ class FinanceSetting extends Model
             'period_min_days' => 'integer',
             'period_mode' => PeriodMode::class,
             'remind_days_before' => 'integer',
+            'savings_target_percent' => 'integer',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];

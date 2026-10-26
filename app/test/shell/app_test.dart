@@ -121,7 +121,7 @@ void main() {
       storage: {'auth_token': 'stored'},
     );
 
-    for (final label in ['Inicio', 'Resumen', 'Movimientos', 'Presupuestos', 'Más']) {
+    for (final label in ['Resumen', 'Movimientos', 'Presupuestos', 'Más']) {
       expect(find.descendant(of: find.byType(CarliBottomNav), matching: find.text(label)), findsOneWidget);
     }
 
@@ -174,7 +174,7 @@ void main() {
     expect(find.text('Entrar'), findsOneWidget);
   });
 
-  testWidgets('opens the new movement sheet from the FAB above the tab bar', (tester) async {
+  testWidgets('opens the new movement sheet from the + button beside the tab bar', (tester) async {
     await pumpApp(
       tester,
       FakeApi({
@@ -184,7 +184,7 @@ void main() {
       storage: {'auth_token': 'stored'},
     );
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.bySemanticsLabel('Nuevo movimiento'));
     await tester.pumpAndSettle();
 
     final sheet = tester.element(find.byType(TransactionSheet));

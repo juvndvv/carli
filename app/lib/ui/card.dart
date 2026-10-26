@@ -18,7 +18,7 @@ class CarliCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(CarliRadius.lg),
-        border: Border.all(color: colors.border),
+        border: Border.all(color: colors.cardBorder),
       ),
       child: child,
     );

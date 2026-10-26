@@ -679,6 +679,7 @@ class Dashboard {
     required this.byCategory,
     required this.history,
     required this.topBudgets,
+    this.budgetTotals,
     required this.upcoming,
     required this.recentTransactions,
     required this.uncategorized,
@@ -700,6 +701,10 @@ class Dashboard {
       byCategory: parseList(json['by_category'], DashboardCategoryGroup.fromJson),
       history: parseList(json['history'], DashboardHistoryPoint.fromJson),
       topBudgets: parseList((json['budgets'] as Json?)?['top'], BudgetRow.fromJson),
+      budgetTotals: switch ((json['budgets'] as Json?)?['totals']) {
+        final Json totals => BudgetTotals.fromJson(totals),
+        _ => null,
+      },
       upcoming: parseList(json['upcoming'], UpcomingCharge.fromJson),
       recentTransactions: parseList(json['recent_transactions'], Transaction.fromJson),
       uncategorized: UncategorizedSummary.fromJsonOrNull(json['uncategorized']),
@@ -719,6 +724,7 @@ class Dashboard {
   final List<DashboardCategoryGroup> byCategory;
   final List<DashboardHistoryPoint> history;
   final List<BudgetRow> topBudgets;
+  final BudgetTotals? budgetTotals;
   final List<UpcomingCharge> upcoming;
   final List<Transaction> recentTransactions;
   final UncategorizedSummary? uncategorized;
@@ -753,6 +759,7 @@ class FinanceSettings {
     this.remindDaysBefore = 2,
     this.periodMode = PeriodMode.payroll,
     this.periodMinDays = 20,
+    this.savingsTargetPercent = 20,
   });
 
   factory FinanceSettings.fromJson(Json json) => FinanceSettings(
@@ -762,6 +769,7 @@ class FinanceSettings {
     remindDaysBefore: intOrNull(json['remind_days_before']) ?? 2,
     periodMode: PeriodMode.of(json['period_mode'] as String?),
     periodMinDays: intOrNull(json['period_min_days']) ?? 20,
+    savingsTargetPercent: intOrNull(json['savings_target_percent']) ?? 20,
   );
 
   final String? defaultAccountId;
@@ -770,6 +778,7 @@ class FinanceSettings {
   final int remindDaysBefore;
   final PeriodMode periodMode;
   final int periodMinDays;
+  final int savingsTargetPercent;
 
   bool get calendarPeriods => periodMode == PeriodMode.calendar;
 
@@ -779,6 +788,7 @@ class FinanceSettings {
     'remind_days_before': remindDaysBefore,
     'period_mode': periodMode.api,
     'period_min_days': periodMinDays,
+    'savings_target_percent': savingsTargetPercent,
   };
 
   String? get preferredAccountId => defaultAccountId ?? lastUsedAccountId;

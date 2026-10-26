@@ -123,16 +123,7 @@ class _LaunchFrame extends StatelessWidget {
           offset: Offset(0, LaunchOverlay.faceSize / 2 + 28 + 6 * (1 - _wordmark)),
           child: Opacity(
             opacity: _wordmark,
-            child: Text(
-              'carli',
-              style: CarliType.h1.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                fontVariations: const [FontVariation.weight(650)],
-                letterSpacing: -0.03 * 22,
-                color: colors.text,
-              ),
-            ),
+            child: Text('carli', style: CarliType.wordmark(22).copyWith(color: colors.text)),
           ),
         ),
       ],

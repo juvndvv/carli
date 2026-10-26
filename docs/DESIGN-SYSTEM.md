@@ -1,6 +1,6 @@
 # Design System · "Ember"
 
-Design system propio de **carli**, el asistente personal. Desde el 26/10/2026 sigue el prototipo "Health Tracker" que Juanda dejó en `docs/Health Tracker.zip` (tokens en `ds/colors_and_type.css`, derivados del Yurest Design System): estética tipo Apple Fitness, fondo negro puro en oscuro y gris claro en claro, tarjetas grandes y redondeadas, títulos muy gruesos, etiquetas de sección en mayúsculas y un único acento rosa-rojo ("ember"). Sustituye a la dirección "Sol".
+Design system propio de **carli**, el asistente personal. Desde el 26/10/2026 sigue el prototipo "Health Tracker" que Juanda dejó en `docs/Health Tracker.zip` (tokens en `ds/colors_and_type.css`, derivados del Yurest Design System): estética tipo Apple Fitness, fondo negro puro en oscuro y gris claro en claro, tarjetas grandes y redondeadas, títulos muy gruesos, etiquetas de sección en mayúsculas y un único acento rosa-rojo ("ember"). Sustituye a la dirección "Sol". Desde el 26/10/2026 (tarde) se acerca más a la app Fitness de iPhone: SF Pro, tarjetas sin borde en oscuro, títulos de sección grandes, anillos en el Resumen, tab bar flotante y selector de módulo arriba.
 
 Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`CarliColors` como `ThemeExtension`, `CarliSpace`, `CarliRadius`, `CarliMotion`), tipografía en `typography.dart` (`CarliType`), `ThemeData` claro y oscuro en `theme.dart`, y los componentes en `app/lib/ui/` como widgets `Carli*`. Los colores se leen con `context.colors`. En debug, `/dev/catalogo` muestra todos los componentes. El [mockup](../mockup/index.html) todavía usa los tokens monocromos antiguos.
 
@@ -9,10 +9,11 @@ Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`Ca
 1. **Neutros y un solo acento.** Negro, blanco y grises neutros, más el acento ember. El acento marca la acción principal (botón primario, botón "+" flotante), la pestaña activa, la selección, los enlaces de texto ("Ver", "Ver tabla") y el logo. Como mucho una mancha grande de acento por pantalla (la acción principal).
 2. **Chrome neutro.** Barras de navegación, cabeceras, listas, badges y avisos en bloque van en neutros. Excepciones: el punto de notificaciones sin leer (`UnreadDot`, relleno `primary`) y el contador de Pendientes de la pestaña Más (relleno `warning`).
 3. **El color significa algo, y poco.** Fuera del acento, el color solo aparece en gráficos (identidad de categoría), en ingresos (verde) y en estados (aviso ámbar, excedido rojo). Los estados colorean el **número**, nunca la barra o el gráfico que lo acompaña. Un gasto normal se muestra en color de texto. El acento y el rojo de "excedido" son parecidos: un estado de error **siempre** lleva icono y texto, nunca solo color.
-4. **Plano.** Las tarjetas se separan por el fondo y un borde de 1 px, sin sombra. Sombra (o elevación) solo en lo que flota: botón "+", menús y toasts.
+3b. **Excepción: los anillos.** Los tres anillos del Resumen (Disponible, Ahorro, Ritmo) llevan sus colores propios (`rings`), como en Fitness, y su etiqueta va en `ringInk`. El estado "vas por encima" se dice igualmente con texto e icono en `negative`, nunca cambiando el color del anillo.
+4. **Plano.** Las tarjetas se separan por el fondo (en claro, además, un borde de 1 px; en oscuro sin borde), sin sombra. Sombra (o elevación) solo en lo que flota: botón "+", menús y toasts.
 5. **Redondeado y táctil.** Tarjetas de 22 pt, botones y controles de 12 pt (16 pt el grande), avatares y botón "+" redondos. Objetivos táctiles ≥ 44 pt.
-6. **Números primero.** Cifras grandes en Geist con dígitos tabulares, peso 600, tracking negativo; la unidad va pequeña y en gris al lado ("78.3 kg", "1.284,50 €").
-7. **Claro y oscuro de primera.** El oscuro es negro puro (`#000`) con tarjetas `#161616`; el claro es gris `#F5F5F7` con tarjetas blancas.
+6. **Números primero.** Cifras grandes en SF Pro con dígitos tabulares, peso 600–700; la unidad va pequeña y en gris al lado ("78.3 kg", "1.284,50 €").
+7. **Claro y oscuro de primera.** El oscuro es negro puro (`#000`) con tarjetas `#1C1C1E` (gris del sistema); el claro es gris `#F2F2F7` con tarjetas blancas.
 8. **Nativo de iOS.** Navegación, títulos grandes, sheets, diálogos de confirmación, switch, segmentado, selector de hora y pull-to-refresh usan los widgets Cupertino con los tokens Ember. Sin efecto ripple de Material (`NoSplash`): la pulsación se marca con opacidad (`Pressable`).
 
 ## 2. Tokens
@@ -23,11 +24,12 @@ Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`Ca
 
 | Token | Claro | Oscuro | Uso |
 |---|---|---|---|
-| `bg` | `#F5F5F7` | `#000000` | Fondo de la app y de las barras de navegación (translúcido) |
-| `surface` | `#FFFFFF` | `#161616` | Tarjetas, sheets, inputs, tab bar (translúcida) |
-| `surface2` | `#F0F0F2` | `#1F1F1F` | Buscador, segmentado, botón ghost, iconos circulares, skeleton, avisos en bloque |
+| `bg` | `#F2F2F7` | `#000000` | Fondo de la app y de las barras de navegación (translúcido) |
+| `surface` | `#FFFFFF` | `#1C1C1E` | Tarjetas, sheets, inputs, tab bar (translúcida) |
+| `surface2` | `#F0F0F2` | `#2C2C2E` | Buscador, segmentado, botón ghost, iconos circulares, skeleton, avisos en bloque |
 | `sidebar` | `#FFFFFF` | `#0A0A0A` | Sin uso; se conserva por compatibilidad |
-| `border` | `#EBEBEB` | `#262626` | Bordes y divisores |
+| `border` | `#EBEBEB` | `#2C2C2E` | Bordes y divisores |
+| `cardBorder` | `#EBEBEB` | transparente | Borde de `CarliCard`: solo en claro |
 | `text` | `#1F1F1F` | `#FFFFFF` | Texto principal |
 | `text2` | `#666666` | `#A3A3A3` | Texto secundario |
 | `text3` | `#6E6E6E` | `#8A8A8A` | Ayudas, placeholders, ejes, etiquetas de sección, pestañas inactivas |
@@ -66,25 +68,37 @@ Paleta categórica de 8 colores (`CarliColors.chart`) en **orden fijo**, validad
 | 7 violeta | `#6250D6` | `#9085E9` |
 | 8 rojo | `#E34948` | `#E66767` |
 
-"Ingresos vs gastos": ingresos = slot 1, gastos = slot 2, con leyenda siempre visible.
+"Ingresos vs gastos": ingresos = slot 1, gastos = slot 2, con leyenda siempre visible. Barras finas de extremos redondos, rejilla punteada casi invisible y eje de valores a la derecha.
+
+**Anillos** (`rings` para el trazo, `ringInk` para el texto, AA sobre `surface`), de fuera a dentro:
+
+| Anillo | Mide | Claro (trazo · texto) | Oscuro |
+|---|---|---|---|
+| Disponible | Lo que queda de presupuestos / total presupuestado; empieza lleno y se vacía | `#E5063F` · `#D90033` | `#FA114F` · `#FF5C85` |
+| Ahorro | Ahorro del periodo / objetivo (`savings_target_percent` de los ingresos, 20 % por defecto, en Ajustes de finanzas) | `#3D9C0E` · `#2E7D0C` | `#A6FF00` |
+| Ritmo | Gastado en categorías con presupuesto / lo previsto a hoy (presupuesto × parte del periodo transcurrida); > 100 % = por encima | `#0091B3` · `#007E9C` | `#00F0FF` |
+
+Pasado el 100 % el anillo da una segunda vuelta con sombra en el extremo (tope 200 %). La pista es el color del anillo al 20 %.
 
 Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono, no por color.
 
 ### 2.4 Tipografía
 
-- Familia: **Geist** variable, empaquetada en `app/assets/fonts/Geist-Variable.ttf` (licencia OFL) y declarada en `pubspec.yaml`. `CarliType` fija el peso también como `FontVariation` para que el eje variable lo respete. El prototipo declara "Open Sauce One" para el cuerpo, pero nunca llega a cargarse, así que se usa Geist para todo.
-- Números: `CarliType.money(style)` añade `FontFeature.tabularFigures()`; `display` ya la lleva. Se usa en importes, tablas y KPI.
+- Familia: **SF Pro**, la fuente del sistema de iOS, con los alias de Flutter `CupertinoSystemText` (< 20 pt) y `CupertinoSystemDisplay` (≥ 20 pt); no se empaqueta. **Geist** (`app/assets/fonts/Geist-Variable.ttf`, OFL) queda solo para el wordmark "carli" (`CarliType.wordmark`). En los tests Geist sustituye a los alias, porque SF Pro no existe fuera de Apple.
+- Números: `CarliType.money(style)` añade `FontFeature.tabularFigures()`; `display` y `metric` ya la llevan.
 
 | `CarliType` | Tamaño / línea | Peso | Uso |
 |---|---|---|---|
-| `display` | 36/42 · tracking −0.02em | 600 | Cifra héroe (patrimonio, importe en alta) |
-| `h1` | 28/34 · −0.025em | 800 | Título grande de página ("Hola, Juanda") |
-| `h2` | 16/24 | 600 | Título de tarjeta, título de barra compacta |
-| `body` | 15/22 | 400 | Texto general |
-| `bodyStrong` | 15/22 | 600 | Importes en listas, botones |
+| `display` | 34/41 | 700 | Cifra héroe (importe en alta) |
+| `h1` | 34/41 | 700 | Título grande de página |
+| `title2` | 22/28 | 700 | Título de sección (`CarliSectionHeader`, `CarliSection`), en caso normal |
+| `metric` | 28/34 | 600 | Cifra de `CarliMetricCard` (22 pt junto a los anillos) |
+| `h2` | 17/22 | 600 | Título de tarjeta, título de barra compacta |
+| `body` | 15/20 | 400 | Texto general |
+| `bodyStrong` | 15/20 | 600 | Importes en listas, botones, etiqueta de métrica |
 | `small` | 13/18 | 400 | Secundario |
 | `caption` | 12/16 | 500 | Ejes, badges, etiquetas de campo |
-| `eyebrow` | 12/16 · +0.08em · MAYÚSCULAS | 600 | Etiquetas de sección (`CarliSection`: "PRESUPUESTOS", "ESTA SEMANA"), en `text3` |
+| `eyebrow` | 13/18 | 600, MAYÚSCULAS | Línea de fecha o periodo encima del contenido ("OCTUBRE · QUEDAN 5 DÍAS"), en `text2` |
 
 ### 2.5 Forma, sombras y movimiento
 
@@ -92,14 +106,16 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 - Iconos: Hugeicons (`hugeicons`, estilo stroke rounded) con `CarliIcon`, trazo 1.5 (2 en estados activos y badges), 20 pt por defecto. Los nombres que guarda la base de datos siguen la nomenclatura kebab-case de siempre (`shopping-cart`, `piggy-bank`…) y se traducen al glifo con `carliIconNamed()` en `ui/icon_names.dart`, que se mantiene a mano y es la fuente de verdad: para añadir uno, se añade una entrada que asocia el nombre a un glifo de `HugeIconsStrokeRounded`.
 - Sombras: ninguna en tarjetas (`elevation: 0`). Solo el botón "+" lleva elevación; sheets y toasts se distinguen por superficie y forma.
 - Espaciado (`CarliSpace`, pt): `s2, s4, s8, s12, s16, s20, s24, s32, s40, s48, s64`.
-- Movimiento (`CarliMotion`): `hover 120ms`, `enter 200ms` (ease-out; barras de progreso, entradas), `fade 240ms` (salida del arranque). Con "Reducir movimiento" (`MediaQuery.disableAnimationsOf`) no hay animación en progreso, skeleton ni arranque.
+- Movimiento (`CarliMotion`): `hover 120ms`, `enter 200ms` (ease-out; barras de progreso, entradas), `fade 240ms` (salida del arranque), `ring 900ms` (ease-out cúbico; los anillos se llenan al entrar y al cambiar de periodo). Con "Reducir movimiento" (`MediaQuery.disableAnimationsOf`) no hay animación en progreso, skeleton ni arranque.
 
 ### 2.6 Layout
 
 Solo iPhone, una columna, gutter 16 pt.
 
-- **Tab bar** (`CarliBottomNav`) de 5 pestañas: Inicio, Resumen, Movimientos, Presupuestos, Más. `surface` al 82 % con desenfoque y borde superior; ítem activo en `brandInk` con trazo 2, inactivos en `text3`. La pestaña Más lleva el contador de Pendientes.
-- **Botón "+"** flotante redondo en `primary` sobre la tab bar: nuevo movimiento desde cualquier pestaña.
+- **Tab bar** (`CarliBottomNav`): cápsula flotante separada 16 pt de los bordes, `surface` al 72 % con desenfoque, borde de 0,5 pt y sombra suave. 4 pestañas de Finanzas: Resumen, Movimientos, Presupuestos y Más; la activa lleva una píldora `text` al 8 % e icono y texto en `brandInk`. Más lleva el contador de Pendientes.
+- **Botón "+"** redondo de 62 pt en `primary`, a la derecha de la cápsula: nuevo movimiento desde cualquier pestaña.
+- **Selector de módulo** (`ModuleSwitcher`, en `CarliPage(moduleSwitcher: true)` de cada pestaña): píldora `surface2` arriba a la izquierda con el icono y el nombre del módulo. Abre un sheet con Inicio (pendientes, avisos y módulos; ya no tiene pestaña), los módulos activos y los próximos atenuados.
+- **Avatar** arriba a la derecha en el Resumen: abre Ajustes.
 - **Páginas** (`CarliPage`): `CupertinoSliverNavigationBar` con título grande `h1` que se compacta a `h2`; fondo `bg` al 85 % y borde inferior de 0,5 pt; pull-to-refresh nativo.
 - Altas y edición en sheets inferiores (`showCarliSheet`) o a altura completa (`showFullSheet` con `FullSheetHeader`: "Cancelar" a la izquierda, título y "Guardar" a la derecha).
 
@@ -116,7 +132,10 @@ Solo iPhone, una columna, gutter 16 pt.
 | `CarliDatePicker` | Chips "Hoy", "Ayer" y un tercero con calendario para otra fecha (`dd/mm/aaaa`) |
 | `CarliSegmented` | `CupertinoSlidingSegmentedControl` sobre `surface2`; opción activa blanca con texto oscuro en ambos temas |
 | `CarliChip` | Radio 8 con borde; activo = relleno `primary` |
-| `CarliCard` | `surface` sobre `bg`, borde 1 px, radio 22, sin sombra; pulsable opcional |
+| `CarliCard` | `surface` sobre `bg`, borde `cardBorder` (solo en claro), radio 22, sin sombra; pulsable opcional |
+| `CarliRings` | Anillos concéntricos (`CustomPainter`), extremo redondo, pista al 20 %, segunda vuelta con sombra; se llenan en `CarliMotion.ring` salvo con "Reducir movimiento" |
+| `CarliMetricCard` | Tarjeta de métrica estilo Fitness: etiqueta `bodyStrong` en `text2`, cifra `metric`, nota con icono y mini barras de los últimos periodos (neutras, la última en `text`); chevron si es pulsable |
+| `CarliSectionHeader` | Título `title2` con enlace opcional ("Ver todos") en `brandInk` |
 | `CarliStat` | Etiqueta pequeña, valor 24/600 tabular, variación con icono + texto; el tono (`CarliTone`) colorea solo la cifra |
 | `CarliProgress` + `CarliProgressFigure` | Barra de 8 pt sobre `surface2`. La barra nunca cambia de color por estado: `text` en presupuestos y `primaryStrong` en objetivos y deudas. El aviso (80–100 %) y el exceso se marcan en la **cifra** ("141 / 150 €") con `warning` o `negative`, icono y peso 600 |
 | `CarliBadge` | Píldora `caption`; tonos neutral (por defecto), primary, positive, warning, negative. Los avisos de estado (pendiente, por revisar, % de presupuesto, consentimiento de banco) van en **neutral** con icono; el color de estado se reserva para la cifra. Los avisos en bloque (sin categoría, banco) usan `surface2` con texto `text2` |
@@ -130,7 +149,7 @@ Solo iPhone, una columna, gutter 16 pt.
 | `AsyncView` | Pinta un `AsyncValue`: el widget de carga que recibe (normalmente skeletons), un `CarliEmptyState` de error con "Reintentar" o los datos |
 | `CarliLogo` / `CarliFacePainter` | La carita de carli en `primary` con ojos `onPrimary`; `size` en pt (30 por defecto) y `eyeOpenness` para el parpadeo |
 | `CarliChart` | Wrapper de fl_chart (`bar`, `line`, `donut`); único sitio con paleta categórica; leyenda, tooltip invertido y conmutador "Ver tabla" / "Ver gráfico" en `brandInk` |
-| `CarliPage`, `CarliSection` | Página con título grande (§2.6) y sección con etiqueta `eyebrow` |
+| `CarliPage`, `CarliSection` | Página con título grande (§2.6) y sección con `CarliSectionHeader` |
 | `Pressable` | Respuesta táctil por opacidad (0,6) para todo lo pulsable |
 | `CarliIcon` | Glifo Hugeicons con tamaño, color y trazo |
 

@@ -48,6 +48,7 @@ class BudgetsScreen extends ConsumerWidget {
 
     return CarliPage(
       title: 'Presupuestos',
+      moduleSwitcher: true,
       onRefresh: () async {
         ref.read(financeChangesProvider.notifier).notify(const [FinanceScope.budgets, FinanceScope.periods]);
         await ref.read(budgetsProvider(periodId).future).then((_) {}, onError: (_) {});

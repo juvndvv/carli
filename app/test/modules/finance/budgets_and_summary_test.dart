@@ -97,10 +97,12 @@ void main() {
     await pumpFinance(tester, const SummaryScreen(), api);
 
     expect(find.text('18.345,00$nbsp€'), findsOneWidget);
-    expect(find.text('Patrimonio neto'), findsOneWidget);
+    expect(find.text('Patrimonio'), findsWidgets);
     expect(find.text('−12 % vs sep'), findsOneWidget);
-    expect(find.text('Tasa de ahorro 54,2 %'), findsOneWidget);
-    expect(find.text('Octubre · queda 1 día'), findsOneWidget);
+    expect(find.text('Tasa 54,2 %'), findsOneWidget);
+    expect(find.text('OCTUBRE · QUEDA 1 DÍA'), findsOneWidget);
+    expect(find.text('Disponible'), findsOneWidget);
+    expect(find.text('Ritmo'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Mercadona'), 300);
     expect(find.text('Mercadona'), findsOneWidget);
   });

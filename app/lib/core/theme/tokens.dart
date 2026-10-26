@@ -24,7 +24,10 @@ class CarliColors extends ThemeExtension<CarliColors> {
     required this.warningSoft,
     required this.negativeSoft,
     required this.focusRing,
+    required this.cardBorder,
     required this.chart,
+    required this.rings,
+    required this.ringInk,
   });
 
   final Color bg, surface, surface2, sidebar, border;
@@ -33,13 +36,20 @@ class CarliColors extends ThemeExtension<CarliColors> {
   final Color positive, warning, negative;
   final Color positiveSoft, warningSoft, negativeSoft;
   final Color focusRing;
+  final Color cardBorder;
 
   final List<Color> chart;
+
+  /// Activity rings, outer to inner: disponible, ahorro, ritmo. Stroke colours.
+  final List<Color> rings;
+
+  /// Text in a ring's colour (labels next to the rings); AA on `surface`.
+  final List<Color> ringInk;
 
   static const dangerFill = Color(0xFFC8281C);
 
   static const light = CarliColors(
-    bg: Color(0xFFF5F5F7),
+    bg: Color(0xFFF2F2F7),
     surface: Color(0xFFFFFFFF),
     surface2: Color(0xFFF0F0F2),
     sidebar: Color(0xFFFFFFFF),
@@ -60,6 +70,7 @@ class CarliColors extends ThemeExtension<CarliColors> {
     warningSoft: Color(0xFFFFFBEB),
     negativeSoft: Color(0xFFFEF3F2),
     focusRing: Color(0x40E5063F),
+    cardBorder: Color(0xFFEBEBEB),
     chart: [
       Color(0xFF2A78D6),
       Color(0xFFEB6834),
@@ -70,14 +81,16 @@ class CarliColors extends ThemeExtension<CarliColors> {
       Color(0xFF6250D6),
       Color(0xFFE34948),
     ],
+    rings: [Color(0xFFE5063F), Color(0xFF3D9C0E), Color(0xFF0091B3)],
+    ringInk: [Color(0xFFD90033), Color(0xFF2E7D0C), Color(0xFF007E9C)],
   );
 
   static const dark = CarliColors(
     bg: Color(0xFF000000),
-    surface: Color(0xFF161616),
-    surface2: Color(0xFF1F1F1F),
+    surface: Color(0xFF1C1C1E),
+    surface2: Color(0xFF2C2C2E),
     sidebar: Color(0xFF0A0A0A),
-    border: Color(0xFF262626),
+    border: Color(0xFF2C2C2E),
     text: Color(0xFFFFFFFF),
     text2: Color(0xFFA3A3A3),
     text3: Color(0xFF8A8A8A),
@@ -94,6 +107,7 @@ class CarliColors extends ThemeExtension<CarliColors> {
     warningSoft: Color(0xFF3A2A0A),
     negativeSoft: Color(0xFF3D1A16),
     focusRing: Color(0x66FF5C85),
+    cardBorder: Color(0x00000000),
     chart: [
       Color(0xFF3987E5),
       Color(0xFFD95926),
@@ -104,6 +118,8 @@ class CarliColors extends ThemeExtension<CarliColors> {
       Color(0xFF9085E9),
       Color(0xFFE66767),
     ],
+    rings: [Color(0xFFFA114F), Color(0xFFA6FF00), Color(0xFF00F0FF)],
+    ringInk: [Color(0xFFFF5C85), Color(0xFFA6FF00), Color(0xFF00F0FF)],
   );
 
   @override
@@ -135,7 +151,10 @@ class CarliColors extends ThemeExtension<CarliColors> {
       warningSoft: l(warningSoft, other.warningSoft),
       negativeSoft: l(negativeSoft, other.negativeSoft),
       focusRing: l(focusRing, other.focusRing),
+      cardBorder: l(cardBorder, other.cardBorder),
       chart: [for (var i = 0; i < chart.length; i++) l(chart[i], other.chart[i])],
+      rings: [for (var i = 0; i < rings.length; i++) l(rings[i], other.rings[i])],
+      ringInk: [for (var i = 0; i < ringInk.length; i++) l(ringInk[i], other.ringInk[i])],
     );
   }
 }
@@ -161,6 +180,7 @@ abstract final class CarliMotion {
   static const hover = Duration(milliseconds: 120);
   static const enter = Duration(milliseconds: 200);
   static const fade = Duration(milliseconds: 240);
+  static const ring = Duration(milliseconds: 900);
 }
 
 extension CarliThemeX on BuildContext {

@@ -91,7 +91,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                   const CarliLogo(size: 30),
                   const CarliLogo(size: 48),
                   const CarliLogo(size: 48, eyeOpenness: 0.1),
-                  Text('carli', style: CarliType.h1.copyWith(fontSize: 20, color: colors.text, letterSpacing: -0.6)),
+                  Text('carli', style: CarliType.wordmark(20).copyWith(color: colors.text)),
                 ],
               ),
             ),

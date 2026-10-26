@@ -22,7 +22,7 @@ void main() {
       }
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Avisos y hojas'.toUpperCase()), findsOneWidget);
+      expect(find.text('Avisos y hojas'), findsOneWidget);
     });
   }
 }

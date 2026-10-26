@@ -31,6 +31,7 @@ final class SettingsResource extends JsonResource
             'period_min_days' => $settings->period_min_days,
             'period_mode' => $settings->period_mode->value,
             'remind_days_before' => $settings->remind_days_before,
+            'savings_target_percent' => $settings->savings_target_percent,
         ];
     }
 }

@@ -319,6 +319,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
     return CarliPage(
       title: 'Movimientos',
+      moduleSwitcher: true,
       onRefresh: () => _refresh(filters),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

@@ -142,6 +142,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
   late final _threshold = TextEditingController(text: '${_baseline.budgetWarningThreshold}');
   late final _remind = TextEditingController(text: '${_baseline.remindDaysBefore}');
   late final _minDays = TextEditingController(text: '${_baseline.periodMinDays}');
+  late final _savingsTarget = TextEditingController(text: '${_baseline.savingsTargetPercent}');
   late PeriodMode _mode = _baseline.periodMode;
   var _submitted = false;
   var _saving = false;
@@ -158,6 +159,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
     _threshold.dispose();
     _remind.dispose();
     _minDays.dispose();
+    _savingsTarget.dispose();
     super.dispose();
   }
 
@@ -167,6 +169,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
     _threshold.text = '${settings.budgetWarningThreshold}';
     _remind.text = '${settings.remindDaysBefore}';
     _minDays.text = '${settings.periodMinDays}';
+    _savingsTarget.text = '${settings.savingsTargetPercent}';
     _mode = settings.periodMode;
     _submitted = false;
   }
@@ -176,6 +179,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
       _threshold.text.trim() != '${_baseline.budgetWarningThreshold}' ||
       _remind.text.trim() != '${_baseline.remindDaysBefore}' ||
       _minDays.text.trim() != '${_baseline.periodMinDays}' ||
+      _savingsTarget.text.trim() != '${_baseline.savingsTargetPercent}' ||
       _mode != _baseline.periodMode;
 
   String? _error(String field, TextEditingController controller, int baseline, int min, int max, String fallback) {
@@ -196,6 +200,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
     final valid =
         _inRange(_threshold, 1, 100) &&
         _inRange(_remind, 0, 30) &&
+        _inRange(_savingsTarget, 1, 100) &&
         (_mode == PeriodMode.calendar || _inRange(_minDays, 1, 60));
     if (!valid) return;
     final values = FinanceSettings(
@@ -204,6 +209,7 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
       remindDaysBefore: _parseInt(_remind.text)!,
       periodMode: _mode,
       periodMinDays: _inRange(_minDays, 1, 60) ? _parseInt(_minDays.text)! : _baseline.periodMinDays,
+      savingsTargetPercent: _parseInt(_savingsTarget.text)!,
     );
     setState(() {
       _saving = true;
@@ -256,6 +262,14 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
     );
     final remindError = _error('remind_days_before', _remind, _baseline.remindDaysBefore, 0, 30, 'Entre 0 y 30 días.');
     final minDaysError = _error('period_min_days', _minDays, _baseline.periodMinDays, 1, 60, 'Entre 1 y 60 días.');
+    final savingsTargetError = _error(
+      'savings_target_percent',
+      _savingsTarget,
+      _baseline.savingsTargetPercent,
+      1,
+      100,
+      'Entre 1 y 100.',
+    );
     final accountError = _serverErrors['default_account_id'];
 
     return Padding(
@@ -295,6 +309,12 @@ class _GeneralSettingsFormState extends ConsumerState<GeneralSettingsForm> {
             hint: 'Días de antelación para el aviso push.',
             error: remindError,
             child: _numberInput(_remind, 'Avisar de cargos recurrentes', remindError != null),
+          ),
+          CarliField(
+            label: 'Objetivo de ahorro (%)',
+            hint: 'Parte de los ingresos del periodo que quieres ahorrar. Llena el anillo de Ahorro del resumen.',
+            error: savingsTargetError,
+            child: _numberInput(_savingsTarget, 'Objetivo de ahorro (%)', savingsTargetError != null),
           ),
           CarliField(
             label: 'Periodo financiero',

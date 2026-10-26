@@ -72,7 +72,7 @@ void main() {
     expect(find.text('La última usada'), findsOneWidget);
     expect(find.widgetWithText(TextField, '80'), findsOneWidget);
     expect(find.widgetWithText(TextField, '2'), findsOneWidget);
-    expect(find.widgetWithText(TextField, '20'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '20'), findsNWidgets(2));
     expect(
       find.text('Cada periodo empieza el día que registras la nómina y termina el día antes de la siguiente.'),
       findsOneWidget,
@@ -96,6 +96,8 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextField, '80'), '90');
     await tester.pump();
+    await tester.ensureVisible(find.text('Guardar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar'));
     await settle(tester);
 
@@ -105,6 +107,7 @@ void main() {
       'remind_days_before': 2,
       'period_mode': 'payroll',
       'period_min_days': 20,
+      'savings_target_percent': 20,
     });
     expect(find.text('Ajustes guardados'), findsOneWidget);
     await tester.pump(const Duration(seconds: 6));
@@ -125,6 +128,8 @@ void main() {
     await tester.tap(find.text('BBVA').last);
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Guardar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar'));
     await settle(tester);
 
@@ -154,12 +159,16 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, '80'), '150');
     await tester.pump();
     expect(find.text('Entre 1 y 100.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Guardar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar'));
     await settle(tester);
     expect(api.requests.where((request) => request.method == 'PATCH'), isEmpty);
 
     await tester.enterText(find.widgetWithText(TextField, '150'), '85');
     await tester.pump();
+    await tester.ensureVisible(find.text('Guardar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar'));
     await settle(tester);
 
@@ -259,6 +268,8 @@ void main() {
     await settle(tester);
 
     await tester.scrollUntilVisible(find.text('Bancos y reglas'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Bancos y reglas'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Bancos y reglas'));
     await tester.pumpAndSettle();
 

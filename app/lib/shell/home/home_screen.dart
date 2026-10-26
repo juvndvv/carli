@@ -39,6 +39,7 @@ class HomeScreen extends ConsumerWidget {
 
     return CarliPage(
       title: firstName == null || firstName.isEmpty ? greeting : '$greeting, $firstName',
+      moduleSwitcher: true,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: CarliSpace.s4,

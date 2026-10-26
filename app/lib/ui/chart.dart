@@ -137,12 +137,13 @@ class _CarliChartState extends State<CarliChart> {
     final grid = FlGridData(
       drawVerticalLine: false,
       horizontalInterval: interval,
-      getDrawingHorizontalLine: (_) => FlLine(color: colors.border, strokeWidth: 1),
+      getDrawingHorizontalLine: (_) =>
+          FlLine(color: colors.text3.withValues(alpha: 0.35), strokeWidth: 0.5, dashArray: const [2, 3]),
     );
     final titles = FlTitlesData(
       topTitles: const AxisTitles(),
-      rightTitles: const AxisTitles(),
-      leftTitles: AxisTitles(
+      leftTitles: const AxisTitles(),
+      rightTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 44,
@@ -191,14 +192,14 @@ class _CarliChartState extends State<CarliChart> {
             for (var i = 0; i < widget.labels.length; i++)
               BarChartGroupData(
                 x: i,
-                barsSpace: 4,
+                barsSpace: 3,
                 barRods: [
                   for (final (index, series) in widget.series.indexed)
                     BarChartRodData(
                       toY: series.values[i].toDouble(),
                       color: palette[index % palette.length],
-                      width: widget.series.length > 1 ? 8 : 14,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      width: widget.series.length > 1 ? 6 : 10,
+                      borderRadius: BorderRadius.circular(widget.series.length > 1 ? 3 : 5),
                     ),
                 ],
               ),

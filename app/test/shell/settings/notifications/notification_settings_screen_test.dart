@@ -85,8 +85,8 @@ void main() {
     expect(find.textContaining('Ajustes de iOS'), findsNothing);
 
     await tester.scrollUntilVisible(find.text('Resumen semanal (lunes 09:00)'), 200);
-    expect(find.text('GENERAL'), findsOneWidget);
-    expect(find.text('FINANZAS'), findsOneWidget);
+    expect(find.text('General'), findsOneWidget);
+    expect(find.text('Finanzas'), findsOneWidget);
     expect(find.text('Cuando te acercas al límite'), findsOneWidget);
     expect(switchFor(tester, 'Push: Resumen semanal (lunes 09:00)').value, isFalse);
     expect(switchFor(tester, 'En la app: Resumen semanal (lunes 09:00)').value, isTrue);

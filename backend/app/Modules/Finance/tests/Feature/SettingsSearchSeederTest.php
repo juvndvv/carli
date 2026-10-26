@@ -34,20 +34,22 @@ it('reads and updates finance settings', function () {
             'period_min_days' => 20,
             'period_mode' => 'payroll',
             'remind_days_before' => 2,
+            'savings_target_percent' => 20,
         ]]);
 
     F::expense($user, $account, 100, '2026-10-24');
 
-    $this->putJson('/api/v1/finance/settings', ['default_account_id' => $account->id, 'budget_warning_threshold' => 90, 'remind_days_before' => 3])
+    $this->putJson('/api/v1/finance/settings', ['default_account_id' => $account->id, 'budget_warning_threshold' => 90, 'remind_days_before' => 3, 'savings_target_percent' => 25])
         ->assertOk()
         ->assertJsonPath('data.default_account_id', $account->id)
         ->assertJsonPath('data.last_used_account_id', $account->id)
         ->assertJsonPath('data.budget_warning_threshold', 90)
+        ->assertJsonPath('data.savings_target_percent', 25)
         ->assertJsonPath('meta.periods_changed', false);
 
-    $this->putJson('/api/v1/finance/settings', ['period_mode' => 'weekly', 'budget_warning_threshold' => 0])
+    $this->putJson('/api/v1/finance/settings', ['period_mode' => 'weekly', 'budget_warning_threshold' => 0, 'savings_target_percent' => 0])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['period_mode', 'budget_warning_threshold']);
+        ->assertJsonValidationErrors(['period_mode', 'budget_warning_threshold', 'savings_target_percent']);
 });
 
 it('registers a global search provider', function () {
