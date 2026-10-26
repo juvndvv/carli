@@ -63,7 +63,7 @@ class HomeScreen extends ConsumerWidget {
       },
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: CarliSpace.s16),
+          padding: const EdgeInsets.fromLTRB(CarliSpace.s16, CarliSpace.s12, CarliSpace.s16, 0),
           sliver: SliverList.list(
             children: [
               Text(formatLongDate(moment), style: CarliType.small.copyWith(color: colors.text2)),
