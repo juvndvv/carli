@@ -12,15 +12,16 @@ import { BudgetRow } from '../data-access/finance.models';
   template: `
     <div class="head small">
       <span class="name">{{ name() }}</span>
-      <span class="num muted">{{ row().spent_cents | money }} / {{ limit() | money }}</span>
+      <span class="num" [class.muted]="row().status === 'ok'" [class.warn]="row().status === 'warning'" [class.neg]="exceeded()">
+        @if (row().status !== 'ok') {
+          <ui-icon [name]="exceeded() ? 'circle-alert' : 'triangle-alert'" [size]="14" />
+        }
+        {{ row().spent_cents | money }} / {{ limit() | money }}
+      </span>
     </div>
     <ui-progress [ratio]="ratio()" [warnAt]="warnAt()" [label]="'Presupuesto de ' + name()" />
     <div class="small note">
-      @if (exceeded()) {
-        <span class="neg"><ui-icon name="circle-alert" [size]="14" /> {{ note() }}</span>
-      } @else {
-        <span class="muted">{{ note() }}</span>
-      }
+      <span class="muted">{{ note() }}</span>
       @if (showProjection() && row().projected_status !== 'ok' && row().projected_status !== row().status) {
         <span class="faint"> · Proyección {{ row().projected_cents | money }}</span>
       }
@@ -54,11 +55,18 @@ import { BudgetRow } from '../data-access/finance.models';
       min-width: 0;
       text-align: right;
     }
+    .num.warn,
+    .num.neg {
+      font-weight: 600;
+    }
+    .num.warn {
+      color: var(--warning);
+    }
+    .num ui-icon {
+      vertical-align: -2px;
+    }
     .note {
       margin-top: 4px;
-    }
-    .note ui-icon {
-      vertical-align: -2px;
     }
   `,
 })

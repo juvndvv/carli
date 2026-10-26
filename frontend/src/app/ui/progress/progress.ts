@@ -58,12 +58,6 @@ const STATE_LABELS: Record<ProgressState, string> = { ok: 'En margen', warn: 'Ce
     :host(.tone-primary) .fill {
       background: var(--primary-strong);
     }
-    :host(.tone-status.state-warn) .fill {
-      background: var(--warning);
-    }
-    :host(.tone-status.state-over) .fill {
-      background: var(--negative);
-    }
     .status {
       display: flex;
       align-items: center;

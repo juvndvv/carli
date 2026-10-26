@@ -5,7 +5,7 @@ Design system propio de **carli**, el asistente personal. Desde el 26/10/2026 si
 ## 1. Principios
 
 1. **Neutros y un solo acento.** Negro, blanco y grises neutros, más el acento ember. El acento marca la acción principal, la pestaña activa, la selección, los enlaces de sección ("Ver", "Historial") y el logo. Como mucho una mancha grande de acento por pantalla (la acción principal).
-2. **El color significa algo.** Fuera del acento, el color solo aparece en gráficos (identidad de categoría), en ingresos (verde) y en estados (aviso ámbar, excedido rojo). Un gasto normal se muestra en color de texto. El acento y el rojo de "excedido" son parecidos: un estado de error **siempre** lleva icono y texto, nunca solo color.
+2. **El color significa algo, y poco.** Fuera del acento, el color solo aparece en gráficos (identidad de categoría), en ingresos (verde) y en estados (aviso ámbar, excedido rojo). Los estados colorean el **número**, nunca la barra o el gráfico que lo acompaña. Un gasto normal se muestra en color de texto. El acento y el rojo de "excedido" son parecidos: un estado de error **siempre** lleva icono y texto, nunca solo color.
 3. **Plano.** Las tarjetas se separan por el fondo y un borde de 1 px, sin sombra. Sombra solo en lo que flota (diálogos, menús, toasts).
 4. **Redondeado y táctil.** Tarjetas de 22 px, botones y controles de 12 px (16 px el grande), avatares y FAB redondos. Objetivos táctiles ≥ 44 px.
 5. **Números primero.** Cifras grandes en Geist con dígitos tabulares, peso 600, tracking negativo; la unidad va pequeña y en gris al lado ("78.3 kg", "1.284,50 €").
@@ -110,7 +110,7 @@ Los módulos (Finanzas, Tareas, Salud, Hábitos, Notas) se distinguen por icono,
 | `ui-chip` | Radio 8 con borde; activo = relleno `--primary` |
 | `ui-card` | `--surface` sobre `--bg`, borde 1 px, radio 22, sin sombra |
 | `ui-stat` | Etiqueta pequeña, valor 24/600, variación con icono + texto |
-| `ui-progress` | 8 px; OK = `--text`, `primary` (objetivos, deudas) = `--primary-strong`, aviso = `--warning`, excedido = `--negative` (+ icono y texto) |
+| `ui-progress` | 8 px. La barra nunca cambia de color por estado: `--text` en presupuestos y `--primary-strong` en objetivos y deudas. El aviso (80–100 %) y el exceso se marcan en la **cifra** ("141 / 150 €") con `--warning` o `--negative`, icono y peso 600 |
 | `ui-badge` | neutral, positive, warning, negative |
 | `ui-list-item` | Icono circular monocromo, título, subtítulo, valor a la derecha; hover `--surface-2` |
 | `ui-dialog` / `ui-sheet` | Mismo contenido; sheet inferior en móvil con radio 28 |
