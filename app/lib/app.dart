@@ -4,8 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/auth/auth_controller.dart';
 import 'core/auth/biometric_lock.dart';
+import 'core/lifecycle/session_refresh.dart';
+import 'core/reminders/daily_reminder_bootstrap.dart';
+import 'core/reminders/daily_reminder_controller.dart';
 import 'core/router/router.dart';
 import 'core/theme/theme.dart';
+import 'core/theme/theme_preference.dart';
 import 'shell/launch/launch_overlay.dart';
 import 'shell/lock/lock_screen.dart';
 import 'ui/toast.dart';
@@ -15,12 +19,15 @@ class CarliApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(sessionRefreshProvider);
+    ref.watch(dailyReminderBootstrapProvider);
+    ref.listen(reminderTapsProvider, (_, _) => ref.read(routerProvider).go(Routes.pending));
     return MaterialApp.router(
       title: 'carli',
       debugShowCheckedModeBanner: false,
       theme: carliTheme(Brightness.light),
       darkTheme: carliTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
+      themeMode: themeModeOf(ref.watch(themePreferenceProvider)),
       locale: const Locale('es', 'ES'),
       supportedLocales: const [Locale('es', 'ES')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,

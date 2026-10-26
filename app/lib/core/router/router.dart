@@ -24,12 +24,24 @@ import '../../shell/home/home_screen.dart';
 import '../../shell/launch/launch_screen.dart';
 import '../../shell/login/login_screen.dart';
 import '../../shell/more/more_screen.dart';
+import '../../shell/notifications/notifications_screen.dart';
+import '../../shell/pending/pending_screen.dart';
+import '../../shell/search/global_search_screen.dart';
+import '../../shell/settings/appearance_settings_screen.dart';
+import '../../shell/settings/module_settings_screen.dart';
+import '../../shell/settings/notifications/notification_settings_screen.dart';
+import '../../shell/settings/profile_settings_screen.dart';
+import '../../shell/settings/security/security_settings_screen.dart';
+import '../../shell/settings/settings_screen.dart';
 import '../auth/auth_controller.dart';
 
 abstract final class Routes {
   static const launch = '/arranque';
   static const login = '/login';
   static const home = '/';
+  static const pending = '/pendientes';
+  static const notifications = '/notificaciones';
+  static const search = '/buscar';
   static const summary = '/finanzas';
   static const transactions = '/finanzas/movimientos';
   static const budgets = '/finanzas/presupuestos';
@@ -42,7 +54,11 @@ abstract final class Routes {
   static const shared = '/mas/compartidos';
   static const financeSettings = '/mas/ajustes-finanzas';
   static const banks = '/mas/ajustes-finanzas/bancos';
+  static const settings = SettingsPaths.root;
+  static const notificationSettings = SettingsPaths.notifications;
 
+  static String pendingFor(Map<String, String> query) =>
+      Uri(path: pending, queryParameters: query.isEmpty ? null : query).toString();
   static String account(String id) => '$accounts/$id';
   static String goal(String id) => '$goals/$id';
   static String contact(String id) => '$shared/$id';
@@ -67,7 +83,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
         branches: [
-          _branch(Routes.home, const HomeScreen()),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.home,
+                builder: (context, state) => const HomeScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'pendientes',
+                    builder: (context, state) => PendingScreen(
+                      module: state.uri.queryParameters['modulo'],
+                      type: state.uri.queryParameters['tipo'],
+                    ),
+                  ),
+                  GoRoute(path: 'notificaciones', builder: (context, state) => const NotificationsScreen()),
+                  GoRoute(path: 'buscar', builder: (context, state) => const GlobalSearchScreen()),
+                ],
+              ),
+            ],
+          ),
           _branch(Routes.summary, const SummaryScreen()),
           _branch(Routes.transactions, const TransactionsScreen()),
           _branch(Routes.budgets, const BudgetsScreen()),
@@ -85,6 +119,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: ':id',
                         builder: (context, state) => AccountDetailScreen(accountId: state.pathParameters['id']!),
                       ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'ajustes',
+                    builder: (context, state) => const SettingsScreen(),
+                    routes: [
+                      GoRoute(path: 'perfil', builder: (context, state) => const ProfileSettingsScreen()),
+                      GoRoute(path: 'seguridad', builder: (context, state) => const SecuritySettingsScreen()),
+                      GoRoute(path: 'avisos', builder: (context, state) => const NotificationSettingsScreen()),
+                      GoRoute(path: 'modulos', builder: (context, state) => const ModuleSettingsScreen()),
+                      GoRoute(path: 'apariencia', builder: (context, state) => const AppearanceSettingsScreen()),
                     ],
                   ),
                   GoRoute(path: 'categorias', builder: (context, state) => const CategoriesScreen()),

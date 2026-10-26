@@ -6,6 +6,7 @@ import 'package:carli/app.dart';
 import 'package:carli/modules/finance/screens/transaction_sheet.dart';
 import 'package:carli/shell/app_shell.dart';
 
+import '../core/pending/pending_fixtures.dart';
 import '../support/fake_api.dart';
 import '../support/finance_fixtures.dart';
 import '../support/test_app.dart';
@@ -101,6 +102,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Presupuestos'), findsNWidgets(2));
+  });
+
+  testWidgets('shows pending and unread counts in the tab bar, Inicio and Más', (tester) async {
+    await pumpApp(
+      tester,
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+        'GET /v1/pending/summary': (_) => (200, pendingSummaryJson()),
+        'GET /v1/notifications/unread-count': (_) => (200, {'unread_count': 2}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+
+    expect(find.bySemanticsLabel('Más, 3 pendientes'), findsOneWidget);
+    expect(find.text('3 elementos por revisar'), findsOneWidget);
+    expect(find.bySemanticsLabel('Notificaciones (2 sin leer)'), findsOneWidget);
+
+    await tester.tap(find.descendant(of: find.byType(CarliBottomNav), matching: find.text('Más')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 elementos por revisar'), findsOneWidget);
+    expect(find.text('Notificaciones'), findsOneWidget);
   });
 
   testWidgets('logs out from the more tab', (tester) async {

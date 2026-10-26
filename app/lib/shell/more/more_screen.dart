@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/notifications/notifications_providers.dart';
+import '../../core/pending/pending_models.dart';
+import '../../core/pending/pending_providers.dart';
 import '../../core/router/router.dart';
 import '../../core/theme/tokens.dart';
 import '../../ui/card.dart';
@@ -11,6 +14,8 @@ import '../../ui/icon.dart';
 import '../../ui/icon_names.dart';
 import '../../ui/list_item.dart';
 import '../../ui/page.dart';
+import '../notifications/unread_dot.dart';
+import '../pending/pending_badge.dart';
 
 class MoreEntry {
   const MoreEntry(this.label, this.icon, this.path);
@@ -27,7 +32,7 @@ const financeEntries = [
   MoreEntry('Objetivos', 'target', Routes.goals),
   MoreEntry('Deudas', 'hand-coins', Routes.debts),
   MoreEntry('Compartidos', 'users', Routes.shared),
-  MoreEntry('Ajustes', 'settings', Routes.financeSettings),
+  MoreEntry('Ajustes de finanzas', 'settings', Routes.financeSettings),
 ];
 
 class MoreScreen extends ConsumerWidget {
@@ -53,11 +58,37 @@ class MoreScreen extends ConsumerWidget {
       ),
     );
 
+    final pendingTotal = ref.watch(pendingTotalProvider);
+    final unread = ref.watch(unreadNotificationsCountProvider).value ?? 0;
+    Widget trailingWith(Widget indicator) =>
+        Row(mainAxisSize: MainAxisSize.min, spacing: CarliSpace.s8, children: [indicator, chevron()]);
+
     return CarliPage(
       title: 'Más',
       slivers: [
         SliverList.list(
           children: [
+            group('General', [
+              CarliListItem(
+                title: 'Pendientes',
+                subtitle: pendingTotalLabel(pendingTotal),
+                icon: carliIconNamed('inbox'),
+                trailing: trailingWith(const PendingBadge()),
+                onTap: () => context.push(Routes.pending),
+              ),
+              CarliListItem(
+                title: 'Notificaciones',
+                icon: carliIconNamed('bell'),
+                trailing: unread > 0 ? trailingWith(UnreadDot(semanticLabel: '$unread sin leer')) : chevron(),
+                onTap: () => context.push(Routes.notifications),
+              ),
+              CarliListItem(
+                title: 'Buscar',
+                icon: carliIconNamed('search'),
+                trailing: chevron(),
+                onTap: () => context.push(Routes.search),
+              ),
+            ]),
             group('Finanzas', [
               for (final entry in financeEntries)
                 CarliListItem(
@@ -68,6 +99,12 @@ class MoreScreen extends ConsumerWidget {
                 ),
             ]),
             group('Cuenta', [
+              CarliListItem(
+                title: 'Ajustes',
+                icon: carliIconNamed('settings'),
+                trailing: chevron(),
+                onTap: () => context.push(Routes.settings),
+              ),
               if (kDebugMode)
                 CarliListItem(
                   title: 'Catálogo de componentes',

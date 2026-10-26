@@ -1,19 +1,23 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
 
 import '../core/theme/tokens.dart';
 import '../core/theme/typography.dart';
+import '../core/pending/pending_providers.dart';
 import '../modules/finance/screens/transaction_sheet.dart';
+import 'pending/pending_badge.dart';
 
 class ShellDestination {
-  const ShellDestination(this.label, this.icon);
+  const ShellDestination(this.label, this.icon, {this.showsPending = false});
 
   final String label;
   final List<List<dynamic>> icon;
+  final bool showsPending;
 }
 
 const shellDestinations = [
@@ -21,7 +25,7 @@ const shellDestinations = [
   ShellDestination('Resumen', HugeIconsStrokeRounded.layoutDashboard),
   ShellDestination('Movimientos', HugeIconsStrokeRounded.list),
   ShellDestination('Presupuestos', HugeIconsStrokeRounded.dashboardSpeed01),
-  ShellDestination('Más', HugeIconsStrokeRounded.menu01),
+  ShellDestination('Más', HugeIconsStrokeRounded.menu01, showsPending: true),
 ];
 
 class AppShell extends StatelessWidget {
@@ -93,7 +97,7 @@ class CarliBottomNav extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+class _NavItem extends ConsumerWidget {
   const _NavItem({required this.destination, required this.selected, required this.onTap});
 
   final ShellDestination destination;
@@ -101,13 +105,15 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final color = selected ? colors.brandInk : colors.text3;
+    final pending = destination.showsPending ? ref.watch(pendingTotalProvider) : 0;
+    final icon = HugeIcon(icon: destination.icon, size: 22, color: color, strokeWidth: selected ? 2 : 1.5);
     return Semantics(
       button: true,
       selected: selected,
-      label: destination.label,
+      label: pending > 0 ? '${destination.label}, $pending pendientes' : destination.label,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -116,7 +122,39 @@ class _NavItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           spacing: 3,
           children: [
-            HugeIcon(icon: destination.icon, size: 22, color: color, strokeWidth: selected ? 2 : 1.5),
+            if (pending > 0)
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  icon,
+                  Positioned(
+                    left: 14,
+                    top: -5,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 16),
+                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: colors.warning,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: colors.surface, width: 1.5),
+                      ),
+                      child: Text(
+                        pendingBadgeLabel(pending),
+                        style: CarliType.caption.copyWith(
+                          fontSize: 9.5,
+                          height: 1,
+                          fontWeight: FontWeight.w700,
+                          color: colors.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              icon,
             Text(
               destination.label,
               maxLines: 1,
