@@ -189,7 +189,10 @@ void main() {
       expect(nativeNotificationRoute('/finanzas/ajustes/bancos'), '/mas/ajustes-finanzas/bancos');
       expect(nativeNotificationRoute('/finanzas/objetivos/goal-1'), '/mas/objetivos/goal-1');
       expect(nativeNotificationRoute('/finanzas/presupuestos?periodo=p-1'), '/finanzas/presupuestos?periodo=p-1');
-      expect(nativeNotificationRoute('/finanzas/movimientos/nuevo?tipo=ingreso'), '/finanzas/movimientos');
+      expect(
+        nativeNotificationRoute('/finanzas/movimientos/nuevo?tipo=ingreso'),
+        '/finanzas/movimientos/nuevo?tipo=ingreso',
+      );
       expect(nativeNotificationRoute('/pendientes'), '/pendientes');
       expect(nativeNotificationRoute('/ajustes'), '/mas/ajustes');
     });

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/format/dates.dart';
@@ -32,7 +33,9 @@ import 'transaction_sheet.dart';
 import 'transaction_tools.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key});
+  const TransactionsScreen({super.key, this.query = const {}});
+
+  final Map<String, List<String>> query;
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -50,6 +53,31 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void initState() {
     super.initState();
     _search.text = ref.read(transactionFiltersProvider).query;
+    _applyQuery();
+  }
+
+  @override
+  void didUpdateWidget(TransactionsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.query, widget.query)) _applyQuery();
+  }
+
+  void _applyQuery() {
+    final query = widget.query;
+    if (query.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final router = GoRouter.maybeOf(context);
+      final location = router?.routeInformationProvider.value.uri.path;
+      if (router != null && location != null) router.go(location);
+      if (query.containsKey(TransactionQuery.quickAdd)) {
+        showTransactionSheet(context, preset: quickAddPreset(query));
+        return;
+      }
+      final filters = TransactionFilters.fromQuery(query);
+      _filters.replace(filters);
+      _search.text = filters.query;
+    });
   }
 
   @override

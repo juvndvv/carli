@@ -8,6 +8,7 @@ import '../../modules/finance/screens/accounts/account_detail_screen.dart';
 import '../../modules/finance/screens/accounts/accounts_screen.dart';
 import '../../modules/finance/screens/bank/bank_connections_screen.dart';
 import '../../modules/finance/screens/bank/bank_link_screen.dart';
+import '../../modules/finance/data/finance_providers.dart';
 import '../../modules/finance/screens/budgets_screen.dart';
 import '../../modules/finance/screens/categories/categories_screen.dart';
 import '../../modules/finance/screens/debts/debts_screen.dart';
@@ -34,6 +35,7 @@ import '../../shell/settings/profile_settings_screen.dart';
 import '../../shell/settings/security/security_settings_screen.dart';
 import '../../shell/settings/settings_screen.dart';
 import '../auth/auth_controller.dart';
+import 'route_query_handler.dart';
 
 abstract final class Routes {
   static const launch = '/arranque';
@@ -45,6 +47,7 @@ abstract final class Routes {
   static const summary = '/finanzas';
   static const transactions = '/finanzas/movimientos';
   static const budgets = '/finanzas/presupuestos';
+  static const newTransaction = '/finanzas/movimientos/nuevo';
   static const more = '/mas';
   static const accounts = '/mas/cuentas';
   static const categories = '/mas/categorias';
@@ -72,10 +75,19 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authControllerProvider, (_, next) => auth.value = next);
   ref.onDispose(auth.dispose);
 
+  String? returnTo;
   final router = GoRouter(
     initialLocation: Routes.home,
     refreshListenable: auth,
-    redirect: (context, state) => authRedirect(auth.value, state.matchedLocation),
+    redirect: (context, state) {
+      final current = auth.value;
+      if (current is SignedOut && current.expired && state.matchedLocation != Routes.login) {
+        returnTo = state.uri.toString();
+      }
+      final target = authRedirect(current, state.matchedLocation, returnTo: returnTo);
+      if (current is SignedIn && target != null) returnTo = null;
+      return target;
+    },
     routes: [
       GoRoute(path: Routes.launch, builder: (context, state) => const LaunchScreen()),
       GoRoute(path: Routes.login, builder: (context, state) => const LoginScreen()),
@@ -103,8 +115,39 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           _branch(Routes.summary, const SummaryScreen()),
-          _branch(Routes.transactions, const TransactionsScreen()),
-          _branch(Routes.budgets, const BudgetsScreen()),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.transactions,
+                builder: (context, state) => TransactionsScreen(query: state.uri.queryParametersAll),
+                routes: [
+                  GoRoute(
+                    path: 'nuevo',
+                    redirect: (context, state) => Uri(
+                      path: Routes.transactions,
+                      queryParameters: {...state.uri.queryParameters, 'nuevo': '1'},
+                    ).toString(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.budgets,
+                builder: (context, state) => RouteQueryHandler(
+                  query: state.uri.queryParametersAll,
+                  onQuery: (context, ref, query) =>
+                      ref.read(budgetsPeriodProvider.notifier).selectId(switch (query['periodo']?.firstOrNull) {
+                        'actual' || null => null,
+                        final id => id,
+                      }),
+                  child: const BudgetsScreen(),
+                ),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -190,11 +233,11 @@ StatefulShellBranch _branch(String path, Widget screen) => StatefulShellBranch(
   routes: [GoRoute(path: path, builder: (context, state) => screen)],
 );
 
-String? authRedirect(AuthState auth, String location, {bool debug = kDebugMode}) {
+String? authRedirect(AuthState auth, String location, {String? returnTo, bool debug = kDebugMode}) {
   if (debug && location == Routes.catalog && auth is! AuthUnknown) return null;
   return switch (auth) {
     AuthUnknown() => location == Routes.launch ? null : Routes.launch,
     SignedOut() => location == Routes.login ? null : Routes.login,
-    SignedIn() => location == Routes.login || location == Routes.launch ? Routes.home : null,
+    SignedIn() => location == Routes.login || location == Routes.launch ? returnTo ?? Routes.home : null,
   };
 }

@@ -19,6 +19,7 @@ import '../../ui/page.dart';
 import '../notifications/notifications_home_card.dart';
 import '../notifications/unread_dot.dart';
 import '../pending/pending_home_card.dart';
+import 'upcoming_modules_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key, this.now});
@@ -71,6 +72,7 @@ class HomeScreen extends ConsumerWidget {
                 onOpen: (filter) => context.push(Routes.pendingFor(filter.queryParameters)),
               ),
               FinanceHomeCard(onTap: () => context.go(Routes.summary)),
+              const UpcomingModulesCard(),
               const SizedBox(height: CarliSpace.s16),
               const NotificationsHomeCard(),
             ],

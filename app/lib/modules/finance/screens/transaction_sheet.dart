@@ -37,6 +37,15 @@ class TransactionPreset {
   final String? categoryId;
 }
 
+TransactionPreset quickAddPreset(Map<String, List<String>> query) => TransactionPreset(
+  kind: switch (query['tipo']?.firstOrNull) {
+    'ingreso' => TransactionKind.income,
+    'transferencia' => TransactionKind.transfer,
+    _ => TransactionKind.expense,
+  },
+  accountId: query['cuenta']?.firstOrNull,
+);
+
 sealed class SheetResult {
   const SheetResult();
 }

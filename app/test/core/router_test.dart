@@ -19,4 +19,9 @@ void main() {
     expect(authRedirect(const SignedIn(null), Routes.launch), Routes.home);
     expect(authRedirect(const SignedIn(null), Routes.transactions), isNull);
   });
+
+  test('returns to the interrupted location after signing in again', () {
+    expect(authRedirect(const SignedIn(null), Routes.login, returnTo: Routes.budgets), Routes.budgets);
+    expect(authRedirect(const SignedIn(null), Routes.login), Routes.home);
+  });
 }

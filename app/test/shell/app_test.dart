@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carli/app.dart';
+import 'package:carli/core/auth/auth_controller.dart';
+import 'package:carli/core/router/router.dart';
 import 'package:carli/modules/finance/screens/transaction_sheet.dart';
 import 'package:carli/shell/app_shell.dart';
 
@@ -83,6 +85,31 @@ void main() {
 
     expect(api.requests.lastWhere((request) => request.path == '/v1/auth/token').data, containsPair('code', '123456'));
     expect(find.byType(CarliBottomNav), findsOneWidget);
+  });
+
+  testWidgets('returns to the interrupted screen after the session expires and the user signs in again', (tester) async {
+    final container = testContainer(
+      FakeApi({
+        'GET /v1/me': (_) => (200, {'data': testUser}),
+        'POST /v1/auth/token': (_) => (201, {'token': '2|plain', 'user': testUser}),
+      }),
+      storage: {'auth_token': 'stored'},
+    );
+    await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const CarliApp()));
+    await tester.pumpAndSettle();
+    container.read(routerProvider).go(Routes.budgets);
+    await tester.pumpAndSettle();
+
+    await container.read(authControllerProvider.notifier).handleUnauthorized();
+    await tester.pumpAndSettle();
+    expect(find.text('Entrar'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).at(0), 'juanda@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'password');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(routerProvider).routeInformationProvider.value.uri.path, Routes.budgets);
   });
 
   testWidgets('switches tabs from the bottom navigation', (tester) async {

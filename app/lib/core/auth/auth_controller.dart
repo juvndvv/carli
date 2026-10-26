@@ -13,7 +13,9 @@ final class AuthUnknown extends AuthState {
 }
 
 final class SignedOut extends AuthState {
-  const SignedOut();
+  const SignedOut({this.expired = false});
+
+  final bool expired;
 }
 
 final class SignedIn extends AuthState {
@@ -77,6 +79,6 @@ class AuthController extends Notifier<AuthState> {
   Future<void> handleUnauthorized() async {
     if (state is! SignedIn) return;
     await _repository.forget();
-    state = const SignedOut();
+    state = const SignedOut(expired: true);
   }
 }

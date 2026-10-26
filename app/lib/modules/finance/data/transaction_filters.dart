@@ -25,7 +25,58 @@ class TransactionFilters {
     this.max,
     this.from,
     this.to,
+    this.debtId,
+    this.recurringRuleId,
+    this.contactId,
   });
+
+  factory TransactionFilters.fromQuery(Map<String, List<String>> query) {
+    List<String> list(String key) => [
+      for (final value in query[key] ?? const <String>[])
+        for (final item in value.split(','))
+          if (item.trim().isNotEmpty) item.trim(),
+    ];
+    String? single(String key) => list(key).firstOrNull;
+    DateTime? date(String key) {
+      final text = single(key);
+      return text != null && RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text) ? parseIsoDate(text) : null;
+    }
+
+    Cents? cents(String key) {
+      final text = single(key);
+      return text != null && RegExp(r'^\d+$').hasMatch(text) ? int.parse(text) : null;
+    }
+
+    final queryText = single(TransactionQuery.text) ?? '';
+    final from = date(TransactionQuery.from);
+    final to = date(TransactionQuery.to);
+    final rawPeriod = single(TransactionQuery.period);
+    final implicitAll = queryText.isNotEmpty || from != null || to != null;
+    final (scope, periodId) = switch (rawPeriod) {
+      'todos' => (PeriodScope.all, null),
+      'actual' => (PeriodScope.current, null),
+      final String id => (PeriodScope.specific, id),
+      null => (implicitAll ? PeriodScope.all : PeriodScope.current, null),
+    };
+    return TransactionFilters(
+      periodScope: scope,
+      periodId: periodId,
+      accountIds: list(TransactionQuery.accounts).toSet(),
+      categoryIds: list(TransactionQuery.categories).toSet(),
+      tags: {for (final tag in list(TransactionQuery.tags)) tag.replaceFirst(RegExp('^#'), '').toLowerCase()},
+      kinds: {for (final kind in list(TransactionQuery.kinds)) ?_kindParams[kind]},
+      min: cents(TransactionQuery.min),
+      max: cents(TransactionQuery.max),
+      query: queryText,
+      status: _statusParams[single(TransactionQuery.status)],
+      uncategorized: _truthy.contains(single(TransactionQuery.uncategorized)?.toLowerCase()),
+      from: from,
+      to: to,
+      debtId: single(TransactionQuery.debt),
+      recurringRuleId: single(TransactionQuery.recurringRule),
+      contactId: single(TransactionQuery.contact),
+    );
+  }
 
   final PeriodScope periodScope;
   final String? periodId;
@@ -40,6 +91,9 @@ class TransactionFilters {
   final Cents? max;
   final DateTime? from;
   final DateTime? to;
+  final String? debtId;
+  final String? recurringRuleId;
+  final String? contactId;
 
   bool get hasDateRange => from != null || to != null;
 
@@ -59,6 +113,9 @@ class TransactionFilters {
     ValueGetter<Cents?>? max,
     ValueGetter<DateTime?>? from,
     ValueGetter<DateTime?>? to,
+    ValueGetter<String?>? debtId,
+    ValueGetter<String?>? recurringRuleId,
+    ValueGetter<String?>? contactId,
   }) => TransactionFilters(
     periodScope: periodScope ?? this.periodScope,
     periodId: periodId == null ? this.periodId : periodId(),
@@ -73,6 +130,9 @@ class TransactionFilters {
     max: max == null ? this.max : max(),
     from: from == null ? this.from : from(),
     to: to == null ? this.to : to(),
+    debtId: debtId == null ? this.debtId : debtId(),
+    recurringRuleId: recurringRuleId == null ? this.recurringRuleId : recurringRuleId(),
+    contactId: contactId == null ? this.contactId : contactId(),
   );
 
   TransactionFilters withPeriod(Period? period) {
@@ -93,6 +153,9 @@ class TransactionFilters {
     status != null,
     uncategorized,
     hasDateRange,
+    debtId != null,
+    recurringRuleId != null,
+    contactId != null,
   ].where((active) => active).length;
 
   bool get onlyUncategorized => uncategorized && activeCount == 1 && query.isEmpty;
@@ -118,6 +181,9 @@ class TransactionFilters {
     'q': query.trim().isEmpty ? null : query.trim(),
     'status': status?.api,
     'uncategorized': uncategorized ? 1 : null,
+    'debt_id': debtId,
+    'recurring_rule_id': recurringRuleId,
+    'contact_id': contactId,
   };
 
   @override
@@ -135,7 +201,10 @@ class TransactionFilters {
       other.min == min &&
       other.max == max &&
       other.from == from &&
-      other.to == to;
+      other.to == to &&
+      other.debtId == debtId &&
+      other.recurringRuleId == recurringRuleId &&
+      other.contactId == contactId;
 
   @override
   int get hashCode => Object.hash(
@@ -152,8 +221,53 @@ class TransactionFilters {
     max,
     from,
     to,
+    debtId,
+    recurringRuleId,
+    contactId,
   );
 }
+
+abstract final class TransactionQuery {
+  static const period = 'periodo';
+  static const from = 'desde';
+  static const to = 'hasta';
+  static const accounts = 'cuenta';
+  static const categories = 'categoria';
+  static const tags = 'etiqueta';
+  static const kinds = 'tipo';
+  static const min = 'min';
+  static const max = 'max';
+  static const text = 'q';
+  static const status = 'estado';
+  static const uncategorized = 'sin_categoria';
+  static const debt = 'deuda';
+  static const recurringRule = 'recurrente';
+  static const contact = 'contacto';
+  static const quickAdd = 'nuevo';
+}
+
+const _kindParams = {
+  'gasto': TransactionKind.expense,
+  'gastos': TransactionKind.expense,
+  'expense': TransactionKind.expense,
+  'ingreso': TransactionKind.income,
+  'ingresos': TransactionKind.income,
+  'income': TransactionKind.income,
+  'transferencia': TransactionKind.transfer,
+  'transferencias': TransactionKind.transfer,
+  'transfer': TransactionKind.transfer,
+  'ajuste': TransactionKind.adjustment,
+  'adjustment': TransactionKind.adjustment,
+};
+
+const _statusParams = {
+  'pendiente': TransactionStatus.pending,
+  'pending': TransactionStatus.pending,
+  'confirmado': TransactionStatus.cleared,
+  'cleared': TransactionStatus.cleared,
+};
+
+const _truthy = {'1', 'true', 'si', 'sí'};
 
 final transactionFiltersProvider = NotifierProvider<TransactionFiltersController, TransactionFilters>(
   TransactionFiltersController.new,

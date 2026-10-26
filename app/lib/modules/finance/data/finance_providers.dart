@@ -144,4 +144,6 @@ class SelectedPeriod extends Notifier<String?> {
   String? build() => null;
 
   void select(Period? period) => state = period == null || period.isCurrent ? null : period.id;
+
+  void selectId(String? id) => state = id;
 }
