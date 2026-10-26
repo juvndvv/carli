@@ -13,7 +13,7 @@ it('lists available modules followed by coming soon placeholders', function () {
 
     $response = $this->actingAs($user)->getJson('/api/v1/modules')->assertOk();
 
-    expect($response->json('data.*.id'))->toBe(['journal', 'tasks', 'health', 'habits', 'notes']);
+    expect($response->json('data.*.id'))->toBe(['journal', 'health', 'habits', 'notes']);
 
     $response->assertJsonPath('data.0', [
         'id' => 'journal',
@@ -30,7 +30,7 @@ it('lists available modules followed by coming soon placeholders', function () {
     $response->assertJsonPath('data.1.available', false)
         ->assertJsonPath('data.1.coming_soon', true)
         ->assertJsonPath('data.1.enabled', false)
-        ->assertJsonPath('data.1.name', 'Tareas');
+        ->assertJsonPath('data.1.name', 'Salud');
 });
 
 it('disables a module and merges its settings', function () {
@@ -65,7 +65,7 @@ it('rejects unknown and coming soon modules', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->patchJson('/api/v1/modules/unknown', ['enabled' => true])->assertNotFound();
-    $this->actingAs($user)->patchJson('/api/v1/modules/tasks', ['enabled' => true])->assertUnprocessable();
+    $this->actingAs($user)->patchJson('/api/v1/modules/health', ['enabled' => true])->assertUnprocessable();
 });
 
 it('blocks module routes when the module is disabled', function () {

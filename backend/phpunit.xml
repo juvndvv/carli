@@ -21,6 +21,7 @@
         </include>
         <exclude>
             <directory>app/Modules/Finance/tests</directory>
+            <directory>app/Modules/Tasks/tests</directory>
         </exclude>
     </source>
     <php>

@@ -23,13 +23,13 @@ final class SendPendingDigests implements ShouldQueue
         $date = ($this->date === null ? CarbonImmutable::now(self::TIMEZONE) : CarbonImmutable::parse($this->date, self::TIMEZONE))->toDateString();
 
         User::query()->orderBy('id')->each(function (User $user) use ($pending, $date): void {
-            $summary = $pending->summary($user);
+            $digest = $pending->digest($user);
 
-            if ($summary['total'] <= 0 || ! Cache::add("pending-digest:{$user->id}:{$date}", true, now()->addDays(2))) {
+            if ($digest['total'] <= 0 || ! Cache::add("pending-digest:{$user->id}:{$date}", true, now()->addDays(2))) {
                 return;
             }
 
-            $user->notify(new PendingDigestNotification($summary['total'], $pending->describe($user)));
+            $user->notify(new PendingDigestNotification($digest['total'], $digest['phrases']));
             $this->sent++;
         });
     }

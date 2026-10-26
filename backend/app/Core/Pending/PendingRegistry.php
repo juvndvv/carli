@@ -105,4 +105,28 @@ final class PendingRegistry
 
         return $phrases;
     }
+
+    /**
+     * @return array{total: int, phrases: list<string>}
+     */
+    public function digest(User $user): array
+    {
+        $total = $this->summary($user)['total'];
+        $phrases = $this->describe($user);
+
+        foreach ($this->providersFor($user) as $provider) {
+            if (! $provider instanceof DailyDigestContributor) {
+                continue;
+            }
+
+            foreach ($provider->digestCounts($user) as $type => $count) {
+                if ($count > 0) {
+                    $total += $count;
+                    $phrases[] = $provider->describe((string) $type, $count);
+                }
+            }
+        }
+
+        return ['total' => $total, 'phrases' => $phrases];
+    }
 }
