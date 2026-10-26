@@ -129,8 +129,11 @@ class _CarliChartState extends State<CarliChart> {
   Widget _chart(CarliColors colors, List<Color> palette) {
     final axisStyle = CarliType.caption.copyWith(fontSize: 11, color: colors.text3);
     final maxValue = widget.series.expand((s) => s.values).fold<int>(0, math.max);
-    final interval = niceStep(maxValue);
-    final top = maxValue <= 0 ? interval : (maxValue / interval).ceil() * interval;
+    final minValue = widget.series.expand((s) => s.values).fold<int>(0, math.min);
+    final interval = niceStep(math.max(maxValue, -minValue));
+    final top = maxValue <= 0 ? (minValue < 0 ? 0.0 : interval) : (maxValue / interval).ceil() * interval;
+    final bottom = minValue < 0 ? (minValue / interval).floor() * interval : 0.0;
+    final labelEvery = math.max(1, (widget.labels.length / 6).ceil());
     final grid = FlGridData(
       drawVerticalLine: false,
       horizontalInterval: interval,
@@ -154,7 +157,9 @@ class _CarliChartState extends State<CarliChart> {
           interval: 1,
           getTitlesWidget: (value, meta) {
             final index = value.round();
-            if (index < 0 || index >= widget.labels.length || value != index) return const SizedBox.shrink();
+            if (index < 0 || index >= widget.labels.length || value != index || index % labelEvery != 0) {
+              return const SizedBox.shrink();
+            }
             return Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(widget.labels[index], style: axisStyle),
@@ -205,7 +210,7 @@ class _CarliChartState extends State<CarliChart> {
           gridData: grid,
           titlesData: titles,
           borderData: FlBorderData(show: false),
-          minY: 0,
+          minY: bottom,
           maxY: top,
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(

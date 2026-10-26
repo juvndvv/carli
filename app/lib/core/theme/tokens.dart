@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Tokens del design system "Ember" (docs/DESIGN-SYSTEM.md §2).
 @immutable
 class CarliColors extends ThemeExtension<CarliColors> {
   const CarliColors({
@@ -35,10 +34,8 @@ class CarliColors extends ThemeExtension<CarliColors> {
   final Color positiveSoft, warningSoft, negativeSoft;
   final Color focusRing;
 
-  /// Paleta categórica en orden fijo; solo gráficos y leyendas.
   final List<Color> chart;
 
-  /// Relleno de acciones destructivas en ambos temas; `negative` queda para cifras y texto.
   static const dangerFill = Color(0xFFC8281C);
 
   static const light = CarliColors(
@@ -143,7 +140,6 @@ class CarliColors extends ThemeExtension<CarliColors> {
   }
 }
 
-/// Radios (§2.5).
 abstract final class CarliRadius {
   static const sm = 6.0;
   static const md = 12.0;
@@ -156,13 +152,11 @@ abstract final class CarliRadius {
   static const full = 999.0;
 }
 
-/// Escala de espaciado en px (§2.5).
 abstract final class CarliSpace {
   static const s2 = 2.0, s4 = 4.0, s8 = 8.0, s12 = 12.0, s16 = 16.0, s20 = 20.0;
   static const s24 = 24.0, s32 = 32.0, s40 = 40.0, s48 = 48.0, s64 = 64.0;
 }
 
-/// Duraciones (§2.5).
 abstract final class CarliMotion {
   static const hover = Duration(milliseconds: 120);
   static const enter = Duration(milliseconds: 200);

@@ -35,13 +35,13 @@ class CarliSelect<T> extends StatelessWidget {
   final bool invalid;
 
   Future<void> _open(BuildContext context) async {
-    final picked = await showCarliSheet<T>(
+    final picked = await showCarliSheet<(T,)>(
       context,
       title: title,
       scrollable: true,
       builder: (context) => _OptionList(options: options, value: value),
     );
-    if (picked != null) onChanged(picked);
+    if (picked != null) onChanged(picked.$1);
   }
 
   @override
@@ -104,7 +104,7 @@ class _OptionList<T> extends StatelessWidget {
           selected: selected,
           button: true,
           child: Pressable(
-            onTap: () => Navigator.pop(context, option.value),
+            onTap: () => Navigator.pop(context, (option.value,)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: CarliSpace.s20, vertical: 14),
               child: Row(

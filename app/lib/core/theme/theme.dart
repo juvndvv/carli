@@ -93,7 +93,6 @@ ThemeData carliTheme(Brightness brightness) {
         borderRadius: BorderRadius.circular(CarliRadius.md),
         borderSide: BorderSide(color: c.border),
       ),
-      // Foco oscureciendo el borde, sin halo de color.
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(CarliRadius.md),
         borderSide: BorderSide(color: c.text),

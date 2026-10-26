@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Escala tipográfica (§2.4). Geist para todo, cifras tabulares.
 abstract final class CarliType {
   static const family = 'Geist';
   static const _tabular = [FontFeature.tabularFigures()];
@@ -23,6 +22,5 @@ abstract final class CarliType {
   static final caption = _s(12, 16, FontWeight.w500);
   static final eyebrow = _s(12, 16, FontWeight.w600, tracking: 0.08);
 
-  /// Para importes en listas y KPI.
   static TextStyle money(TextStyle base) => base.copyWith(fontFeatures: _tabular);
 }
