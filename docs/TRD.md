@@ -107,6 +107,7 @@ Reglas:
 
 **Sincronización bancaria (F3)** dentro de `Finance/BankSync/`:
 - `Contracts/BankDataProvider`: `listAspsps()`, `startAuth(aspsp, redirectUrl)`, `completeAuth(code)`, `listAccounts(session)`, `fetchTransactions(accountUid, from, to)`, `fetchBalance(accountUid)`, `revoke(session)`.
+- Nombre de cuenta: Enable Banking pone el titular en `name` y el nombre de la cuenta en `details` o `product`. `BankAccount::suggestedName()` propone «Banco · details|product» o, sin ellos, «Banco · Compartida» (titulares con « & »), «· Tarjeta», «· Ahorro» o «· Principal».
 - `Providers/EnableBankingProvider`: JWT RS256 firmado con la clave privada de la aplicación (TTL ≤ 24 h), cliente HTTP con reintentos y backoff.
 - `Services/BankSyncService`: mapea al modelo propio y hace upsert idempotente. Aplica las reglas de autocategorización (PRD FI-BK-10); lo que no casa entra sin categoría. Al final llama a `TransferDetector` (§4.1.2). No toca periodos.
 
@@ -139,6 +140,7 @@ interface PendingItemsProvider {
 3. **Señales fuertes** (`signals`):
    - `iban`: el IBAN de la contraparte del raw (`creditor_account` del gasto / `debtor_account` del ingreso; claves `iban`, `bban` u `other.identification`) coincide con el IBAN de la otra cuenta. Solo se guarda el IBAN enmascarado de cada cuenta (`ES75 •••• 7919` en `bank_connections.accounts`), así que se comparan país + dígitos de control + últimos 4; si el banco también lo enmascara (`ES******7919`), país + últimos 4. No se guardan ni se exponen IBAN completos.
    - `holder`: el nombre de la contraparte (`creditor.name` del gasto / `debtor.name` del ingreso, o `payee`) es el titular. Titulares = `users.name` y el nombre del lado propio del raw de ambas patas (`debtor` del gasto, `creditor` del ingreso), porque el perfil puede no tener el nombre real. Comparación con `MerchantText::normalize` (sin acentos, mayúsculas, solo letras): el nombre con menos palabras (≥ 2) debe estar contenido en el otro, en cualquier orden.
+   - `internal`: las dos cuentas son de la misma conexión bancaria, ninguna pata tiene contraparte (ni nombre ni cuenta en `creditor`/`debtor`) y el concepto de una nombra la otra cuenta (su `details`/`product` o la parte tras «Banco · » de su nombre), p. ej. «To EUR Gastos» ↔ hucha «Gastos» de Revolut.
    - `concept`: payee, concepto o `bank_transaction_code.code` contienen `TOP UP`/`TOPUP`, `RECARGA`, `TRASPASO`, `CUENTA(S) PROPIA(S)`, `ENTRE CUENTAS`, `MISMO TITULAR` o el nombre del banco de la otra cuenta (si es distinto del propio).
 4. **Selección**: se ordenan (claras primero, más señales, menos días de diferencia, más recientes) y cada movimiento entra en una sola pareja.
 5. **Clara** = única + ≥ 1 señal. Se convierte sola si además las dos patas están **sin categoría** (respeta lo que el usuario ya decidió) y, durante la sincronización, si la fecha más reciente cae en los últimos 30 días. El resto son sugerencias.
@@ -147,6 +149,8 @@ Conversión (`convert`): en una transacción, ambas filas pasan a `kind = 'trans
 Deshacer (`undo`, solo con `transfer_source` no nulo): las patas del banco vuelven a `expense`/`income` según el signo, sin categoría ni grupo; las patas creadas a mano se borran del todo; si eran dos patas del banco se guarda la exclusión.
 Cuenta sin conexión (`link`): la cuenta destino debe ser propia, no archivada y sin conexión bancaria. El importado pasa a pata (`transfer_source = 'linked'`) y se crea la contraparte `source = 'manual'` con importe opuesto, misma fecha y el nombre de la cuenta del banco como payee.
 Inmutabilidad: `PATCH` sigue rechazando cambios de cuenta, tipo, importe o fecha de un importado; `TransferService::update` además rechaza importe y fecha si alguna pata es del banco. El tipo solo cambia por estas vías.
+
+Enlace automático con cuenta manual (PRD FI-BK-15): tras las parejas, cada importado sin categoría que no está en ninguna pareja, sin contraparte en el raw y con concepto `TO|FROM|HACIA|DESDE X` (en el sentido de su signo) se enlaza con `link(..., TransferSource::Auto)` si X coincide con el nombre normalizado de **exactamente una** cuenta manual no archivada (nombre completo o la parte tras « · »). Al deshacerlo se guarda la exclusión `(id, id)`, que marca el movimiento como «no enlazar».
 
 Cuándo corre: al final de `BankSyncService::sync()` (ventana de 30 días, guarda el número de conversiones en `bank_connections.last_sync_transfers`) y con `php artisan finance:detect-transfers [--dry-run] [--user=]` sobre todo el histórico. Es idempotente: lo convertido ya no es candidato y lo excluido no vuelve.
 
@@ -314,6 +318,7 @@ bank_connections (
 --   índice parcial de candidatas: (user_id, amount_cents, date) WHERE source = 'bank' AND kind IN ('expense','income') AND deleted_at IS NULL
 
 -- bank_connections añade: last_sync_transfers int DEFAULT 0
+-- bank_connections.accounts (snapshot por cuenta): uid, identification_hash, name (titular), details, product, iban enmascarado, currency, type
 
 transfer_exclusions (                            -- parejas que no son transferencia (descartadas o deshechas)
   id uuid PK, user_id uuid FK,
@@ -548,6 +553,7 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 | `finance:payroll-overdue` | Diario 09:00 | Si hoy > `expected_end_date` + 1 y no hay periodo nuevo: push de aviso (PRD FI-PE-07) |
 | `finance:weekly-summary` | Lunes 09:00 | Opcional |
 | `finance:bank-sync` (F3) | 07:00, 13:00, 19:00 | Encola un job por conexión activa: trae movimientos desde `max(sync_from_date, último booking_date − 5 días)`, upsert por `external_id`, actualiza el saldo del banco. Respeta el límite PSD2 de 4 consultas/día sin usuario presente. Las alertas de presupuesto se evalúan una vez al final del job, no por movimiento. Después detecta transferencias de los últimos 30 días (§4.1.2). |
+| `finance:refresh-bank-account-names` (F3) | A mano | Relee `/accounts/{uid}/details` de las cuentas vinculadas, guarda `details`/`product` en el snapshot y renombra a «Banco · details» solo las cuentas que conservan el nombre por defecto antiguo («Banco titular»); `--dry-run`. Al renovar la conexión se aplica el mismo renombrado con los datos nuevos |
 | `finance:detect-transfers` (F3) | A mano | Reprocesa todo lo importado; `--dry-run` lista lo que convertiría y lo que quedaría como sugerencia |
 | `core:pending-digest` | Diario 20:00 | Si `PendingRegistry` suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
