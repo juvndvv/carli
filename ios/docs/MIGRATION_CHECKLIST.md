@@ -1,57 +1,42 @@
 # SwiftUI migration checklist
 
 Inventory of the Flutter app (`app/lib`) to track parity in the native iOS app (`ios/`).
-Status as of 2026-10-27: ✅ native · 🟡 partial · ⬜ pending.
+Status as of 2026-10-28: ✅ native · 🟡 partial · ⬜ pending.
 
 ## Shell
 - ✅ Launch
-- ✅ Login
-- ⬜ Lock screen (biometric unlock, `local_auth`)
-- ✅ Home (Inicio)
-- ⬜ Global search
-- ⬜ Notifications inbox (list, read state, delete)
-- ⬜ Pending items screen
-- ⬜ More screen
-- ⬜ Coming-soon module screen
-- ⬜ Settings: general, profile, appearance, modules, notifications, security (password prompt)
+- ✅ Login (with 2FA code / recovery code)
+- ✅ Lock screen (Face ID / Touch ID, `AppLock`)
+- ✅ Home (Inicio), notification rows open their link
+- ✅ Global search (sections + `v1/search`, opens movements in their sheet)
+- ✅ Notifications inbox (pages, read/unread swipe, delete one / read / all)
+- ✅ Pending items screen (filters, inline actions per type, undo, similar categorization)
+- ✅ More screen → replaced by the tab bar + Ajustes (logout lives in Ajustes)
+- ✅ Coming-soon modules (listed under Ajustes › Módulos › Próximamente)
+- ✅ Settings: root, profile, appearance, modules, notifications (push + per type), security (password, 2FA with QR and recovery codes, Face ID, sessions)
+- ✅ Deep links: Flutter routes → tab + section + pushed screens (`AppLink`)
 
 ## Finanzas
 - ✅ Resumen
-- ✅ Movimientos (list, search, filters, swipe delete)
-- 🟡 Presupuestos (overview done; editor sheet not opening yet; copy from previous period)
-- ⬜ Transaction sheet (create / edit movement, the "+" action)
-- ⬜ Accounts list and account detail, account form
-- ⬜ Bank connections and bank link flow
-- ⬜ Categories (form, delete, tags)
-- ⬜ Debts (list, detail, form)
-- ⬜ Goals (list, detail, goal form, contributions)
-- ⬜ Recurring rules (list, rule form, confirm occurrence)
-- ⬜ Shared expenses and contacts
-- ⬜ Finance settings (period start date)
+- ✅ Movimientos (list, search, filters, swipe delete, link filters: dates, amounts, tags, debt, recurring, contact)
+- 🟡 Movimientos tools: more-filters sheet, multi-select bulk edit, CSV export
+- ✅ Presupuestos
+- 🟡 Transaction sheet (create / edit; tags, splits and shares still read-only)
+- ✅ Similar categorization offer after categorizing an import
+- ✅ Accounts, bank connections and link flow, categories and tags, debts, goals, recurring, shared, finance settings
 
 ## Tareas
-- ⬜ Hoy, Próximas, Listas, list detail
-- ⬜ Task detail, new task sheet, postpone sheet
-- ⬜ Templates and template editor
-- ⬜ Tasks settings
+- ✅ Hoy, Próximas, Listas, list detail, task detail, new task, templates, settings
 
 ## Notas
-- ⬜ Notes list and note editor
-- ⬜ Shopping list (sheets)
-- ⬜ Notes settings
+- ✅ Notes home, folders, archive / trash, text and checklist editors, shopping list, restock, settings
 
 ## Hábitos
-- ⬜ Hoy, list, progress
-- ⬜ Habit detail and editor
-- ⬜ Log, break and convert-template sheets
-- ⬜ Habits settings
+- ✅ Hoy, list, progress, detail, editor, log / break / convert sheets, settings
 
-## Cross-cutting (Flutter plugins / core)
-- ⬜ Push notifications (APNs registration, `PushBridge.swift` in the Flutter runner)
-- ⬜ Offline cache and pending sync queue (`drift`, `core/pending`)
-- ⬜ Biometric lock (`local_auth`)
-- ⬜ Share sheet (`share_plus`)
-- ⬜ QR codes (`qr_flutter`)
-- ⬜ Home-screen quick actions (`quick_actions`)
-- ⬜ File handling (`core/files`, `path_provider`)
-- ⬜ Deep links / router (`go_router`)
+## Cross-cutting
+- ✅ Push notifications (APNs registration, taps open their route, test push)
+- ✅ Home-screen quick actions
+- ✅ Share sheet (`ShareLink`) and QR codes (Core Image)
+- ✅ Session refresh (pending + unread every 2 min while open)
+- ⬜ Offline notes database (`drift`): the native app is online-only by decision; writes are optimistic and synced right away

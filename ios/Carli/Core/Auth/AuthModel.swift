@@ -22,6 +22,8 @@ final class AuthModel {
         case signedOut(expired: Bool)
         /// `user` is nil when the token exists but the server could not be reached.
         case signedIn(CurrentUser?)
+
+        var isSignedIn: Bool { if case .signedIn = self { true } else { false } }
     }
 
     private(set) var state: State = .unknown
@@ -67,7 +69,19 @@ final class AuthModel {
         return .signedIn
     }
 
+    /// Replaces the signed-in user after a profile or preference change.
+    func updateUser(_ user: CurrentUser) {
+        guard case .signedIn = state else { return }
+        state = .signedIn(user)
+    }
+
+    func refreshUser() async {
+        guard case .signedIn = state, let user = try? await me() else { return }
+        state = .signedIn(user)
+    }
+
     func logout() async {
+        await PushManager.shared.forget()
         try? await api.delete("v1/auth/token")
         tokens.clear()
         state = .signedOut(expired: false)

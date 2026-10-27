@@ -1,7 +1,8 @@
 import SwiftUI
 
 enum HomeRoute: Hashable {
-    case notifications, pending, settings, search
+    case notifications, settings, search
+    case pending(module: String? = nil, type: String? = nil)
 }
 
 /// Inicio: greeting, then a card per module plus pending items and recent notifications.
@@ -10,9 +11,11 @@ struct HomeView: View {
     var openModule: (String) -> Void
 
     @Environment(AuthModel.self) private var auth
+    @Environment(AppRouter.self) private var router
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 LazyVStack(spacing: CarliSpace.s16) {
                     let hasNotifications = !(model.notifications.value ?? []).isEmpty
@@ -39,17 +42,38 @@ struct HomeView: View {
             .toolbar { toolbar }
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
-                case .notifications: PendingMigrationView(title: "Notificaciones")
-                case .pending: PendingMigrationView(title: "Pendientes")
-                case .settings: SettingsStubView()
-                case .search: PendingMigrationView(title: "Buscar", symbol: "magnifyingglass")
+                case .notifications: NotificationsView(model: NotificationsModel(api: auth.api))
+                case .pending(let module, let type): PendingView(model: PendingModel(api: auth.api, module: module, type: type))
+                case .settings: SettingsView(modules: model.modules)
+                case .search: SearchView(api: auth.api, enabledModules: Set((model.modules ?? []).filter(\.isOn).map(\.id) + [AppModule.finance]))
                 }
             }
+            .settingsDestinations(api: auth.api, modules: model.modules)
             .refreshable { await model.load() }
             .task { await model.load() }
             .onHabitsChanged { await model.loadHabits() }
             .onTasksChanged { await model.loadTasks() }
             .onReceive(NotificationCenter.default.publisher(for: .notesChanged)) { _ in Task { await model.loadNotes() } }
+            .onReceive(NotificationCenter.default.publisher(for: .notificationsChanged)) { _ in Task { await model.loadNotifications() } }
+            .onReceive(NotificationCenter.default.publisher(for: .pendingChanged)) { _ in Task { await model.loadPending() } }
+            .onReceive(NotificationCenter.default.publisher(for: .financeChanged)) { _ in
+                Task {
+                    await model.loadFinance()
+                    await model.loadPending()
+                }
+            }
+        }
+        .onChange(of: router.pending?.id, initial: true) {
+            guard let link = router.take(for: "home") else { return }
+            var next = NavigationPath()
+            for step in link.steps {
+                switch step {
+                case .home(let route): next.append(route)
+                case .settings(let page): next.append(page)
+                default: break
+                }
+            }
+            path = next
         }
         .habitActions(model.habitActions)
         .carliToast($model.toast)
@@ -94,6 +118,7 @@ struct HomeView: View {
 
 private struct NotificationsCard: View {
     var model: HomeModel
+    @Environment(AppRouter.self) private var router
 
     var body: some View {
         CarliCard(padding: 0) {
@@ -117,7 +142,13 @@ private struct NotificationsCard: View {
             case .loaded(let items):
                 ForEach(Array(items.prefix(3).enumerated()), id: \.element.id) { index, item in
                     if index > 0 { Divider().padding(.leading, 34) }
-                    NotificationRow(item: item)
+                    Button {
+                        if item.unread { Task { await model.markRead(item) } }
+                        router.open(url: item.url)
+                    } label: {
+                        NotificationRow(item: item).contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.bottom, CarliSpace.s4)
             }
@@ -175,13 +206,13 @@ private struct PendingCard: View {
             CarliCard(padding: 0) {
                 CardHeader(title: "Pendientes",
                            subtitle: summary.total == 1 ? "1 elemento por revisar" : "\(summary.total) elementos por revisar") {
-                    NavigationLink("Revisar", value: HomeRoute.pending)
+                    NavigationLink("Revisar", value: HomeRoute.pending())
                         .font(.subheadline.weight(.medium))
                 }
                 .padding(CarliSpace.s16)
                 ForEach(summary.byModule) { entry in
                     let described = PendingType.describe(entry)
-                    NavigationLink(value: HomeRoute.pending) {
+                    NavigationLink(value: HomeRoute.pending(module: entry.module, type: entry.type)) {
                         HStack(spacing: CarliSpace.s12) {
                             Image(systemName: described.symbol)
                                 .foregroundStyle(CarliColor.text2)
@@ -444,29 +475,5 @@ private struct NotesCard: View {
                 }
             }
         }
-    }
-}
-
-/// Temporary Ajustes until that screen is migrated: who is signed in and a way out.
-private struct SettingsStubView: View {
-    @Environment(AuthModel.self) private var auth
-
-    var body: some View {
-        List {
-            if let user = auth.user {
-                Section {
-                    LabeledContent("Nombre", value: user.name)
-                    LabeledContent("Email", value: user.email)
-                }
-            }
-            Section {
-                Button("Cerrar sesión", role: .destructive) {
-                    Task { await auth.logout() }
-                }
-            } footer: {
-                Text("El resto de Ajustes llega cuando migremos esa pantalla.")
-            }
-        }
-        .navigationTitle("Ajustes")
     }
 }

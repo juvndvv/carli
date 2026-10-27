@@ -89,7 +89,7 @@ struct ShoppingListView: View {
                     if switchable {
                         Button { switching = true } label: {
                             HStack(spacing: 6) {
-                                Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1)
+                                Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
                                 Image(systemName: "chevron.down").font(.headline.weight(.bold)).foregroundStyle(CarliColor.text2)
                             }
                             .foregroundStyle(CarliColor.text)
@@ -100,6 +100,7 @@ struct ShoppingListView: View {
                         Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 0, leading: CarliSpace.s4, bottom: CarliSpace.s8, trailing: CarliSpace.s4))
                 HStack(spacing: CarliSpace.s12) {
@@ -440,7 +441,7 @@ private struct RestockOverview: View {
             }
             .navigationTitle("Reposición")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Listo", systemImage: "checkmark") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cerrar", systemImage: "xmark") { dismiss() } } }
             .sheet(item: $picked) { ProductRestockSheet(store: store, product: $0) }
         }
     }

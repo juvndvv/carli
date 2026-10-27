@@ -101,6 +101,11 @@ final class HomeModel {
 
     // MARK: Actions
 
+    func markRead(_ notification: AppNotification) async {
+        let _: UnreadCount? = try? await api.post("v1/notifications/read", body: Patch(["ids": .array([.string(notification.id)])]))
+        await loadNotifications()
+    }
+
     func complete(_ task: TaskItem) async {
         do {
             let _: Empty = try await api.post("v1/tasks/tasks/\(task.id)/complete")

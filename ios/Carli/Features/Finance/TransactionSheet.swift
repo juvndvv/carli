@@ -4,6 +4,8 @@ import SwiftUI
 struct TransactionSheet: View {
     @State var model: TransactionFormModel
     var onSaved: (String) -> Void = { _ in }
+    /// Called after an uncategorized import gets a category (transaction, category, category name).
+    var onCategorized: ((String, String, String) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @FocusState private var amountFocused: Bool
@@ -212,7 +214,9 @@ struct TransactionSheet: View {
 
     private func save() {
         Task {
+            let categorized = model.categorizedImport
             if await model.save() {
+                if let categorized { onCategorized?(categorized.transactionId, categorized.categoryId, categorized.name) }
                 onSaved(model.isEditing ? "Movimiento guardado" : model.kind == .transfer ? "Transferencia creada" : "Movimiento añadido")
                 dismiss()
             }

@@ -22,7 +22,7 @@ enum ThemePreference: String, Codable, CaseIterable {
 }
 
 struct CurrentUser: Decodable, Equatable {
-    struct Preferences: Decodable, Equatable {
+    struct Preferences: Codable, Equatable {
         var theme: ThemePreference?
     }
 

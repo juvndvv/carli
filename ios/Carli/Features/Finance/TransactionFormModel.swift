@@ -120,6 +120,21 @@ final class TransactionFormModel {
         suggestions = []
     }
 
+    /// A bank import that just got its first category: Movimientos offers to apply it to similar ones.
+    var categorizedImport: (transactionId: String, categoryId: String, name: String)? {
+        guard let editing, editing.category == nil, !isSplit, kind != .transfer,
+              editing.kind == kind.rawValue, let categoryId else { return nil }
+        return (editing.id, categoryId, categoryName(categoryId))
+    }
+
+    private func categoryName(_ id: String) -> String {
+        for parent in categories {
+            if parent.id == id { return parent.name }
+            if let child = parent.children?.first(where: { $0.id == id }) { return child.name }
+        }
+        return "la categoría elegida"
+    }
+
     func save() async -> Bool {
         guard canSave, let amount, let accountId else { return false }
         saving = true

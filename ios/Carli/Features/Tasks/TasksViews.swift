@@ -166,11 +166,6 @@ struct TasksTodayView: View {
         let done = view.progress?.done ?? 0
         let total = view.progress?.total ?? 0
         Section {
-            Text(CarliDate.day(view.date).map(CarliDate.long) ?? "")
-                .font(.footnote)
-                .foregroundStyle(CarliColor.text2)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: CarliSpace.s4, bottom: 0, trailing: 0))
             if total > 0 || !view.overdue.isEmpty {
                 HStack(spacing: CarliSpace.s16) {
                     ActivityRing(progress: total == 0 ? 0 : Double(done) / Double(total), color: CarliColor.rings[0],
@@ -189,6 +184,11 @@ struct TasksTodayView: View {
                 }
                 .accessibilityElement(children: .combine)
             }
+        } header: {
+            Text(CarliDate.day(view.date).map(CarliDate.long) ?? "")
+                .font(.footnote)
+                .foregroundStyle(CarliColor.text2)
+                .textCase(nil)
         }
 
         if !habits.isEmpty {

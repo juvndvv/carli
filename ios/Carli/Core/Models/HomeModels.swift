@@ -123,10 +123,22 @@ struct AppNotification: Decodable, Identifiable, Equatable {
 struct NotificationsPage: Decodable {
     struct Meta: Decodable {
         var unreadCount: Int?
+        var currentPage: Int?
+        var lastPage: Int?
     }
 
     var data: [AppNotification]
     var meta: Meta?
+
+    var nextPage: Int? {
+        let current = meta?.currentPage ?? 1
+        return current < (meta?.lastPage ?? 1) ? current + 1 : nil
+    }
+}
+
+extension Notification.Name {
+    /// Posted after any inbox write so Inicio's badge and recent list follow.
+    static let notificationsChanged = Notification.Name("carli.notificationsChanged")
 }
 
 // MARK: Tasks

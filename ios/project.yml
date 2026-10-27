@@ -26,6 +26,10 @@ targets:
         PRODUCT_NAME: Carli
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    entitlements:
+      path: Carli/Carli.entitlements
+      properties:
+        aps-environment: development
     info:
       path: Carli/Info.plist
       properties:

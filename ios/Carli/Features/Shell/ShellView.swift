@@ -49,8 +49,11 @@ enum ModuleTab: String, CaseIterable {
 /// in Inicio's toolbar instead of the search slot.
 struct ShellView: View {
     @Environment(AuthModel.self) private var auth
+    @Environment(\.scenePhase) private var scenePhase
     @State private var home: HomeModel?
     @State private var selection = "home"
+    @State private var router = AppRouter()
+    @State private var push = PushManager.shared
 
     var body: some View {
         TabView(selection: $selection) {
@@ -67,9 +70,50 @@ struct ShellView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .environment(router)
         .onAppear {
             if home == nil { home = HomeModel(api: auth.api) }
         }
+        .onChange(of: router.pending?.id) { route() }
+        .onChange(of: home?.modules) { route() }
+        .onChange(of: push.opened?.id, initial: true) { openExternal() }
+        .onReceive(NotificationCenter.default.publisher(for: .modulesChanged)) { _ in
+            Task { await home?.loadModules() }
+        }
+        .task(id: scenePhase) {
+            // Keeps Inicio's pending count and unread badge fresh while the app is open.
+            guard scenePhase == .active else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(120))
+                guard !Task.isCancelled else { return }
+                await home?.loadPending()
+                await home?.loadNotifications()
+            }
+        }
+    }
+
+    /// Switches to the tab a link targets; links to modules that are off are dropped.
+    private func route() {
+        guard let link = router.pending else { return }
+        if link.tab == "home" || modules.map(\.rawValue).contains(link.tab) {
+            selection = link.tab
+        } else if home?.modules != nil {
+            router.drop()
+            selection = "home"
+        }
+    }
+
+    /// A push tap or quick action: marks the notification read and opens its route (the inbox when unknown).
+    private func openExternal() {
+        guard let opened = push.opened else { return }
+        push.opened = nil
+        if let id = opened.notificationId {
+            Task {
+                let _: UnreadCount? = try? await auth.api.post("v1/notifications/read", body: Patch(["ids": .array([.string(id)])]))
+                NotificationCenter.default.post(name: .notificationsChanged, object: nil)
+            }
+        }
+        router.open(url: opened.url, fallback: .home(.home(.notifications)))
     }
 
     /// Enabled modules only; until /modules answers, Finanzas alone.
@@ -88,8 +132,10 @@ struct ModuleRootView: View {
     /// Switches the tab bar to another module (Hoy in Tareas links to Hábitos).
     var openTab: (String) -> Void = { _ in }
     @Environment(AuthModel.self) private var auth
+    @Environment(AppRouter.self) private var router
     @State private var section: ModuleSection
     @State private var adding = false
+    @State private var newKind: TransactionFormModel.Kind = .expense
     @State private var toast: String?
     /// Filters a link asked for; entering Movimientos from the header menu starts clean.
     @State private var transactionFilters = TransactionFilters()
@@ -131,6 +177,50 @@ struct ModuleRootView: View {
                     addSheet
                 }
                 .carliToast($toast)
+        }
+        .onChange(of: router.pending?.id, initial: true) { applyLink() }
+    }
+
+    /// Opens a link addressed to this tab: its section, Movimientos filters, pushed screens and sheets.
+    private func applyLink() {
+        guard let link = router.take(for: module.rawValue) else { return }
+        if module == .notes, notesStore == nil { notesStore = NotesStore(api: auth.api) }
+        transactionFilters = link.filters ?? TransactionFilters()
+        if let id = link.section, let target = module.sections.first(where: { $0.id == id }) { section = target }
+        path = NavigationPath()
+        let steps = link.steps
+        if !steps.isEmpty {
+            // One runloop later, so the new section's destinations are registered before pushing.
+            Task { @MainActor in
+                await Task.yield()
+                steps.forEach(push)
+            }
+        }
+        if let kind = link.newTransaction, module == .finance {
+            newKind = kind
+            adding = true
+        }
+    }
+
+    private func push(_ step: AppLinkStep) {
+        switch step {
+        case .financePage(let page): path.append(page)
+        case .account(let id): path.append(AccountLink(id: id))
+        case .goal(let id): path.append(GoalRoute(id: id))
+        case .contact(let id): path.append(ContactRoute(id: id))
+        case .banks: path.append(BanksRoute())
+        case .bankLink(let id, let renewed): path.append(BankLinkRoute(connectionId: id, renewed: renewed))
+        case .task(let id): path.append(TaskRoute(id: id))
+        case .taskList(let id): path.append(TaskListRoute(id: id))
+        case .template(let id): path.append(TemplateRoute(id: id))
+        case .tasksSettings: path.append(TasksSettingsRoute())
+        case .habit(let id): path.append(HabitRoute(id: id))
+        case .habitsSettings: path.append(HabitsSettingsRoute())
+        case .note(let id): path.append(NoteRoute(id: id))
+        case .folder(let id): path.append(FolderRoute(id: id))
+        case .notesCollection(let trash): path.append(NotesCollectionRoute(trash: trash))
+        case .notesSettings: path.append(NotesSettingsRoute())
+        case .home, .settings: break
         }
     }
 
@@ -190,7 +280,7 @@ struct ModuleRootView: View {
     private var addSheet: some View {
         switch module {
         case .finance:
-            TransactionSheet(model: TransactionFormModel(api: auth.api)) { toast = $0 }
+            TransactionSheet(model: TransactionFormModel(api: auth.api, kind: newKind)) { toast = $0 }
         case .tasks:
             NewTaskSheet(api: auth.api, onSaved: { toast = $0 }) { seed in
                 path.append(TemplateRoute(id: nil, seed: seed))
@@ -214,6 +304,7 @@ struct ModuleRootView: View {
         if module == .notes && section.id == "shopping" {
             shoppingFocus += 1
         } else {
+            newKind = .expense
             adding = true
         }
     }

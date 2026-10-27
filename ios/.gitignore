@@ -2,3 +2,4 @@ Carli.xcodeproj/
 Carli/Info.plist
 build/
 screenshots/
+Carli/Carli.entitlements

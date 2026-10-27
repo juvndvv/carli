@@ -71,14 +71,70 @@ struct TransactionFilters: Hashable {
     var query = ""
     var pendingOnly = false
     var uncategorized = false
+    /// Narrowing that only links set (a notification, search or another screen); "Limpiar" drops it.
+    var tags: Set<String> = []
+    var from: String?
+    var to: String?
+    var minCents: Int?
+    var maxCents: Int?
+    var clearedOnly = false
+    var debtId: String?
+    var recurringRuleId: String?
+    var contactId: String?
+
+    var linkedCount: Int {
+        [!tags.isEmpty, from != nil || to != nil, minCents != nil || maxCents != nil, clearedOnly,
+         debtId != nil, recurringRuleId != nil, contactId != nil].filter { $0 }.count
+    }
 
     var activeCount: Int {
-        [!accountIds.isEmpty, !categoryIds.isEmpty, !kinds.isEmpty, pendingOnly, uncategorized].filter { $0 }.count
+        [!accountIds.isEmpty, !categoryIds.isEmpty, !kinds.isEmpty, pendingOnly, uncategorized].filter { $0 }.count + linkedCount
     }
 
     var isFiltering: Bool { activeCount > 0 || !trimmedQuery.isEmpty }
 
     var trimmedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Reads the Flutter link query (`?categoria=…&periodo=todos&sin_categoria=1`), as notifications and search send it.
+    static func fromLink(_ query: [String: String]) -> TransactionFilters {
+        func list(_ key: String) -> [String] {
+            (query[key] ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        }
+        func day(_ key: String) -> String? {
+            guard let text = query[key], text.wholeMatch(of: /\d{4}-\d{2}-\d{2}/) != nil else { return nil }
+            return text
+        }
+        func cents(_ key: String) -> Int? { query[key].flatMap { $0.wholeMatch(of: /\d+/) != nil ? Int($0) : nil } }
+        let kindNames: [String: TransactionKind] = ["gasto": .expense, "gastos": .expense, "expense": .expense,
+                                                     "ingreso": .income, "ingresos": .income, "income": .income,
+                                                     "transferencia": .transfer, "transferencias": .transfer, "transfer": .transfer,
+                                                     "ajuste": .adjustment, "ajustes": .adjustment, "adjustment": .adjustment]
+        var filters = TransactionFilters()
+        filters.query = query["q"] ?? ""
+        filters.from = day("desde")
+        filters.to = day("hasta")
+        switch query["periodo"] {
+        case "todos": filters.allPeriods = true
+        case "actual", nil: filters.allPeriods = !filters.query.isEmpty || filters.from != nil || filters.to != nil
+        case let id?: filters.periodId = id
+        }
+        filters.accountIds = Set(list("cuenta"))
+        filters.categoryIds = Set(list("categoria"))
+        filters.tags = Set(list("etiqueta").map { $0.replacing(/^#/, with: "").lowercased() })
+        filters.kinds = Set(list("tipo").compactMap { kindNames[$0] })
+        filters.minCents = cents("min")
+        filters.maxCents = cents("max")
+        switch query["estado"] {
+        case "pendiente", "pending": filters.pendingOnly = true
+        case "confirmado", "cleared": filters.clearedOnly = true
+        default: break
+        }
+        filters.uncategorized = ["1", "true", "si", "sí"].contains(query["sin_categoria"]?.lowercased() ?? "")
+        filters.debtId = query["deuda"]
+        filters.recurringRuleId = query["recurrente"]
+        filters.contactId = query["contacto"]
+        return filters
+    }
 
     /// Clears everything but the period.
     func cleared() -> TransactionFilters {
@@ -88,7 +144,16 @@ struct TransactionFilters: Hashable {
     /// The API takes comma-separated lists.
     func apiQuery(currentPeriodId: String?) -> [String: String] {
         var query: [String: String] = [:]
-        if !allPeriods, let period = periodId ?? currentPeriodId { query["period_id"] = period }
+        if from == nil, to == nil, !allPeriods, let period = periodId ?? currentPeriodId { query["period_id"] = period }
+        if let from { query["from"] = from }
+        if let to { query["to"] = to }
+        if !tags.isEmpty { query["tag"] = tags.sorted().joined(separator: ",") }
+        if let minCents { query["min"] = "\(minCents)" }
+        if let maxCents { query["max"] = "\(maxCents)" }
+        if clearedOnly { query["status"] = "cleared" }
+        if let debtId { query["debt_id"] = debtId }
+        if let recurringRuleId { query["recurring_rule_id"] = recurringRuleId }
+        if let contactId { query["contact_id"] = contactId }
         if !accountIds.isEmpty { query["account_id"] = accountIds.sorted().joined(separator: ",") }
         if !categoryIds.isEmpty { query["category_id"] = categoryIds.sorted().joined(separator: ",") }
         if !kinds.isEmpty { query["kind"] = kinds.map(\.rawValue).sorted().joined(separator: ",") }

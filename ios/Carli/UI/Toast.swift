@@ -27,6 +27,7 @@ extension View {
 /// Glass capsule with a message and "Deshacer", shown after a delete.
 struct UndoBar: View {
     var text: String
+    var action = "Deshacer"
     var undo: () -> Void
 
     var body: some View {
@@ -34,7 +35,7 @@ struct UndoBar: View {
             Text(text)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(CarliColor.text)
-            Button("Deshacer", action: undo)
+            Button(action, action: undo)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(CarliColor.brandInk)
         }
@@ -50,6 +51,9 @@ struct UndoBar: View {
 struct UndoOffer: Identifiable, Equatable {
     let id = UUID()
     var text: String
+    /// The button; also used for non-undo offers such as "Aplicar a los 3 parecidos".
+    var action = "Deshacer"
+    var seconds: Double?
     var perform: () async -> Void
 
     static func == (lhs: UndoOffer, rhs: UndoOffer) -> Bool { lhs.id == rhs.id }
@@ -59,12 +63,12 @@ extension View {
     func undoBar(_ offer: Binding<UndoOffer?>, seconds: Double = 5) -> some View {
         overlay(alignment: .bottom) {
             if let current = offer.wrappedValue {
-                UndoBar(text: current.text) {
+                UndoBar(text: current.text, action: current.action) {
                     offer.wrappedValue = nil
                     Task { await current.perform() }
                 }
                 .task(id: current.id) {
-                    try? await Task.sleep(for: .seconds(seconds))
+                    try? await Task.sleep(for: .seconds(current.seconds ?? seconds))
                     if offer.wrappedValue?.id == current.id { offer.wrappedValue = nil }
                 }
             }

@@ -7,6 +7,7 @@ struct TransactionsView: View {
     @State private var deleted: FinanceTransaction?
     @State private var toast: String?
     @State private var editing: FinanceTransaction?
+    @State private var similar: UndoOffer?
 
     var body: some View {
         List {
@@ -31,8 +32,16 @@ struct TransactionsView: View {
             Task { await model.reload() }
         }
         .sheet(item: $editing) { transaction in
-            TransactionSheet(model: TransactionFormModel(api: model.api, editing: transaction)) { toast = $0 }
+            TransactionSheet(model: TransactionFormModel(api: model.api, editing: transaction), onSaved: { toast = $0 },
+                             onCategorized: { id, category, name in
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    similar = await SimilarCategorization.offer(api: model.api, transactionId: id, categoryId: category,
+                                                                categoryName: name) { toast = $0 }
+                }
+            })
         }
+        .undoBar($similar)
         .task(id: model.filters) {
             if model.state == .loading, model.periods.isEmpty {
                 await model.load()

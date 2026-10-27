@@ -258,6 +258,8 @@ struct NotesHomeView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .contentMargins(.top, CarliSpace.s4, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(CarliColor.bg)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Buscar en notas")
@@ -354,8 +356,13 @@ struct NotesHomeView: View {
             snapshot.search(query, filter: filter).map { ($0, nil) }
         }
         if rows.isEmpty {
-            ContentUnavailableView("Nada por aquí", systemImage: "magnifyingglass",
-                                   description: Text("Prueba con otra palabra o cambia el filtro."))
+            if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                ContentUnavailableView(filter == .text ? "No hay notas de texto" : filter == .list ? "No hay listas" : "No hay listas de la compra",
+                                       systemImage: "note.text", description: Text("Crea una con el botón +."))
+            } else {
+                ContentUnavailableView("Nada por aquí", systemImage: "magnifyingglass",
+                                       description: Text("Prueba con otra palabra o cambia el filtro."))
+            }
         } else {
             Section {
                 ForEach(rows, id: \.0.id) { note, snippet in

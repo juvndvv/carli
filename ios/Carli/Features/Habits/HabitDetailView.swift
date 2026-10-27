@@ -320,6 +320,7 @@ private struct WeekBarsCard: View {
                                 .fill(week.target > 0 && week.value + 0.001 >= week.target ? habitRingColor : CarliColor.text)
                                 .frame(height: min(64, max(4, week.value / top * 64)))
                         }
+                        .frame(maxWidth: 40)
                         .frame(maxWidth: .infinity)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel("Semana del \(CarliDate.day(week.start).map(HabitFormat.dayPhrase) ?? week.start): \(HabitFormat.number(week.value)) de \(HabitFormat.number(week.target))")

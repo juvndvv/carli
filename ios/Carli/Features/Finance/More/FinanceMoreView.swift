@@ -97,6 +97,9 @@ struct FinanceMoreView: View {
         .navigationDestination(for: AccountLink.self) { link in
             AccountLinkView(api: api, link: link, go: go)
         }
+        .navigationDestination(for: BankLinkRoute.self) { route in
+            BankLinkView(api: api, route: route) { _ in }
+        }
     }
 
     @ViewBuilder
