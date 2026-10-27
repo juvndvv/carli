@@ -19,15 +19,8 @@ enum ModuleTab: String, CaseIterable {
         }
     }
 
-    /// Filled, low-detail, rounded: one circle family so the bar reads as a set.
-    var symbol: String {
-        switch self {
-        case .finance: "eurosign.circle.fill"
-        case .tasks: "checkmark.circle.fill"
-        case .notes: "pencil.circle.fill"
-        case .habits: "repeat.circle.fill"
-        }
-    }
+    /// Fluent UI Filled icons (MIT) in the asset catalog: soft, curved and filled.
+    var icon: String { "tab-\(rawValue)" }
 
     var sections: [ModuleSection] {
         switch self {
@@ -61,14 +54,14 @@ struct ShellView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            Tab("Inicio", systemImage: "house.fill", value: "home") {
+            Tab("Inicio", image: "tab-home", value: "home") {
                 if let home {
                     HomeView(model: home) { selection = $0 }
                 }
             }
 
             ForEach(modules, id: \.self) { module in
-                Tab(module.title, systemImage: module.symbol, value: module.rawValue) {
+                Tab(module.title, image: module.icon, value: module.rawValue) {
                     ModuleRootView(module: module)
                 }
             }
