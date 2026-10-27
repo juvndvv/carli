@@ -9,7 +9,13 @@ final readonly class ApnsMessage
         public string $body,
         public ?string $url = null,
         public ?string $threadId = null,
+        public ?string $notificationId = null,
     ) {}
+
+    public function withNotificationId(?string $notificationId): self
+    {
+        return new self($this->title, $this->body, $this->url, $this->threadId, $notificationId);
+    }
 
     /**
      * @return array<string, mixed>
@@ -25,6 +31,9 @@ final readonly class ApnsMessage
             $aps['thread-id'] = $this->threadId;
         }
 
-        return array_filter(['aps' => $aps, 'url' => $this->url], fn ($value) => $value !== null);
+        return array_filter(
+            ['aps' => $aps, 'url' => $this->url, 'notification_id' => $this->notificationId],
+            fn ($value) => $value !== null,
+        );
     }
 }

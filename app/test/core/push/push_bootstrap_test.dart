@@ -16,6 +16,7 @@ Future<(ProviderContainer, FakeApi)> pumpWithPush(
 }) async {
   final api = FakeApi({
     'GET /v1/me': (_) => (200, {'data': testUser}),
+    'POST /v1/notifications/read': (_) => (200, {'marked': 1, 'unread_count': 0}),
     'POST /v1/push-devices': (_) => (
       201,
       {
@@ -57,6 +58,20 @@ void main() {
     platform.tap('/somewhere-unknown');
     await tester.pump(const Duration(milliseconds: 500));
     expect(locationOf(container), Routes.notifications);
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('marks the tapped push as read in the inbox', (tester) async {
+    final platform = FakePushPlatform(currentPermission: PushPermission.granted);
+    final (container, api) = await pumpWithPush(tester, platform);
+
+    platform.tap('/pendientes', notificationId: 'n-1');
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(locationOf(container), Routes.pending);
+    expect(api.requests.where((request) => request.path == '/v1/notifications/read').single.data, {
+      'ids': ['n-1'],
+    });
     await tester.pump(const Duration(seconds: 5));
   });
 

@@ -51,6 +51,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
     Route::post('notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('notifications/unread', [NotificationController::class, 'markUnread'])->name('notifications.unread');
+    Route::post('notifications/delete', [NotificationController::class, 'destroy'])->name('notifications.delete');
     Route::post('notifications/test', [NotificationController::class, 'test'])
         ->middleware('throttle:10,1')
         ->name('notifications.test');

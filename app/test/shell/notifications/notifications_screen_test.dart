@@ -76,6 +76,9 @@ Future<GoRouter> pumpNotificationsRouter(WidgetTester tester, FakeApi api, {Stri
 Iterable<String> markReadBodies(FakeApi api) =>
     api.requests.where((request) => request.path == '/v1/notifications/read').map((request) => '${request.data}');
 
+Iterable<String> bodiesOf(FakeApi api, String path) =>
+    api.requests.where((request) => request.path == path).map((request) => '${request.data}');
+
 void main() {
   group('formatTimeAgo', () {
     DateTime ago(Duration duration) => now.subtract(duration);
@@ -231,6 +234,109 @@ void main() {
 
       expect(find.text('Resumen semanal'), findsOneWidget);
       expect(find.text('Cargar más'), findsNothing);
+    });
+
+    testWidgets('groups unread and read notifications', (tester) async {
+      final api = FakeApi(
+        notificationRoutes(
+          items: [
+            notificationJson('n1', title: 'Nuevo aviso'),
+            notificationJson('n2', title: 'Aviso visto', readAt: '2026-10-24T09:30:00+02:00'),
+          ],
+        ),
+      );
+      await pumpNotificationsRouter(tester, api, initial: '/notificaciones');
+
+      expect(find.text('Sin leer'), findsOneWidget);
+      expect(find.text('Leídas'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('Nuevo aviso')).dy, lessThan(tester.getTopLeft(find.text('Leídas')).dy));
+      expect(tester.getTopLeft(find.text('Aviso visto')).dy, greaterThan(tester.getTopLeft(find.text('Leídas')).dy));
+    });
+
+    testWidgets('swiping left deletes a notification', (tester) async {
+      final api = FakeApi(
+        notificationRoutes(
+          items: [
+            notificationJson('n1'),
+            notificationJson('n2', title: 'Otro'),
+          ],
+        ),
+      );
+      await pumpNotificationsRouter(tester, api, initial: '/notificaciones');
+
+      await tester.drag(find.text('Netflix 13,99 € pasado mañana'), const Offset(-600, 0));
+      await settle(tester);
+      await settle(tester);
+
+      expect(bodiesOf(api, '/v1/notifications/delete'), ['{ids: [n1]}']);
+      expect(find.text('Netflix 13,99 € pasado mañana'), findsNothing);
+      expect(find.text('Otro'), findsOneWidget);
+    });
+
+    testWidgets('swiping right toggles read and unread', (tester) async {
+      final api = FakeApi(
+        notificationRoutes(
+          items: [
+            notificationJson('n1'),
+            notificationJson('n2', title: 'Aviso visto', readAt: '2026-10-24T09:30:00+02:00'),
+          ],
+        ),
+      );
+      await pumpNotificationsRouter(tester, api, initial: '/notificaciones');
+
+      await tester.drag(find.text('Netflix 13,99 € pasado mañana'), const Offset(600, 0));
+      await settle(tester);
+      expect(markReadBodies(api), ['{ids: [n1]}']);
+
+      await tester.drag(find.text('Aviso visto'), const Offset(600, 0));
+      await settle(tester);
+      expect(bodiesOf(api, '/v1/notifications/unread'), ['{ids: [n2]}']);
+      expect(find.byType(UnreadDot), findsOneWidget);
+    });
+
+    testWidgets('deletes every notification after confirming', (tester) async {
+      var deleted = false;
+      final routes = notificationRoutes(items: [notificationJson('n1')]);
+      final api = FakeApi({
+        ...routes,
+        'GET /v1/notifications': (options) =>
+            deleted ? (200, notificationsPageJson(const [])) : routes['GET /v1/notifications']!(options),
+        'POST /v1/notifications/delete': (_) {
+          deleted = true;
+          return (200, {'deleted': 1, 'unread_count': 0});
+        },
+      });
+      await pumpNotificationsRouter(tester, api, initial: '/notificaciones');
+
+      await tester.tap(find.bySemanticsLabel('Borrar notificaciones'));
+      await settle(tester);
+      await tester.tap(find.text('Borrar todas'));
+      await settle(tester);
+      await tester.tap(find.text('Borrar todas').last);
+      await settle(tester);
+
+      expect(bodiesOf(api, '/v1/notifications/delete'), ['{all: true}']);
+      expect(find.text('No tienes notificaciones.'), findsOneWidget);
+      expect(find.bySemanticsLabel('Borrar notificaciones'), findsNothing);
+    });
+
+    testWidgets('deletes only read notifications', (tester) async {
+      final api = FakeApi(
+        notificationRoutes(
+          items: [
+            notificationJson('n1'),
+            notificationJson('n2', title: 'Aviso visto', readAt: '2026-10-24T09:30:00+02:00'),
+          ],
+        ),
+      );
+      await pumpNotificationsRouter(tester, api, initial: '/notificaciones');
+
+      await tester.tap(find.bySemanticsLabel('Borrar notificaciones'));
+      await settle(tester);
+      await tester.tap(find.text('Borrar leídas'));
+      await settle(tester);
+
+      expect(bodiesOf(api, '/v1/notifications/delete'), ['{read: true}']);
     });
 
     testWidgets('shows a toast when marking read fails', (tester) async {

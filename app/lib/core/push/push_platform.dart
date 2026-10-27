@@ -18,9 +18,10 @@ class PushRegistration {
 
 @immutable
 class PushTap {
-  const PushTap(this.url);
+  const PushTap(this.url, {this.notificationId});
 
   final String? url;
+  final String? notificationId;
 }
 
 abstract interface class PushPlatform {
@@ -45,10 +46,12 @@ class NativePushPlatform implements PushPlatform {
   final _taps = StreamController<PushTap>.broadcast();
 
   Future<void> _handle(MethodCall call) async {
-    if (call.method == 'opened') _taps.add(PushTap(_url(call.arguments)));
+    if (call.method == 'opened') _taps.add(_tap(call.arguments));
   }
 
-  static String? _url(Object? arguments) => arguments is Map ? arguments['url'] as String? : null;
+  static PushTap _tap(Object? arguments) => arguments is Map
+      ? PushTap(arguments['url'] as String?, notificationId: arguments['notification_id'] as String?)
+      : const PushTap(null);
 
   @override
   Stream<PushTap> get taps => _taps.stream;
@@ -56,7 +59,7 @@ class NativePushPlatform implements PushPlatform {
   @override
   Future<PushTap?> launchTap() async {
     final arguments = await _channel.invokeMethod<Object?>('launchTap');
-    return arguments is Map ? PushTap(_url(arguments)) : null;
+    return arguments is Map ? _tap(arguments) : null;
   }
 
   @override

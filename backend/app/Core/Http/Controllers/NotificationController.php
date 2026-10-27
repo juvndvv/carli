@@ -2,6 +2,7 @@
 
 namespace App\Core\Http\Controllers;
 
+use App\Core\Http\Requests\DeleteNotificationsRequest;
 use App\Core\Http\Requests\MarkNotificationsReadRequest;
 use App\Core\Http\Resources\NotificationResource;
 use App\Core\Notifications\TestNotification;
@@ -45,6 +46,42 @@ class NotificationController
 
         return response()->json([
             'marked' => $marked,
+            'unread_count' => $user->unreadNotifications()->count(),
+        ]);
+    }
+
+    public function markUnread(MarkNotificationsReadRequest $request): JsonResponse
+    {
+        $user = $this->user($request);
+
+        $query = $user->readNotifications();
+
+        if (! $request->boolean('all')) {
+            $query->whereIn('id', (array) $request->validated('ids', []));
+        }
+
+        $marked = $query->update(['read_at' => null]);
+
+        return response()->json([
+            'marked' => $marked,
+            'unread_count' => $user->unreadNotifications()->count(),
+        ]);
+    }
+
+    public function destroy(DeleteNotificationsRequest $request): JsonResponse
+    {
+        $user = $this->user($request);
+
+        $query = $request->boolean('read') ? $user->readNotifications() : $user->notifications();
+
+        if (! $request->boolean('all') && ! $request->boolean('read')) {
+            $query->whereIn('id', (array) $request->validated('ids', []));
+        }
+
+        $deleted = $query->delete();
+
+        return response()->json([
+            'deleted' => $deleted,
             'unread_count' => $user->unreadNotifications()->count(),
         ]);
     }

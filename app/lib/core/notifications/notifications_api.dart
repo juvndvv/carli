@@ -32,4 +32,20 @@ class NotificationsApi {
     final response = await _dio.post<NotificationJson>('$_base/read', data: ids == null ? {'all': true} : {'ids': ids});
     return (response.data!['unread_count'] as num).toInt();
   }
+
+  Future<int> markUnread(List<String> ids) async {
+    final response = await _dio.post<NotificationJson>('$_base/unread', data: {'ids': ids});
+    return (response.data!['unread_count'] as num).toInt();
+  }
+
+  /// Deletes [ids], every read notification with [onlyRead], or everything when neither is given.
+  Future<int> delete({List<String>? ids, bool onlyRead = false}) async {
+    final data = ids != null
+        ? {'ids': ids}
+        : onlyRead
+        ? {'read': true}
+        : {'all': true};
+    final response = await _dio.post<NotificationJson>('$_base/delete', data: data);
+    return (response.data!['unread_count'] as num).toInt();
+  }
 }

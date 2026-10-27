@@ -106,6 +106,87 @@ describe('inbox', function () {
             ->assertJsonValidationErrors('ids');
     });
 
+    it('marks specific notifications as unread', function () {
+        configurePush(false);
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $user->notify(new JournalNotification);
+        $user->notify(new JournalNotification);
+        $other->notify(new JournalNotification);
+        $user->unreadNotifications->markAsRead();
+        $other->unreadNotifications->markAsRead();
+
+        $target = $user->notifications()->first()->id;
+        $foreign = $other->notifications()->first()->id;
+
+        $this->actingAs($user)->postJson('/api/v1/notifications/unread', ['ids' => [$target, $foreign]])
+            ->assertOk()
+            ->assertExactJson(['marked' => 1, 'unread_count' => 1]);
+
+        expect($user->notifications()->find($target)->read_at)->toBeNull()
+            ->and($other->unreadNotifications()->count())->toBe(0);
+    });
+
+    it('deletes specific notifications of the user only', function () {
+        configurePush(false);
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $user->notify(new JournalNotification);
+        $user->notify(new JournalNotification);
+        $other->notify(new JournalNotification);
+
+        $target = $user->notifications()->first()->id;
+        $foreign = $other->notifications()->first()->id;
+
+        $this->actingAs($user)->postJson('/api/v1/notifications/delete', ['ids' => [$target, $foreign]])
+            ->assertOk()
+            ->assertExactJson(['deleted' => 1, 'unread_count' => 1]);
+
+        expect($user->notifications()->count())->toBe(1)
+            ->and($other->notifications()->count())->toBe(1);
+    });
+
+    it('deletes only read notifications', function () {
+        configurePush(false);
+        $user = User::factory()->create();
+
+        $user->notify(new JournalNotification);
+        $user->notify(new JournalNotification);
+        $user->notifications()->first()->markAsRead();
+
+        $this->actingAs($user)->postJson('/api/v1/notifications/delete', ['read' => true])
+            ->assertOk()
+            ->assertExactJson(['deleted' => 1, 'unread_count' => 1]);
+
+        expect($user->notifications()->count())->toBe(1);
+    });
+
+    it('deletes all notifications', function () {
+        configurePush(false);
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $user->notify(new JournalNotification);
+        $user->notify(new JournalNotification);
+        $other->notify(new JournalNotification);
+
+        $this->actingAs($user)->postJson('/api/v1/notifications/delete', ['all' => true])
+            ->assertOk()
+            ->assertExactJson(['deleted' => 2, 'unread_count' => 0]);
+
+        expect($other->notifications()->count())->toBe(1);
+    });
+
+    it('requires ids, read or all when deleting', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/v1/notifications/delete', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ids');
+    });
+
     it('sends a test notification', function () {
         configurePush(false);
         $user = User::factory()->create();
