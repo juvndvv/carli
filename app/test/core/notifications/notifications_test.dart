@@ -194,6 +194,7 @@ void main() {
         '/finanzas/movimientos/nuevo?tipo=ingreso',
       );
       expect(nativeNotificationRoute('/pendientes'), '/pendientes');
+      expect(nativeNotificationRoute('/habitos/hoy'), '/habitos/hoy');
       expect(nativeNotificationRoute('/ajustes'), '/mas/ajustes');
     });
 
