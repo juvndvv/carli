@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:carli/modules/finance/data/json.dart';
 import 'package:carli/modules/tasks/data/tasks_models.dart';
 import 'package:carli/modules/tasks/screens/today_screen.dart';
 import 'package:carli/modules/tasks/ui/tasks_home_card.dart';
@@ -19,7 +20,7 @@ Map<String, FakeRoute> _routes({required List<String> completed, required List<S
   'GET /v1/tasks/today': (_) => (
     200,
     todayJson(
-      overdue: [taskJson(id: 'late', title: 'Llamar al seguro', dueDate: '2026-10-25', overdue: true)],
+      overdue: [taskJson(id: 'late', title: 'Llamar al seguro', dueDate: isoDate(DateTime.now().subtract(const Duration(days: 1))), overdue: true)],
       today: [
         taskJson(
           id: 'trash',
