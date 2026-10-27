@@ -51,12 +51,14 @@ abstract final class AppModuleIds {
   static const finance = 'finance';
   static const tasks = 'tasks';
   static const notes = 'notes';
+  static const habits = 'habits';
 }
 
 const moduleSettingsLocations = {
   AppModuleIds.finance: '/mas/ajustes-finanzas',
   AppModuleIds.tasks: '/tareas/ajustes',
   AppModuleIds.notes: '/notas/ajustes',
+  AppModuleIds.habits: '/habitos/ajustes',
 };
 
 String? moduleSettingsLocationOf(String moduleId) => moduleSettingsLocations[moduleId];

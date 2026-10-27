@@ -19,6 +19,8 @@ import '../../modules/tasks/data/tasks_providers.dart';
 import '../../modules/tasks/ui/tasks_home_card.dart';
 import '../../modules/tasks/ui/tasks_routes.dart';
 import '../../modules/notes/ui/notes_home_card.dart';
+import '../../modules/habits/data/habits_providers.dart';
+import '../../modules/habits/ui/habits_home_card.dart';
 import '../../ui/button.dart';
 import '../../ui/icon_names.dart';
 import '../../ui/page.dart';
@@ -65,6 +67,7 @@ class HomeScreen extends ConsumerWidget {
       onRefresh: () async {
         ref.read(financeChangesProvider.notifier).refreshAll();
         if (showsTasks) ref.read(tasksChangesProvider.notifier).notify();
+        ref.read(habitsChangesProvider.notifier).notify();
         await Future.wait([
           ref.read(financeSummaryProvider.future).then((_) {}, onError: (_) {}),
           ref.read(pendingSummaryProvider.notifier).refresh().then((_) {}, onError: (_) {}),
@@ -91,6 +94,7 @@ class HomeScreen extends ConsumerWidget {
                   onOpenTask: (task) => context.push(TasksRoutes.task(task.id)),
                 ),
               ],
+              const HabitsHomeCard(),
               const NotesHomeCard(),
               const UpcomingModulesCard(),
               if (!hasNotifications) ...[const SizedBox(height: CarliSpace.s16), const NotificationsHomeCard()],

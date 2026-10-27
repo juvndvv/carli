@@ -18,6 +18,8 @@ import '../../../ui/sheet.dart';
 import '../../../ui/switch.dart';
 import '../../../ui/toast.dart';
 import '../../finance/data/json.dart';
+import '../../habits/data/habits_providers.dart';
+import '../../habits/ui/convert_template_sheet.dart';
 import '../data/frequency.dart';
 import '../data/quick_dates.dart';
 import '../data/task_actions.dart';
@@ -570,6 +572,15 @@ class _TemplateEditorState extends ConsumerState<TemplateEditor> {
                     const SizedBox(height: CarliSpace.s20),
                     _TemplateHistoryCard(templateId: template.id),
                     const SizedBox(height: CarliSpace.s20),
+                    if (ref.watch(habitsEnabledProvider) && canConvertToHabit(rrule: template.rrule)) ...[
+                      CarliButton(
+                        label: 'Convertir en hábito',
+                        variant: CarliButtonVariant.secondary,
+                        icon: carliIconNamed('repeat'),
+                        onPressed: () => showConvertTemplateSheet(context, templateId: template.id),
+                      ),
+                      const SizedBox(height: CarliSpace.s8),
+                    ],
                     CarliButton(
                       label: template.paused ? 'Reanudar plantilla' : 'Pausar plantilla',
                       variant: CarliButtonVariant.secondary,

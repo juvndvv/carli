@@ -14,6 +14,8 @@ import '../../../ui/icon_names.dart';
 import '../../../ui/page.dart';
 import '../../../ui/pressable.dart';
 import '../../../ui/ring.dart';
+import '../../habits/data/habits_providers.dart';
+import '../../habits/ui/habits_tasks_row.dart';
 import '../data/tasks_models.dart';
 import '../data/tasks_providers.dart';
 import '../ui/task_group.dart';
@@ -47,6 +49,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       ),
       onRefresh: () async {
         ref.invalidate(tasksTodayProvider);
+        if (ref.read(habitsEnabledProvider)) ref.read(habitsChangesProvider.notifier).notify();
         await ref.read(tasksTodayProvider.future).then((_) {}, onError: (_) {});
       },
       slivers: [
@@ -96,6 +99,7 @@ class _TodayBody extends StatelessWidget {
       children: [
         Text(formatLongDate(view.date), style: CarliType.small.copyWith(color: colors.text2)),
         if (view.total > 0 || view.overdue.isNotEmpty) TodayProgressCard(view: view),
+        const HabitsTasksRow(),
         if (view.overdue.isNotEmpty)
           _Section(
             title: 'Vencidas',

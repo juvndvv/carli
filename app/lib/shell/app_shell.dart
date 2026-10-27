@@ -13,6 +13,8 @@ import '../core/theme/tokens.dart';
 import '../core/theme/typography.dart';
 import '../core/pending/pending_providers.dart';
 import '../modules/finance/screens/transaction_sheet.dart';
+import '../modules/habits/habits_paths.dart';
+import '../modules/habits/habits_shell.dart';
 import '../modules/notes/notes_paths.dart';
 import '../modules/notes/notes_shell.dart';
 import '../modules/tasks/screens/new_task_sheet.dart';
@@ -23,12 +25,13 @@ import '../ui/pressable.dart';
 import 'pending/pending_badge.dart';
 
 /// Which set of tabs the bar shows: carli's general home lists the modules, a module lists its own screens.
-enum ShellContext { home, finance, tasks, notes }
+enum ShellContext { home, finance, tasks, notes, habits }
 
 ShellContext shellContextFor(String location) => switch (location) {
   _ when location == Routes.home || _homeChildren.any(location.startsWith) => ShellContext.home,
   _ when location.startsWith(TasksRoutes.root) => ShellContext.tasks,
   _ when NotesPaths.owns(location) => ShellContext.notes,
+  _ when HabitsPaths.owns(location) => ShellContext.habits,
   _ => ShellContext.finance,
 };
 
@@ -108,6 +111,7 @@ class AppShell extends ConsumerWidget {
           ),
       ],
       ShellContext.notes => notesShellTabs(navigationShell, location),
+      ShellContext.habits => habitsShellTabs(navigationShell),
     };
 
     return Scaffold(
@@ -123,10 +127,12 @@ class AppShell extends ConsumerWidget {
                 ShellContext.finance => () => showTransactionSheet(context),
                 ShellContext.tasks => () => showNewTaskSheet(context),
                 ShellContext.notes => () => onNotesAdd(context, ref, location),
+                ShellContext.habits => () => onHabitsAdd(context),
               },
               addLabel: switch (shellContext) {
                 ShellContext.tasks => 'Nueva tarea',
                 ShellContext.notes => notesAddLabel(location),
+                ShellContext.habits => 'Nuevo hábito',
                 _ => 'Nuevo movimiento',
               },
             ),
