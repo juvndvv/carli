@@ -1,0 +1,117 @@
+name: Backend
+
+on:
+  pull_request:
+    paths:
+      - backend/**
+      - infra/**
+      - compose.yaml
+      - .github/workflows/backend.yml
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - infra/**
+      - compose.yaml
+      - .github/workflows/backend.yml
+  workflow_dispatch:
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: backend
+
+env:
+  PHP_VERSION: "8.4"
+  PHP_EXTENSIONS: pdo_pgsql, pgsql, intl, bcmath, gmp, zip, pcntl
+
+jobs:
+  quality:
+    name: Pint and PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - uses: ramsey/composer-install@v3
+        with:
+          working-directory: backend
+
+      - run: vendor/bin/pint --test
+
+      - run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: personal
+          POSTGRES_PASSWORD: personal
+          POSTGRES_DB: personal_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U personal -d personal_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_USERNAME: personal
+      DB_PASSWORD: personal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - uses: ramsey/composer-install@v3
+        with:
+          working-directory: backend
+
+      - run: cp .env.example .env && php artisan key:generate
+
+      - run: php artisan test --parallel
+
+  deploy:
+    name: Deploy to Lightsail
+    needs: [quality, tests]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+        run: ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "ubuntu@$HOST" "$GITHUB_SHA"
