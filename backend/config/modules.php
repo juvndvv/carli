@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Finance\FinanceServiceProvider;
+use App\Modules\Habits\HabitsServiceProvider;
 use App\Modules\Notes\NotesServiceProvider;
 use App\Modules\Tasks\TasksServiceProvider;
 
@@ -9,5 +10,6 @@ return [
         FinanceServiceProvider::class,
         TasksServiceProvider::class,
         NotesServiceProvider::class,
+        HabitsServiceProvider::class,
     ],
 ];

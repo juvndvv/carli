@@ -13,7 +13,7 @@ it('lists available modules followed by coming soon placeholders', function () {
 
     $response = $this->actingAs($user)->getJson('/api/v1/modules')->assertOk();
 
-    expect($response->json('data.*.id'))->toBe(['journal', 'health', 'habits']);
+    expect($response->json('data.*.id'))->toBe(['journal', 'health']);
 
     $response->assertJsonPath('data.0', [
         'id' => 'journal',

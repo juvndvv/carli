@@ -23,6 +23,7 @@
             <directory>app/Modules/Finance/tests</directory>
             <directory>app/Modules/Tasks/tests</directory>
             <directory>app/Modules/Notes/tests</directory>
+            <directory>app/Modules/Habits/tests</directory>
         </exclude>
     </source>
     <php>
