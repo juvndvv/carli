@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// A module's own sections, shown as a segmented control inside its tab.
 struct ModuleSection: Identifiable, Hashable {
@@ -20,13 +19,13 @@ enum ModuleTab: String, CaseIterable {
         }
     }
 
-    /// Line symbols with little detail; the tab bar keeps them unfilled.
+    /// Filled, low-detail, rounded: one circle family so the bar reads as a set.
     var symbol: String {
         switch self {
-        case .finance: "creditcard"
-        case .tasks: "checkmark.circle"
-        case .notes: "note.text"
-        case .habits: "repeat"
+        case .finance: "eurosign.circle.fill"
+        case .tasks: "checkmark.circle.fill"
+        case .notes: "pencil.circle.fill"
+        case .habits: "repeat.circle.fill"
         }
     }
 
@@ -62,19 +61,15 @@ struct ShellView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            Tab(value: "home") {
+            Tab("Inicio", systemImage: "house.fill", value: "home") {
                 if let home {
                     HomeView(model: home) { selection = $0 }
                 }
-            } label: {
-                Label { Text("Inicio") } icon: { Image.outline("house") }
             }
 
             ForEach(modules, id: \.self) { module in
-                Tab(value: module.rawValue) {
+                Tab(module.title, systemImage: module.symbol, value: module.rawValue) {
                     ModuleRootView(module: module)
-                } label: {
-                    Label { Text(module.title) } icon: { Image.outline(module.symbol) }
                 }
             }
         }
@@ -141,19 +136,3 @@ struct ModuleRootView: View {
     }
 }
 
-extension Image {
-    /// An SF Symbol flattened to a template bitmap. The system tab bar forces the
-    /// `.fill` variant on symbol images; a plain image keeps the line version.
-    static func outline(_ symbol: String, pointSize: CGFloat = 19) -> Image {
-        let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
-        guard let source = UIImage(systemName: symbol, withConfiguration: config) else {
-            return Image(systemName: symbol)
-        }
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 3
-        let bitmap = UIGraphicsImageRenderer(size: source.size, format: format).image { _ in
-            source.withTintColor(.black, renderingMode: .alwaysOriginal).draw(at: .zero)
-        }
-        return Image(uiImage: bitmap.withRenderingMode(.alwaysTemplate))
-    }
-}
