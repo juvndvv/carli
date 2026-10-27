@@ -94,17 +94,17 @@ Producción corre en una instancia Lightsail (Ubuntu 24.04, 2 GB) con este mismo
 
 1. **Pint y PHPStan** (`pint --test`, `phpstan analyse`).
 2. **Tests** (`php artisan test --parallel`) contra un Postgres 18 de servicio.
-3. **Deploy** (solo push a `main`, tras los dos anteriores): entra por SSH en Lightsail y ejecuta `infra/scripts/deploy.sh <sha>`, que hace fast-forward a ese commit, `docker compose build`, un `pg_dump` en `backups/predeploy/` (guarda los 5 últimos), `docker compose up -d --wait` (`app` aplica las migraciones al arrancar) y comprueba `/up`.
+3. **Promote** (solo push a `main`, tras los dos anteriores): hace fast-forward de la rama `production` a ese commit.
 
-La clave SSH del CI solo puede lanzar ese script: en `~/.ssh/authorized_keys` del servidor va como
+El servidor no abre puertos ni guarda claves de GitHub con escritura: `carli-deploy.timer` ejecuta cada 2 minutos `infra/scripts/deploy.sh`, que compara el checkout con `origin/production` y, si hay un commit nuevo, hace fast-forward, `docker compose build`, un `pg_dump` en `backups/predeploy/` (guarda los 5 últimos), `docker compose up -d --wait` (`app` aplica las migraciones al arrancar) y comprueba `/up`. Instalarlo en el servidor:
 
+```sh
+sudo cp ~/carli/infra/systemd/carli-deploy.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now carli-deploy.timer
+journalctl -u carli-deploy -f   # ver los despliegues
 ```
-command="/home/ubuntu/carli/infra/scripts/deploy.sh",restrict ssh-ed25519 AAAA... github-actions-deploy
-```
 
-Secretos del repo en GitHub: `LIGHTSAIL_HOST`, `LIGHTSAIL_SSH_KEY` (privada de esa clave) y `LIGHTSAIL_KNOWN_HOSTS` (`ssh-keyscan -t ed25519 <host>`). El job usa el environment `production`, así que puedes exigir aprobación manual desde *Settings → Environments*.
-
-Desplegar a mano el `main` actual: `ssh carli 'cd ~/carli && git fetch -q origin main && infra/scripts/deploy.sh $(git rev-parse origin/main)'`. Volver atrás: en el servidor, `git reset --hard <sha anterior> && docker compose up -d --build` y, si la migración rompió datos, restaura el último dump de `backups/predeploy/`.
+Desplegar a mano un commit de `main` sin esperar al CI: `ssh carli '~/carli/infra/scripts/deploy.sh <sha>'`. Volver atrás: en el servidor, para el timer (`sudo systemctl stop carli-deploy.timer`, si no volvería a desplegar `production`), `git reset --hard <sha anterior> && docker compose up -d --build` y, si la migración rompió datos, restaura el último dump de `backups/predeploy/`. Reactiva el timer cuando el arreglo esté en `production`.
 
 ### Sincronización bancaria (Enable Banking, F3)
 

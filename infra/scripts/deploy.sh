@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Deploys the backend on the server. With no argument it deploys origin/production, the
+# branch CI fast-forwards once a main commit passes Pint, PHPStan and the tests, and does
+# nothing when the checkout is already there (carli-deploy.timer runs it every 2 minutes).
+# With a commit sha it deploys that commit, which must be on origin/main.
 set -euo pipefail
 
 readonly REPO_DIR="${DEPLOY_REPO_DIR:-$HOME/carli}"
@@ -9,20 +13,29 @@ readonly HEALTH_URL="http://127.0.0.1:${APP_PORT:-8180}/up"
 log() { printf '[deploy %s] %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 
 main() {
-    local sha="${SSH_ORIGINAL_COMMAND:-${1:-}}"
-    if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
-        echo "usage: deploy.sh <40-char commit sha>" >&2
+    cd "$REPO_DIR"
+    exec 9> .deploy.lock
+    flock --nonblock 9 || { log "another deploy is running"; exit 0; }
+
+    local sha="${1:-}"
+    if [[ -z "$sha" ]]; then
+        git fetch --quiet origin main
+        # Nothing to do until CI has promoted a first commit.
+        git fetch --quiet origin production 2> /dev/null || exit 0
+        sha="$(git rev-parse origin/production)"
+    elif [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+        git fetch --quiet origin main
+    else
+        echo "usage: deploy.sh [<40-char commit sha>]" >&2
         exit 64
     fi
 
-    cd "$REPO_DIR"
-
-    log "fetching origin/main"
-    git fetch --quiet origin main
     if ! git merge-base --is-ancestor "$sha" origin/main; then
         echo "commit $sha is not on origin/main" >&2
         exit 65
     fi
+    # Already deployed, or older than what runs (a manual deploy got ahead of production).
+    git merge-base --is-ancestor "$sha" HEAD && exit 0
     git merge --ff-only --quiet "$sha"
     log "at $(git log --oneline -1)"
 
@@ -47,4 +60,3 @@ main() {
 }
 
 main "$@"
-exit

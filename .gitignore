@@ -2,4 +2,5 @@
 .env
 node_modules/
 /backups/
+/.deploy.lock
 .env.bak*
