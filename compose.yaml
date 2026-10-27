@@ -133,6 +133,21 @@ services:
       app:
         condition: service_healthy
 
+  # Cloudflare Tunnel for servers with no open ports (e.g. AWS Lightsail). Off unless the
+  # "tunnel" profile is active (COMPOSE_PROFILES=tunnel in .env). Uses the host network so the
+  # tunnel's public hostname keeps pointing at http://localhost:${APP_PORT}, as on the Mac.
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:2026.9.3
+    restart: unless-stopped
+    network_mode: host
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      caddy:
+        condition: service_started
+
   backup:
     build:
       context: ./infra/docker/backup
