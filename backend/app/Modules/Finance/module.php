@@ -28,8 +28,8 @@ return [
         'goal_reached' => [
             'label' => 'Objetivo alcanzado',
             'description' => 'Al llegar al 25, 50, 75 y 100 % de un objetivo de ahorro.',
-            'push' => false,
-            'in_app' => false,
+            'push' => true,
+            'in_app' => true,
         ],
         'debt_reminder' => [
             'label' => 'Recordatorio de deuda',
@@ -46,8 +46,8 @@ return [
         'weekly_summary' => [
             'label' => 'Resumen semanal',
             'description' => 'Los lunes a las 09:00.',
-            'push' => false,
-            'in_app' => false,
+            'push' => true,
+            'in_app' => true,
         ],
         'bank_consent_expiring' => [
             'label' => 'Conexión bancaria a punto de caducar',
@@ -58,7 +58,7 @@ return [
         'bank_sync_failed' => [
             'label' => 'Error al sincronizar un banco',
             'description' => 'Cuando una sincronización bancaria falla.',
-            'push' => false,
+            'push' => true,
             'in_app' => true,
         ],
     ],

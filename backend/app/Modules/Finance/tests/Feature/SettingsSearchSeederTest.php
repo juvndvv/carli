@@ -74,7 +74,7 @@ it('exposes the module manifest next to the provider', function () {
     expect($manifest['id'])->toBe('finance')
         ->and($manifest['route'])->toBe('/finanzas')
         ->and(array_keys($manifest['notifications']))->toBe(['budget_threshold', 'upcoming_charge', 'recurring_pending', 'goal_reached', 'debt_reminder', 'payroll_overdue', 'weekly_summary', 'bank_consent_expiring', 'bank_sync_failed'])
-        ->and($manifest['notifications']['weekly_summary']['push'])->toBeFalse();
+        ->and(collect($manifest['notifications'])->every(fn (array $type) => $type['push'] && $type['in_app']))->toBeTrue();
 });
 
 it('seeds realistic demo data for the demo user', function () {

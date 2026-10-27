@@ -29,6 +29,7 @@ final List<_RouteRule> _rules = [
     keepQuery: true,
   ),
   (pattern: RegExp(r'^/pendientes$'), target: (_) => '/pendientes', keepQuery: true),
+  (pattern: RegExp(r'^/habitos(/hoy|/lista|/progreso)?$'), target: (match) => match[0]!, keepQuery: false),
   (pattern: RegExp(r'^/notificaciones$'), target: (_) => '/notificaciones', keepQuery: false),
   (pattern: RegExp(r'^/ajustes/notificaciones$'), target: (_) => '/mas/ajustes/avisos', keepQuery: false),
   (pattern: RegExp(r'^/ajustes(/.*)?$'), target: (_) => '/mas/ajustes', keepQuery: false),
