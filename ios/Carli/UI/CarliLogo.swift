@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The carli face: an ember rounded square with two white eyes. `eyeOpenness`
+/// The carli face: a sun rounded square with two dark eyes. `eyeOpenness`
 /// drives the launch blink (1 open, 0 closed).
 struct CarliLogo: View {
     var size: CGFloat = 30

@@ -109,6 +109,7 @@ struct ModuleRootView: View {
                         Button(module.addLabel, systemImage: "plus") { adding = true }
                             .buttonStyle(.glassProminent)
                             .tint(CarliColor.primary)
+                            .foregroundStyle(CarliColor.onPrimary)
                     }
                 }
                 .sheet(isPresented: $adding) {

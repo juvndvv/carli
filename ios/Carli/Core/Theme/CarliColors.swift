@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Ember palette, ported from the Flutter `CarliColors` tokens. Each colour resolves
+/// Sun palette (amber accent on neutral greys). Each colour resolves
 /// light/dark at render time, so views never branch on the colour scheme.
 enum CarliColor {
     static let bg = dynamic(0xF2F2F7, 0x000000)
@@ -11,27 +11,29 @@ enum CarliColor {
     static let text = dynamic(0x1F1F1F, 0xFFFFFF)
     static let text2 = dynamic(0x666666, 0xA3A3A3)
     static let text3 = dynamic(0x6E6E6E, 0x8A8A8A)
-    static let primary = dynamic(0xE5063F, 0xE5063F)
-    static let primarySoft = dynamic(0xFFEBF0, 0x3A0A18)
-    static let primaryStrong = dynamic(0xE5063F, 0xFA114F)
-    static let onPrimary = Color.white
-    static let brandInk = dynamic(0xD90033, 0xFF5C85)
+    static let primary = dynamic(0xF2A900, 0xFFC300)
+    static let primarySoft = dynamic(0xFFF4D6, 0x3A2C00)
+    static let primaryStrong = dynamic(0xE89A00, 0xFFC300)
+    /// Ink on sun fills: white fails contrast on yellow.
+    static let onPrimary = Color(hex: 0x1F1600)
+    /// Accent for text; the fill colour is too light to read on white.
+    static let brandInk = dynamic(0x9A6200, 0xFFD24D)
     static let positive = dynamic(0x0F7B4A, 0x10B981)
     static let warning = dynamic(0xB45309, 0xF59E0B)
     static let negative = dynamic(0xC8281C, 0xED5A46)
     static let dangerFill = Color(hex: 0xC8281C)
 
-    /// Category slots c1–c8, all in ember tones so charts stay within the brand; neighbours alternate light and dark so slices stay apart.
+    /// Category slots c1–c8, all in sun tones so charts stay within the brand; neighbours alternate light and dark so slices stay apart.
     static let chart = [
-        dynamic(0x8F0026, 0xFF5C85), dynamic(0xF57A95, 0xB8073F), dynamic(0xC4053A, 0xFFB3C6), dynamic(0xF4A1B3, 0xE01E55),
-        dynamic(0xE5063F, 0xFF8AA6), dynamic(0xB85A70, 0xC2405F), dynamic(0xF0446C, 0xFFD6E0), dynamic(0x5C0019, 0x9E1A3E),
+        dynamic(0x8A5A00, 0xFFC300), dynamic(0xFFC93D, 0xA86E00), dynamic(0xC27C00, 0xFFE08A), dynamic(0xF7D06A, 0xE09400),
+        dynamic(0xE89A00, 0xFFD24D), dynamic(0xB8862E, 0xB8862E), dynamic(0xFFB000, 0xFFF0C2), dynamic(0x5C3B00, 0x8A5A00),
     ]
     /// The "Otras categorías" bucket.
     static let chartRest = dynamic(0xB9B9BE, 0x5A5A5E)
     /// Income bars: neutral ink, so only spending carries the accent.
     static let chartIncome = dynamic(0x1F1F1F, 0xFFFFFF)
     /// Spending bars and the net-worth line.
-    static let chartAccent = dynamic(0xE5063F, 0xFF5C85)
+    static let chartAccent = dynamic(0xE89A00, 0xFFC300)
 
     /// Activity rings, outer to inner: disponible, ahorro, ritmo.
     static let rings = [dynamic(0xE5063F, 0xFA114F), dynamic(0x3D9C0E, 0xA6FF00), dynamic(0x0091B3, 0x00F0FF)]

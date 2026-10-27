@@ -121,6 +121,7 @@ struct LoginView: View {
                     if busy { ProgressView().tint(CarliColor.onPrimary) }
                 }
                 .font(.body.weight(.semibold))
+                .foregroundStyle(CarliColor.onPrimary)
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
