@@ -21,7 +21,6 @@ enum CarliColor {
     static let negative = dynamic(0xC8281C, 0xED5A46)
     static let dangerFill = Color(hex: 0xC8281C)
 
-    /// Validated categorical chart palette, slots c1…c8.
     /// Category slots c1–c8, all in ember tones so charts stay within the brand; neighbours alternate light and dark so slices stay apart.
     static let chart = [
         dynamic(0x8F0026, 0xFF5C85), dynamic(0xF57A95, 0xB8073F), dynamic(0xC4053A, 0xFFB3C6), dynamic(0xF4A1B3, 0xE01E55),
