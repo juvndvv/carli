@@ -5,6 +5,7 @@ struct CategoryRef: Decodable, Equatable {
     var name: String
     var icon: String?
     var parent: String?
+    var sortKey: Int?
 
     var label: String { parent.map { "\($0) › \(name)" } ?? name }
 }
@@ -24,29 +25,59 @@ enum BudgetStatus: String, Decodable {
 
 struct BudgetRow: Decodable, Equatable, Identifiable {
     var id: String
+    var categoryId: String?
     var category: CategoryRef
     var amountCents: Int
+    var rollover: Bool?
     var rolloverInCents: Int?
     var availableCents: Int
     var spentCents: Int
     var remainingCents: Int
     var status: BudgetStatus?
+    var projectedCents: Int?
+    var projectedStatus: BudgetStatus?
 
-    private var rollover: Int { rolloverInCents ?? 0 }
-    var limitCents: Int { rollover < 0 ? amountCents : availableCents }
-    var consumedCents: Int { spentCents - (rollover < 0 ? rollover : 0) }
-    var barRatio: Double { limitCents > 0 ? Double(consumedCents) / Double(limitCents) : (consumedCents > 0 ? 1.01 : 0) }
+    private var carried: Int { rolloverInCents ?? 0 }
+    var limitCents: Int { carried < 0 ? amountCents : availableCents }
+    var consumedCents: Int { spentCents - (carried < 0 ? carried : 0) }
+    var usageRatio: Double? { limitCents > 0 ? Double(consumedCents) / Double(limitCents) : nil }
+    var barRatio: Double { usageRatio ?? (consumedCents > 0 ? 1.01 : 0) }
     var state: BudgetStatus { status ?? .ok }
 
-    var note: String {
+    /// "67 %" or "Excedido" when there's spending against a zero limit.
+    var usageLabel: String {
+        guard let usageRatio else { return consumedCents > 0 ? "Excedido" : "0 %" }
+        return Plural.percent(basisPoints: Int((usageRatio * 10000).rounded()))
+    }
+
+    var note: String { note(showProjection: false) }
+
+    func note(showProjection: Bool) -> String {
         var parts = [state == .exceeded || remainingCents < 0
                      ? "Excedido en \(Money.format(abs(remainingCents)))"
                      : "Te quedan \(Money.format(remainingCents))"]
-        if rollover != 0 {
-            parts.append("\(rollover > 0 ? "Arrastras" : "Arrastras un exceso de") \(Money.format(rollover, .absolute))")
+        if showProjection, let projected = projectedCents, let outlook = projectedStatus, outlook != .ok, outlook != state {
+            parts.append("Proyección \(Money.format(projected))")
+        }
+        if carried != 0 {
+            parts.append("\(carried > 0 ? "Arrastras" : "Arrastras un exceso de") \(Money.format(carried, .absolute))")
         }
         return parts.joined(separator: " · ")
     }
+}
+
+/// /finance/budgets: rows for a period plus its totals.
+struct BudgetOverview: Decodable {
+    struct Meta: Decodable {
+        var period: FinancePeriod
+        var previousPeriod: FinancePeriod?
+        var totals: BudgetTotals
+        var uncategorized: UncategorizedSummary?
+        var copied: Int?
+    }
+
+    var data: [BudgetRow]
+    var meta: Meta
 }
 
 struct CategoryGroup: Decodable, Equatable {

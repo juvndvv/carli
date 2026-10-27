@@ -10,7 +10,9 @@ struct FinanceSummaryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: CarliSpace.s12) {
-                PeriodBar(model: model)
+                PeriodBar(periods: model.periods, selected: model.selectedPeriod) { period in
+                    Task { await model.select(period) }
+                }
                 switch model.state {
                 case .loading:
                     SummarySkeleton()
@@ -44,59 +46,6 @@ struct FinanceSummaryView: View {
 }
 
 // MARK: Period
-
-private struct PeriodBar: View {
-    var model: FinanceSummaryModel
-
-    var body: some View {
-        HStack(spacing: CarliSpace.s8) {
-            Button("Periodo anterior", systemImage: "chevron.left") {
-                if let older = model.olderPeriod { Task { await model.select(older) } }
-            }
-            .labelStyle(.iconOnly)
-            .disabled(model.olderPeriod == nil)
-            .opacity(model.olderPeriod == nil ? 0.35 : 1)
-
-            Menu {
-                Picker("Periodo", selection: Binding(
-                    get: { model.selectedPeriod?.id ?? "" },
-                    set: { id in if let period = model.periods.first(where: { $0.id == id }) { Task { await model.select(period) } } }
-                )) {
-                    ForEach(model.periods) { period in
-                        Text(period.isCurrent == true ? "\(period.name) · en curso" : period.name).tag(period.id)
-                    }
-                }
-            } label: {
-                HStack(spacing: CarliSpace.s4) {
-                    Text(label)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(CarliColor.text3)
-                }
-                .foregroundStyle(CarliColor.text)
-                .frame(maxWidth: .infinity)
-            }
-            .disabled(model.periods.isEmpty)
-
-            Button("Periodo siguiente", systemImage: "chevron.right") {
-                if let newer = model.newerPeriod { Task { await model.select(newer) } }
-            }
-            .labelStyle(.iconOnly)
-            .disabled(model.newerPeriod == nil)
-            .opacity(model.newerPeriod == nil ? 0.35 : 1)
-        }
-        .buttonStyle(.glass)
-        .controlSize(.large)
-        .tint(CarliColor.text)
-    }
-
-    /// Just the name: the eyebrow below already says how many days are left.
-    private var label: String {
-        model.selectedPeriod?.name ?? "Periodo"
-    }
-}
 
 // MARK: Body
 
@@ -257,34 +206,6 @@ private struct RingsCard: View {
              pace == nil ? "Sin presupuestos" : rings.aheadOfPlan ? "Por encima de lo previsto" : "Dentro de lo previsto",
              rings.aheadOfPlan),
         ]
-    }
-}
-
-private struct UncategorizedNotice: View {
-    var summary: UncategorizedSummary
-    var review: () -> Void
-
-    var body: some View {
-        HStack(spacing: CarliSpace.s12) {
-            Image(systemName: "circle.dashed")
-                .font(.title3)
-                .foregroundStyle(CarliColor.text2)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("\(Money.format(summary.expenseCents)) sin categorizar")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(CarliColor.text)
-                Text("\(summary.count == 1 ? "1 gasto" : "\(summary.count) gastos") aún no cuenta\(summary.count == 1 ? "" : "n") en ningún presupuesto.")
-                    .font(.footnote)
-                    .foregroundStyle(CarliColor.text2)
-            }
-            Spacer(minLength: 0)
-            Button("Revisar", action: review)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(CarliColor.brandInk)
-        }
-        .padding(CarliSpace.s12)
-        .background(CarliColor.surface2, in: .rect(cornerRadius: CarliRadius.control, style: .continuous))
     }
 }
 
@@ -543,57 +464,6 @@ private func compact(_ euros: Double) -> String {
 }
 
 // MARK: Rows
-
-private struct BudgetLine: View {
-    var row: BudgetRow
-
-    var body: some View {
-        let state = row.state
-        let figureColor = state == .exceeded ? CarliColor.negative : state == .warning ? CarliColor.warning : CarliColor.text2
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: CarliSpace.s8) {
-                Text(row.category.label)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(CarliColor.text)
-                    .lineLimit(1)
-                Spacer(minLength: CarliSpace.s8)
-                HStack(spacing: CarliSpace.s4) {
-                    if state != .ok {
-                        Image(systemName: state == .exceeded ? "exclamationmark.circle.fill" : "exclamationmark.triangle.fill")
-                    }
-                    Text("\(Money.format(row.spentCents)) / \(Money.format(row.limitCents))")
-                        .monospacedDigit()
-                }
-                .font(.subheadline.weight(state == .ok ? .regular : .semibold))
-                .foregroundStyle(figureColor)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-            }
-            ProgressBar(ratio: row.barRatio)
-            Text(row.note)
-                .font(.caption)
-                .foregroundStyle(CarliColor.text2)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Neutral progress bar: the state is told by the figure, never by the bar's colour.
-private struct ProgressBar: View {
-    var ratio: Double
-
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(CarliColor.surface2)
-                Capsule().fill(CarliColor.text)
-                    .frame(width: proxy.size.width * min(max(ratio, 0), 1))
-            }
-        }
-        .frame(height: 6)
-        .accessibilityHidden(true)
-    }
-}
 
 // MARK: Layout helpers
 

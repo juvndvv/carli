@@ -30,6 +30,7 @@ struct FinancePeriod: Decodable, Equatable, Identifiable, Hashable {
     var rangeLabel: String?
     var daysRemaining: Int?
     var isCurrent: Bool?
+    var expectedEndDate: String?
 }
 
 struct BudgetTotals: Decodable, Equatable {
@@ -37,6 +38,7 @@ struct BudgetTotals: Decodable, Equatable {
     var spentCents: Int
     var remainingCents: Int
     var percentBp: Int?
+    var projectedCents: Int?
 }
 
 struct FinanceSummary: Decodable, Equatable {
@@ -49,6 +51,7 @@ struct FinanceSummary: Decodable, Equatable {
 struct FinanceSettings: Decodable, Equatable {
     var budgetWarningThreshold: Int?
     var savingsTargetPercent: Int?
+    var periodMode: String?
 }
 
 // MARK: Pending

@@ -25,6 +25,26 @@ enum Money {
         return out
     }
 
+    /// Cents from what someone typed: "12", "12,5", "1.234,56" or "12.50". Nil when empty or invalid.
+    static func parse(_ text: String) -> Int? {
+        var cleaned = text.replacingOccurrences(of: "€", with: "").filter { !$0.isWhitespace }
+        guard !cleaned.isEmpty else { return nil }
+        if cleaned.contains(",") {
+            cleaned = cleaned.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
+        } else if cleaned.filter({ $0 == "." }).count > 1 {
+            cleaned = cleaned.replacingOccurrences(of: ".", with: "")
+        }
+        guard let value = Double(cleaned), value >= 0, value < 100_000_000 else { return nil }
+        return Int((value * 100).rounded())
+    }
+
+    /// Editable form of an amount: "1234,5" without grouping or symbol; whole euros drop the decimals.
+    static func input(_ cents: Int) -> String {
+        let euros = cents / 100, fraction = cents % 100
+        if fraction == 0 { return "\(euros)" }
+        return "\(euros),\(fraction < 10 ? "0" : "")\(fraction)"
+    }
+
     private static func decimal(_ absoluteCents: Int) -> String {
         let fraction = absoluteCents % 100
         return "\(grouped(absoluteCents / 100)),\(fraction < 10 ? "0" : "")\(fraction)"

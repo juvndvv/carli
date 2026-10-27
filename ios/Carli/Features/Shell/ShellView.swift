@@ -131,15 +131,9 @@ struct ModuleRootView: View {
     private var content: some View {
         switch (module, section.id) {
         case (.finance, "summary"):
-            FinanceSummaryView(model: FinanceSummaryModel(api: auth.api)) { route in
-                switch route {
-                case .budgets:
-                    show("budgets")
-                case .transactions(let filters):
-                    transactionFilters = filters
-                    show("transactions")
-                }
-            }
+            FinanceSummaryView(model: FinanceSummaryModel(api: auth.api), go: open)
+        case (.finance, "budgets"):
+            BudgetsView(model: BudgetsModel(api: auth.api), go: open)
         case (.finance, "transactions"):
             TransactionsView(model: TransactionsModel(api: auth.api, filters: transactionFilters))
                 .id(transactionFilters)
@@ -154,6 +148,16 @@ struct ModuleRootView: View {
                 .padding(.horizontal, CarliSpace.s16)
             }
             .background(CarliColor.bg)
+        }
+    }
+
+    private func open(_ route: FinanceRoute) {
+        switch route {
+        case .budgets:
+            show("budgets")
+        case .transactions(let filters):
+            transactionFilters = filters
+            show("transactions")
         }
     }
 

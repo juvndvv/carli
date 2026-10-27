@@ -22,10 +22,6 @@ final class FinanceSummaryModel {
         periods.first { $0.id == selectedPeriodId } ?? state.dashboard?.period
     }
 
-    /// Periods come newest first.
-    var olderPeriod: FinancePeriod? { neighbour(+1) }
-    var newerPeriod: FinancePeriod? { neighbour(-1) }
-
     func load() async {
         async let periods: Void = loadPeriods()
         async let accounts: Void = loadAccounts()
@@ -65,12 +61,6 @@ final class FinanceSummaryModel {
         if let envelope: DataEnvelope<FinanceSettings> = try? await api.get("v1/finance/settings") {
             savingsTargetPercent = envelope.data.savingsTargetPercent ?? 20
         }
-    }
-
-    private func neighbour(_ offset: Int) -> FinancePeriod? {
-        guard let current = selectedPeriod, let index = periods.firstIndex(where: { $0.id == current.id }) else { return nil }
-        let target = index + offset
-        return periods.indices.contains(target) ? periods[target] : nil
     }
 }
 
