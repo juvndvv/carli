@@ -35,9 +35,9 @@ enum CarliColor {
     /// Spending bars and the net-worth line.
     static let chartAccent = dynamic(0xE89A00, 0xFFC300)
 
-    /// Activity rings, outer to inner: disponible, ahorro, ritmo.
-    static let rings = [dynamic(0xF2A900, 0xFFC300), dynamic(0x3D9C0E, 0xA6FF00), dynamic(0x0091B3, 0x00F0FF)]
-    static let ringInk = [dynamic(0x9A6200, 0xFFD24D), dynamic(0x2E7D0C, 0xA6FF00), dynamic(0x007E9C, 0x00F0FF)]
+    /// Activity rings, outer to inner: disponible, ahorro, ritmo. Sunset tones: yellow, orange, coral.
+    static let rings = [dynamic(0xF2A900, 0xFFD60A), dynamic(0xE07800, 0xFF9500), dynamic(0xE0482A, 0xFF6A3D)]
+    static let ringInk = [dynamic(0x9A6200, 0xFFD60A), dynamic(0xA84F00, 0xFF9500), dynamic(0xB5361C, 0xFF6A3D)]
 
     private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
         Color(uiColor: UIColor { traits in
