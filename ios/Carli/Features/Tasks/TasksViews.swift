@@ -207,42 +207,6 @@ struct TasksTodayView: View {
         }
 
         if !view.overdue.isEmpty {
-                        Text(view.overdue.count == 1 ? "1 vencida" : "\(view.overdue.count) vencidas")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(CarliColor.negative)
-                    }
-                }
-                .accessibilityElement(children: .combine)
-            }
-        }
-
-        if !habits.isEmpty {
-            Section {
-                Button { openHabits?() } label: {
-                    HStack {
-                        Text("Hábitos").fontWeight(.semibold)
-                            + Text(" · \(habits.count == 1 ? "queda 1" : "quedan \(habits.count)")").foregroundStyle(CarliColor.text2)
-                        Spacer()
-                        Text("Ver todos").font(.footnote).foregroundStyle(CarliColor.brandInk)
-                    }
-                    .foregroundStyle(CarliColor.text)
-                }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: CarliSpace.s12) {
-                        ForEach(habits) { habit in
-                            VStack(spacing: 4) {
-                                ActivityRing(progress: habit.progress, color: CarliColor.rings[1], lineWidth: 5)
-                                    .frame(width: 40, height: 40)
-                                    .overlay { Image(systemName: CarliIcon.symbol(habit.icon)).font(.caption) }
-                                Text(habit.name).font(.caption2).lineLimit(1).frame(width: 56)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if !view.overdue.isEmpty {
             TaskSection(title: "Vencidas") { rows(view.overdue) }
         }
         TaskSection(title: "Hoy") {

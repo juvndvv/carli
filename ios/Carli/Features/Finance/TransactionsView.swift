@@ -209,19 +209,19 @@ private struct FilterChips: View {
                     Button {
                         model.filters.pendingOnly.toggle()
                     } label: {
-                        Chip(symbol: "clock", text: "Pendientes\(model.pendingCount.map { " (\($0))" } ?? "")",
+                        FilterChip(symbol: "clock", text: "Pendientes\(model.pendingCount.map { " (\($0))" } ?? "")",
                              selected: model.filters.pendingOnly)
                     }
                     Button {
                         model.filters.uncategorized.toggle()
                     } label: {
-                        Chip(symbol: "circle.dashed", text: "Sin categoría", selected: model.filters.uncategorized)
+                        FilterChip(symbol: "circle.dashed", text: "Sin categoría", selected: model.filters.uncategorized)
                     }
                     if model.filters.isFiltering {
                         Button {
                             model.filters = model.filters.cleared()
                         } label: {
-                            Chip(symbol: "xmark", text: "Limpiar", selected: false)
+                            FilterChip(symbol: "xmark", text: "Limpiar", selected: false)
                         }
                     }
                 }
@@ -242,7 +242,7 @@ private struct FilterChips: View {
                 Text("Todos los periodos").tag("all")
             }
         } label: {
-            Chip(symbol: "calendar", text: periodLabel, selected: true)
+            FilterChip(symbol: "calendar", text: periodLabel, selected: true)
         }
     }
 
@@ -271,7 +271,7 @@ private struct FilterChips: View {
                 Button("Todas las cuentas") { model.filters.accountIds = [] }
             }
         } label: {
-            Chip(symbol: "wallet.bifold", text: accountLabel, selected: !model.filters.accountIds.isEmpty)
+            FilterChip(symbol: "wallet.bifold", text: accountLabel, selected: !model.filters.accountIds.isEmpty)
         }
         .menuActionDismissBehavior(.disabled)
     }
@@ -311,7 +311,7 @@ private struct FilterChips: View {
                 Button("Quitar filtro") { model.filters.categoryIds = [] }
             }
         } label: {
-            Chip(symbol: "tag", text: categoryLabel, selected: !model.filters.categoryIds.isEmpty)
+            FilterChip(symbol: "tag", text: categoryLabel, selected: !model.filters.categoryIds.isEmpty)
         }
         .menuActionDismissBehavior(.disabled)
     }
@@ -342,7 +342,7 @@ private struct FilterChips: View {
                 })
             }
         } label: {
-            Chip(symbol: "arrow.up.arrow.down", text: kindLabel, selected: !model.filters.kinds.isEmpty)
+            FilterChip(symbol: "arrow.up.arrow.down", text: kindLabel, selected: !model.filters.kinds.isEmpty)
         }
         .menuActionDismissBehavior(.disabled)
     }
@@ -361,7 +361,7 @@ private struct FilterChips: View {
     }
 }
 
-private struct Chip: View {
+private struct FilterChip: View {
     var symbol: String
     var text: String
     var selected: Bool

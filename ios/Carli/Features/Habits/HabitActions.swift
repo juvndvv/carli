@@ -216,7 +216,7 @@ final class HabitActions {
     func startBreak(from: Date, to: Date, habitId: String?) async -> Bool {
         var fields: [String: JSONValue] = ["from_date": .string(CarliDate.isoDay(from)), "to_date": .string(CarliDate.isoDay(to))]
         if let habitId { fields["habit_id"] = .string(habitId) }
-        return await run("No se ha podido guardar el descanso.") {
+        return await run("No se ha podido guardar el descanso.") { () async throws -> Void in
             let _: Empty = try await api.post("v1/habits/breaks", body: Patch(fields))
         } != nil
     }
