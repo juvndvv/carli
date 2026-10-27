@@ -12,6 +12,22 @@ enum CarliIcon {
         "baby", "dog", "cat", "paw-print", "landmark", "receipt", "percent", "briefcase", "sparkles", "rotate-ccw", "coins",
         "piggy-bank", "hand-coins", "tree-palm", "circle-ellipsis"]
 
+    /// One choice per distinct SF Symbol (several icon names share one), keeping `selected` visible.
+    static func distinct(_ names: [String], keeping selected: String? = nil) -> [String] {
+        var seen: [String: Int] = [:]
+        var result: [String] = []
+        for name in names {
+            let symbol = symbol(name)
+            if let index = seen[symbol] {
+                if name == selected { result[index] = name }
+            } else {
+                seen[symbol] = result.count
+                result.append(name)
+            }
+        }
+        return result
+    }
+
     static func symbol(_ name: String) -> String {
         map[name] ?? "circle.dashed"
     }

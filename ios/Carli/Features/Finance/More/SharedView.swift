@@ -199,14 +199,10 @@ struct SharedView: View {
                                 Avatar(name: contact.name)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(contact.name).font(.body.weight(.medium)).foregroundStyle(CarliColor.text).lineLimit(1)
-                                    Text(contact.summary).font(.footnote).foregroundStyle(CarliColor.text2)
+                                    Text(contact.summary).font(.footnote).foregroundStyle(CarliColor.text2).lineLimit(2)
                                 }
                                 Spacer(minLength: CarliSpace.s8)
-                                Text(DebtsCopy.balance(contact.balanceCents))
-                                    .font(.body.weight(.semibold))
-                                    .monospacedDigit()
-                                    .foregroundStyle(contact.balanceCents > 0 ? CarliColor.positive
-                                                     : contact.balanceCents == 0 ? CarliColor.text2 : CarliColor.text)
+                                BalanceLabel(cents: contact.balanceCents)
                             }
                             .contentShape(.rect)
                         }

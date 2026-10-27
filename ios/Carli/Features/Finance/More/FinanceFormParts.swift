@@ -8,7 +8,7 @@ struct IconGrid: View {
 
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columns), spacing: CarliSpace.s12) {
-            ForEach(icons, id: \.self) { name in
+            ForEach(CarliIcon.distinct(icons, keeping: selection), id: \.self) { name in
                 let selected = selection == name
                 Button {
                     selection = name
@@ -45,11 +45,13 @@ struct AmountRow: View {
                     .controlSize(.small)
                     .accessibilityLabel(negative.wrappedValue ? "Negativo" : "Positivo")
             }
+            // Sized to its digits so the sign button sits right next to them.
             TextField(placeholder, text: $text)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(maxWidth: 130)
+                .fixedSize()
+                .frame(minWidth: 44, alignment: .trailing)
             Text("€").foregroundStyle(CarliColor.text3)
         }
     }

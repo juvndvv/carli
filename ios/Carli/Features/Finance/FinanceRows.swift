@@ -24,6 +24,7 @@ struct RowLayout<Trailing: View>: View {
     var title: String
     var subtitle: String
     var titleBadge: String? = nil
+    var subtitleLines = 1
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -48,7 +49,7 @@ struct RowLayout<Trailing: View>: View {
                 Text(subtitle)
                     .font(.footnote)
                     .foregroundStyle(CarliColor.text2)
-                    .lineLimit(1)
+                    .lineLimit(subtitleLines)
             }
             Spacer(minLength: CarliSpace.s8)
             trailing

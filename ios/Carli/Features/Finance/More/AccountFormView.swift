@@ -171,7 +171,7 @@ struct AccountFormView: View {
 
                 Section("Icono") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: CarliSpace.s12) {
-                        ForEach(AccountFormModel.icons, id: \.self) { name in
+                        ForEach(CarliIcon.distinct(AccountFormModel.icons, keeping: model.icon ?? defaultIcon), id: \.self) { name in
                             let selected = (model.icon ?? defaultIcon) == name
                             Button {
                                 model.icon = name

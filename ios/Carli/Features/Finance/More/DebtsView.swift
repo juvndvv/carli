@@ -242,12 +242,9 @@ struct DebtsView: View {
                     NavigationLink(value: ContactRoute(id: contact.id)) {
                         HStack(spacing: CarliSpace.s12) {
                             Avatar(name: contact.name)
-                            Text(contact.name).foregroundStyle(CarliColor.text)
-                            Spacer()
-                            Text(DebtsCopy.balance(contact.balanceCents))
-                                .font(.body.weight(.semibold))
-                                .monospacedDigit()
-                                .foregroundStyle(contact.balanceCents > 0 ? CarliColor.positive : CarliColor.text)
+                            Text(contact.name).foregroundStyle(CarliColor.text).lineLimit(1)
+                            Spacer(minLength: CarliSpace.s8)
+                            BalanceLabel(cents: contact.balanceCents)
                         }
                         .padding(.horizontal, CarliSpace.s16)
                         .padding(.vertical, CarliSpace.s8)
@@ -268,11 +265,11 @@ private struct DebtTile: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(debt.name).font(.body.weight(.semibold)).foregroundStyle(CarliColor.text)
-                    Text(debt.subtitle).font(.footnote).foregroundStyle(CarliColor.text3)
+                    Text(debt.name).font(.body.weight(.semibold)).foregroundStyle(CarliColor.text).lineLimit(1)
+                    Text(debt.subtitle).font(.footnote).foregroundStyle(CarliColor.text3).lineLimit(1)
                 }
-                Spacer()
-                CarliBadge(label: debt.directionLabel)
+                Spacer(minLength: CarliSpace.s8)
+                CarliBadge(label: debt.directionLabel).fixedSize()
             }
             DebtFigures(debt: debt, trailing: debt.nextDateLabel).padding(.top, CarliSpace.s8)
             ProgressBar(ratio: debt.ratio).padding(.top, 6)
@@ -299,6 +296,26 @@ struct DebtFigures: View {
             if let trailing {
                 Text(trailing).font(.footnote).foregroundStyle(CarliColor.text3)
             }
+        }
+    }
+}
+
+/// "Te debe" / "Le debes" over the amount, so a long name never pushes the figure onto two lines.
+struct BalanceLabel: View {
+    var cents: Int
+
+    var body: some View {
+        if cents == 0 {
+            Text("En paz").font(.subheadline).foregroundStyle(CarliColor.text2)
+        } else {
+            VStack(alignment: .trailing, spacing: 0) {
+                Text(cents > 0 ? "Te debe" : "Le debes").font(.caption).foregroundStyle(CarliColor.text2)
+                Text(Money.format(abs(cents)))
+                    .font(.body.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(cents > 0 ? CarliColor.positive : CarliColor.text)
+            }
+            .fixedSize()
         }
     }
 }

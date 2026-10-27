@@ -309,6 +309,8 @@ struct CategoriesView: View {
                         }
                     }
                 }
+            } footer: {
+                Text("Las etiquetas se crean al añadirlas a un movimiento.")
             }
         }
     }
@@ -414,7 +416,7 @@ struct CategoryFormView: View {
 
                 Section("Icono") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: CarliSpace.s12) {
-                        ForEach(CarliIcon.categoryChoices, id: \.self) { name in
+                        ForEach(CarliIcon.distinct(CarliIcon.categoryChoices, keeping: icon), id: \.self) { name in
                             let selected = icon == name
                             Button {
                                 icon = selected ? nil : name

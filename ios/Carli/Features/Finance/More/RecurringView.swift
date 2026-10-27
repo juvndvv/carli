@@ -166,12 +166,16 @@ struct RecurringView: View {
     var body: some View {
         List {
             Section {
-                Picker("Vista", selection: $tab) {
-                    ForEach(RecurringModel.Tab.allCases, id: \.self) { tab in
-                        Text(tab == .pending && model.pendingCount > 0 ? "\(tab.rawValue) (\(model.pendingCount))" : tab.rawValue).tag(tab)
+                // Chips rather than a segmented control: "Suscripciones" doesn't fit a quarter of the width.
+                ScrollView(.horizontal) {
+                    HStack(spacing: CarliSpace.s8) {
+                        ForEach(RecurringModel.Tab.allCases, id: \.self) { option in
+                            Chip(label: option == .pending && model.pendingCount > 0 ? "\(option.rawValue) (\(model.pendingCount))" : option.rawValue,
+                                 selected: tab == option) { tab = option }
+                        }
                     }
                 }
-                .pickerStyle(.segmented)
+                .scrollIndicators(.hidden)
             }
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
@@ -209,13 +213,12 @@ struct RecurringView: View {
                 }
                 ForEach(visible) { rule in
                     Button { form = .edit(rule) } label: {
-                        RowLayout(symbol: rule.symbol, soft: rule.isCancelled, title: rule.name, subtitle: rule.subtitle) {
+                        RowLayout(symbol: rule.symbol, soft: rule.isCancelled, title: rule.name, subtitle: rule.subtitle,
+                                  titleBadge: rule.isSubscription == true ? "repeat" : nil, subtitleLines: 2) {
                             VStack(alignment: .trailing, spacing: 2) {
                                 amount(rule)
                                 if rule.pendingTransaction != nil {
                                     CarliBadge(label: "Por confirmar", symbol: "clock", tone: .warning)
-                                } else if rule.isSubscription == true {
-                                    CarliBadge(label: "Suscripción", symbol: "repeat")
                                 }
                             }
                         }
