@@ -73,6 +73,21 @@ La configuración de Laravel llega a los contenedores por variables de entorno d
 3. `make up` y `make create-user`. Compila la app con `--dart-define=API_URL=https://app.example.com/api`. Caddy obtiene y renueva el certificado TLS automáticamente y activa HSTS.
 4. Actualizar: `git pull && make up` (reconstruye las imágenes y migra al arrancar).
 
+### Despliegue en AWS Lightsail (túnel de Cloudflare, sin puertos abiertos)
+
+Producción corre en una instancia Lightsail (Ubuntu 24.04, 2 GB) con este mismo Compose; el tráfico entra por Cloudflare Tunnel, así que el firewall solo deja SSH.
+
+1. Instala Docker (`curl -fsSL https://get.docker.com | sh`), añade 2 GB de swap y clona el repo.
+2. Copia el `.env` y la clave de Enable Banking desde la máquina anterior. Conserva el mismo `APP_KEY`: sin él no se descifran los `session_id` de los bancos. Añade:
+   ```dotenv
+   APP_URL=https://carli.jotade.io
+   COMPOSE_PROFILES=tunnel
+   CLOUDFLARE_TUNNEL_TOKEN=<token del túnel>
+   ```
+   El hostname público del túnel debe apuntar a `http://localhost:8180` (`cloudflared` usa la red del host).
+3. Restaura el último dump (ver [Backups](#backups)) y `make up`.
+4. No tengas el mismo túnel conectado en dos máquinas: Cloudflare repartiría las peticiones entre dos bases de datos. Para `cloudflared` en la máquina anterior antes de arrancarlo aquí.
+
 ### Sincronización bancaria (Enable Banking, F3)
 
 Opcional: sin configurar, la app funciona en manual y `Más → Ajustes de Finanzas → Bancos` responde que la conexión no está configurada.
