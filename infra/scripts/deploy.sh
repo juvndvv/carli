@@ -2,7 +2,7 @@
 set -euo pipefail
 
 readonly REPO_DIR="${DEPLOY_REPO_DIR:-$HOME/carli}"
-readonly PREDEPLOY_DIR="backups/predeploy"
+readonly PREDEPLOY_DIR="${DEPLOY_DUMP_DIR:-$HOME/predeploy-dumps}"
 readonly PREDEPLOY_KEEP=5
 readonly HEALTH_URL="http://127.0.0.1:${APP_PORT:-8180}/up"
 

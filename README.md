@@ -94,7 +94,7 @@ Producción corre en una instancia Lightsail (Ubuntu 24.04, 2 GB) con este mismo
 
 1. **Pint y PHPStan** (`pint --test`, `phpstan analyse`).
 2. **Tests** (`php artisan test --parallel`) contra un Postgres 18 de servicio.
-3. **Deploy** (solo push a `main`, tras los dos anteriores): entra por SSH en Lightsail y ejecuta `infra/scripts/deploy.sh <sha>`, que hace fast-forward a ese commit, `docker compose build`, un `pg_dump` en `backups/predeploy/` (guarda los 5 últimos), `docker compose up -d --wait` (`app` aplica las migraciones al arrancar) y comprueba `/up`.
+3. **Deploy** (solo push a `main`, tras los dos anteriores): entra por SSH en Lightsail y ejecuta `infra/scripts/deploy.sh <sha>`, que hace fast-forward a ese commit, `docker compose build`, un `pg_dump` en `~/predeploy-dumps/` del servidor (guarda los 5 últimos; fuera de `backups/`, que es del contenedor `backup` y pertenece a root), `docker compose up -d --wait` (`app` aplica las migraciones al arrancar) y comprueba `/up`.
 
 La clave SSH del CI solo puede lanzar ese script: en `~/.ssh/authorized_keys` del servidor va como
 
@@ -104,7 +104,7 @@ command="/home/ubuntu/carli/infra/scripts/deploy.sh",restrict ssh-ed25519 AAAA..
 
 Secretos del repo en GitHub: `LIGHTSAIL_HOST`, `LIGHTSAIL_SSH_KEY` (privada de esa clave) y `LIGHTSAIL_KNOWN_HOSTS` (`ssh-keyscan -t ed25519 <host>`). El job usa el environment `production`, así que puedes exigir aprobación manual desde *Settings → Environments*.
 
-Desplegar a mano el `main` actual: `ssh carli 'cd ~/carli && git fetch -q origin main && infra/scripts/deploy.sh $(git rev-parse origin/main)'`. Volver atrás: en el servidor, `git reset --hard <sha anterior> && docker compose up -d --build` y, si la migración rompió datos, restaura el último dump de `backups/predeploy/`.
+Desplegar a mano el `main` actual: `ssh carli 'cd ~/carli && git fetch -q origin main && infra/scripts/deploy.sh $(git rev-parse origin/main)'`. Volver atrás: en el servidor, `git reset --hard <sha anterior> && docker compose up -d --build` y, si la migración rompió datos, restaura el último dump de `~/predeploy-dumps/`.
 
 ### Sincronización bancaria (Enable Banking, F3)
 
