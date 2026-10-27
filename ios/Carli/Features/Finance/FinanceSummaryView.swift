@@ -436,7 +436,7 @@ private struct IncomeExpenseChart: View {
                     .cornerRadius(4)
             }
         }
-        .chartForegroundStyleScale(["Ingresos": CarliColor.chart[0], "Gastos": CarliColor.chart[1]])
+        .chartForegroundStyleScale(["Ingresos": CarliColor.chartIncome, "Gastos": CarliColor.chartAccent])
         .chartYAxis {
             AxisMarks(position: .leading) { value in
                 AxisGridLine().foregroundStyle(CarliColor.border)
@@ -495,7 +495,7 @@ private struct CategoryDonut: View {
     }
 
     private func color(_ slice: DonutSlice) -> Color {
-        slice.slot.map { CarliColor.chart[$0 - 1] } ?? CarliColor.text3
+        slice.slot.map { CarliColor.chart[$0 - 1] } ?? CarliColor.chartRest
     }
 }
 
@@ -506,12 +506,12 @@ private struct NetWorthChart: View {
         Chart(history) { point in
             AreaMark(x: .value("Periodo", point.label), y: .value("Patrimonio", Double(point.netWorthCents) / 100))
                 .interpolationMethod(.monotone)
-                .foregroundStyle(LinearGradient(colors: [CarliColor.chart[0].opacity(0.25), CarliColor.chart[0].opacity(0)],
+                .foregroundStyle(LinearGradient(colors: [CarliColor.chartAccent.opacity(0.25), CarliColor.chartAccent.opacity(0)],
                                                 startPoint: .top, endPoint: .bottom))
             LineMark(x: .value("Periodo", point.label), y: .value("Patrimonio", Double(point.netWorthCents) / 100))
                 .interpolationMethod(.monotone)
                 .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
-                .foregroundStyle(CarliColor.chart[0])
+                .foregroundStyle(CarliColor.chartAccent)
         }
         .chartYAxis {
             AxisMarks(position: .leading) { value in

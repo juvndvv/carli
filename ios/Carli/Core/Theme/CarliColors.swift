@@ -22,10 +22,17 @@ enum CarliColor {
     static let dangerFill = Color(hex: 0xC8281C)
 
     /// Validated categorical chart palette, slots c1…c8.
+    /// Category slots c1–c8, all in ember tones so charts stay within the brand.
     static let chart = [
-        dynamic(0x2A78D6, 0x3987E5), dynamic(0xEB6834, 0xD95926), dynamic(0x1BAF7A, 0x199E70), dynamic(0xEDA100, 0xC98500),
-        dynamic(0xE87BA4, 0xD55181), dynamic(0x008300, 0x008300), dynamic(0x6250D6, 0x9085E9), dynamic(0xE34948, 0xE66767),
+        dynamic(0x8F0026, 0xFF2D63), dynamic(0xC4053A, 0xFF5C85), dynamic(0xE5063F, 0xFF8AA6), dynamic(0xF0446C, 0xFFB3C6),
+        dynamic(0xF57A95, 0xD1064A), dynamic(0xF9A9BB, 0x9E0034), dynamic(0xFCD2DC, 0x6B0024), dynamic(0x5C0019, 0xFFD6E0),
     ]
+    /// The "Otras categorías" bucket.
+    static let chartRest = dynamic(0xB9B9BE, 0x5A5A5E)
+    /// Income bars: neutral ink, so only spending carries the accent.
+    static let chartIncome = dynamic(0x1F1F1F, 0xFFFFFF)
+    /// Spending bars and the net-worth line.
+    static let chartAccent = dynamic(0xE5063F, 0xFF5C85)
 
     /// Activity rings, outer to inner: disponible, ahorro, ritmo.
     static let rings = [dynamic(0xE5063F, 0xFA114F), dynamic(0x3D9C0E, 0xA6FF00), dynamic(0x0091B3, 0x00F0FF)]
