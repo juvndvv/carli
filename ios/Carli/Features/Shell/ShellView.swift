@@ -1,129 +1,143 @@
 import SwiftUI
 
-/// One tab in the contextual bar.
-struct ShellTab: Identifiable, Hashable {
+/// A module's own sections, shown as a segmented control inside its tab.
+struct ModuleSection: Identifiable, Hashable {
     var id: String
     var title: String
-    var symbol: String
 }
 
-/// Which tabs the bar shows: Inicio lists the modules; inside a module, its own screens.
-enum ShellSection: String {
-    case home, finance, tasks, notes, habits
+/// The modules that get a tab, in bar order, with their sections and "+" action.
+enum ModuleTab: String, CaseIterable {
+    case finance, tasks, notes, habits
 
-    var tabs: [ShellTab] {
+    var title: String {
         switch self {
-        case .home: []
-        case .finance: [
-            ShellTab(id: "finance.summary", title: "Resumen", symbol: "square.grid.2x2"),
-            ShellTab(id: "finance.transactions", title: "Movimientos", symbol: "list.bullet"),
-            ShellTab(id: "finance.budgets", title: "Presupuestos", symbol: "gauge.with.dots.needle.50percent"),
-            ShellTab(id: "finance.more", title: "Más", symbol: "line.3.horizontal"),
-        ]
-        case .tasks: [
-            ShellTab(id: "tasks.today", title: "Hoy", symbol: "checkmark.circle"),
-            ShellTab(id: "tasks.upcoming", title: "Próximas", symbol: "calendar"),
-            ShellTab(id: "tasks.lists", title: "Listas", symbol: "list.bullet"),
-            ShellTab(id: "tasks.templates", title: "Plantillas", symbol: "repeat"),
-        ]
-        case .notes: [
-            ShellTab(id: "notes.all", title: "Notas", symbol: "note.text"),
-            ShellTab(id: "notes.shopping", title: "Compra", symbol: "cart"),
-        ]
-        case .habits: [
-            ShellTab(id: "habits.today", title: "Hoy", symbol: "target"),
-            ShellTab(id: "habits.list", title: "Hábitos", symbol: "list.bullet"),
-            ShellTab(id: "habits.progress", title: "Progreso", symbol: "chart.bar"),
-        ]
+        case .finance: "Finanzas"
+        case .tasks: "Tareas"
+        case .notes: "Notas"
+        case .habits: "Hábitos"
+        }
+    }
+
+    /// Line symbols with little detail; the tab bar keeps them unfilled.
+    var symbol: String {
+        switch self {
+        case .finance: "creditcard"
+        case .tasks: "checkmark.circle"
+        case .notes: "note.text"
+        case .habits: "repeat"
+        }
+    }
+
+    var sections: [ModuleSection] {
+        switch self {
+        case .finance: [.init(id: "summary", title: "Resumen"), .init(id: "transactions", title: "Movimientos"),
+                        .init(id: "budgets", title: "Presupuestos"), .init(id: "more", title: "Más")]
+        case .tasks: [.init(id: "today", title: "Hoy"), .init(id: "upcoming", title: "Próximas"),
+                      .init(id: "lists", title: "Listas"), .init(id: "templates", title: "Plantillas")]
+        case .notes: [.init(id: "all", title: "Notas"), .init(id: "shopping", title: "Compra")]
+        case .habits: [.init(id: "today", title: "Hoy"), .init(id: "list", title: "Hábitos"),
+                       .init(id: "progress", title: "Progreso")]
         }
     }
 
     var addLabel: String {
         switch self {
+        case .finance: "Nuevo movimiento"
         case .tasks: "Nueva tarea"
         case .notes: "Nueva nota"
         case .habits: "Nuevo hábito"
-        default: "Nuevo movimiento"
         }
     }
 }
 
-/// Signed-in root: the system tab bar (Liquid Glass) with Inicio pinned first. The
-/// trailing search-role slot holds Buscar on Inicio and "+" inside a module.
+/// Signed-in root: a fixed system tab bar (Liquid Glass) with Inicio and one tab per
+/// enabled module, plus Buscar in the trailing search slot.
 struct ShellView: View {
     @Environment(AuthModel.self) private var auth
     @State private var home: HomeModel?
-    @State private var section = ShellSection.home
     @State private var selection = "home"
-    @State private var adding = false
-
-    private static let search = "search", add = "add"
 
     var body: some View {
-        TabView(selection: Binding(get: { selection }, set: select)) {
+        TabView(selection: $selection) {
             Tab("Inicio", systemImage: "house", value: "home") {
                 if let home {
-                    HomeView(model: home, openModule: open)
+                    HomeView(model: home) { selection = $0 }
                 }
             }
 
-            ForEach(barTabs) { tab in
-                Tab(tab.title, systemImage: tab.symbol, value: tab.id) {
-                    NavigationStack {
-                        PendingMigrationView(title: tab.title, symbol: tab.symbol)
-                    }
+            ForEach(modules, id: \.self) { module in
+                Tab(module.title, systemImage: module.symbol, value: module.rawValue) {
+                    ModuleRootView(module: module)
                 }
             }
 
-            if section == .home {
-                Tab("Buscar", systemImage: "magnifyingglass", value: Self.search, role: .search) {
-                    NavigationStack {
-                        PendingMigrationView(title: "Buscar", symbol: "magnifyingglass")
-                    }
-                }
-            } else {
-                Tab(section.addLabel, systemImage: "plus", value: Self.add, role: .search) {
-                    Color.clear
+            Tab("Buscar", systemImage: "magnifyingglass", value: "search", role: .search) {
+                NavigationStack {
+                    PendingMigrationView(title: "Buscar", symbol: "magnifyingglass")
                 }
             }
         }
+        .environment(\.symbolVariants, .none)
         .tabBarMinimizeBehavior(.onScrollDown)
-        .sheet(isPresented: $adding) {
-            NavigationStack {
-                PendingMigrationView(title: section.addLabel, symbol: "plus")
-            }
-            .presentationDetents([.medium, .large])
-        }
         .onAppear {
             if home == nil { home = HomeModel(api: auth.api) }
         }
     }
 
-    /// Inicio lists the enabled modules; coming-soon modules stay out of the bar.
-    private var barTabs: [ShellTab] {
-        guard section == .home else { return section.tabs }
-        let modules = home?.modules?.filter(\.isOn)
-            ?? [AppModule(id: AppModule.finance, name: "Finanzas", icon: "wallet")]
-        return modules.map { ShellTab(id: "module.\($0.id)", title: $0.name, symbol: CarliIcon.symbol($0.icon)) }
+    /// Enabled modules only; until /modules answers, Finanzas alone.
+    private var modules: [ModuleTab] {
+        guard let loaded = home?.modules else { return [.finance] }
+        let on = Set(loaded.filter(\.isOn).map(\.id))
+        return ModuleTab.allCases.filter { on.contains($0.rawValue) }
+    }
+}
+
+/// A module tab: large title, its sections in a segmented control, "+" top right.
+struct ModuleRootView: View {
+    var module: ModuleTab
+    @State private var section: ModuleSection
+    @State private var adding = false
+
+    init(module: ModuleTab) {
+        self.module = module
+        _section = State(initialValue: module.sections[0])
     }
 
-    private func select(_ tab: String) {
-        switch tab {
-        case Self.add:
-            adding = true
-        case "home":
-            section = .home
-            selection = "home"
-        case let id where id.hasPrefix("module."):
-            open(String(id.dropFirst("module.".count)))
-        default:
-            selection = tab
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: CarliSpace.s16) {
+                    Picker("Sección", selection: $section) {
+                        ForEach(module.sections) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .controlSize(.large)
+
+                    ContentUnavailableView {
+                        Label(section.title, systemImage: "hammer")
+                    } description: {
+                        Text("Esta sección todavía no está migrada a la app nativa.")
+                    }
+                    .padding(.top, CarliSpace.s48)
+                }
+                .padding(.horizontal, CarliSpace.s16)
+            }
+            .background(CarliColor.bg)
+            .navigationTitle(module.title)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(module.addLabel, systemImage: "plus") { adding = true }
+                        .buttonStyle(.glassProminent)
+                        .tint(CarliColor.primary)
+                }
+            }
+            .sheet(isPresented: $adding) {
+                NavigationStack {
+                    PendingMigrationView(title: module.addLabel, symbol: "plus")
+                }
+                .presentationDetents([.medium, .large])
+            }
         }
-    }
-
-    private func open(_ module: String) {
-        guard let target = ShellSection(rawValue: module), let first = target.tabs.first else { return }
-        section = target
-        selection = first.id
     }
 }

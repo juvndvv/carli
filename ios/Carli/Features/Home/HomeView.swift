@@ -200,7 +200,7 @@ private struct FinanceCard: View {
     var body: some View {
         Button(action: open) {
             CarliCard {
-                CardHeader(title: "Finanzas", symbol: "wallet.bifold") { Chevron() }
+                CardHeader(title: "Finanzas", symbol: "creditcard") { Chevron() }
                     .padding(.bottom, CarliSpace.s12)
                 switch model.finance {
                 case .loading:
@@ -264,7 +264,7 @@ private struct TasksCard: View {
     var body: some View {
         CarliCard(padding: 0) {
             Button(action: open) {
-                CardHeader(title: "Tareas", subtitle: subtitle, symbol: "checklist") { Chevron() }
+                CardHeader(title: "Tareas", subtitle: subtitle, symbol: "checkmark.circle") { Chevron() }
                     .padding(CarliSpace.s16)
                     .contentShape(.rect)
             }
