@@ -24,9 +24,12 @@ final class HomeModel {
     var toast: String?
 
     private let api: APIClient
+    /// Logs habits from the Inicio rings (tap, long press, "Deshacer").
+    let habitActions: HabitActions
 
     init(api: APIClient) {
         self.api = api
+        habitActions = HabitActions(api: api)
     }
 
     func isEnabled(_ module: String) -> Bool {
@@ -107,17 +110,6 @@ final class HomeModel {
         }
         await loadTasks()
         await loadPending()
-    }
-
-    func tap(_ habit: HabitToday) async {
-        struct Entry: Encodable { var value: Double }
-        do {
-            let _: Empty = try await api.put("v1/habits/\(habit.id)/entries/\(CarliDate.isoDay(.now))",
-                                             body: Entry(value: habit.nextTapValue))
-        } catch {
-            toast = error.apiMessage(fallback: "No se ha podido registrar \(habit.name).")
-        }
-        await loadHabits()
     }
 
     /// Ticks a shopping item through the notes sync endpoint, as the Flutter app does offline.

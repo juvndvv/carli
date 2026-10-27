@@ -131,7 +131,7 @@ struct NotificationsPage: Decodable {
 
 // MARK: Tasks
 
-struct TaskItem: Decodable, Identifiable, Equatable {
+struct TaskItem: Decodable, Identifiable, Equatable, Hashable {
     var id: String
     var title: String
     var status: String?
@@ -139,8 +139,20 @@ struct TaskItem: Decodable, Identifiable, Equatable {
     var dueTime: String?
     var overdue: Bool?
     var important: Bool?
+    var notes: String? = nil
+    var list: TaskListRef? = nil
+    var completedAt: String? = nil
+    var template: TaskTemplateRef? = nil
+    var occurrenceDate: String? = nil
+    var subtasks: [Subtask]? = nil
 
     var isDone: Bool { status == "done" }
+    var isOpen: Bool { status == nil || status == "open" }
+    var isOverdue: Bool { overdue == true }
+    var isImportant: Bool { important == true }
+    var repeats: Bool { template != nil }
+    var steps: [Subtask] { subtasks ?? [] }
+    var stepsDone: Int { steps.filter(\.done).count }
 }
 
 struct TasksToday: Decodable, Equatable {
@@ -152,6 +164,7 @@ struct TasksToday: Decodable, Equatable {
     var date: String
     var overdue: [TaskItem]
     var today: [TaskItem]
+    var done: [TaskItem]? = nil
     var progress: Progress?
 
     var headline: String {
@@ -166,58 +179,62 @@ struct TasksToday: Decodable, Equatable {
 
 // MARK: Habits
 
-struct HabitToday: Decodable, Identifiable, Equatable {
-    var id: String
-    var name: String
-    var icon: String
-    var kind: String
-    var unit: String?
+struct HabitToday: Decodable, Identifiable, Equatable, Hashable {
+    var habit: Habit
     var period: String?
+    var periodEnd: String?
     var target: Double
     var value: Double
     var todayValue: Double
+    var todayNote: String?
     var met: Bool
     var over: Bool?
     var progress: Double
+    var daysLeft: Int
     var streak: Int?
+    var consistency: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, icon, kind, unit, period, target, value, todayValue, met, over, progress, streak
+        case period, periodEnd, target, value, todayValue, todayNote, met, over, progress, daysLeft, streak, consistency
     }
 
     init(from decoder: Decoder) throws {
+        habit = try Habit(from: decoder)
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
-        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
-        icon = try c.decodeIfPresent(String.self, forKey: .icon) ?? "check"
-        kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? "check"
-        unit = try c.decodeIfPresent(String.self, forKey: .unit)
         period = try c.decodeIfPresent(String.self, forKey: .period)
+        periodEnd = try c.decodeIfPresent(String.self, forKey: .periodEnd)
         target = try c.decodeIfPresent(Double.self, forKey: .target) ?? 0
         value = try c.decodeIfPresent(Double.self, forKey: .value) ?? 0
         todayValue = try c.decodeIfPresent(Double.self, forKey: .todayValue) ?? 0
+        todayNote = try c.decodeIfPresent(String.self, forKey: .todayNote)
         met = try c.decodeIfPresent(Bool.self, forKey: .met) ?? false
         over = try c.decodeIfPresent(Bool.self, forKey: .over)
         progress = try c.decodeIfPresent(Double.self, forKey: .progress) ?? 0
+        daysLeft = try c.decodeIfPresent(Int.self, forKey: .daysLeft) ?? 0
         streak = try c.decodeIfPresent(Int.self, forKey: .streak)
+        consistency = try c.decodeIfPresent(Int.self, forKey: .consistency)
     }
 
-    var isAvoid: Bool { kind == "avoid" }
+    var id: String { habit.id }
+    var name: String { habit.name }
+    var icon: String { habit.icon }
+    var kind: String { habit.kindRaw }
+    var unit: String? { habit.unit }
+    var isAvoid: Bool { habit.isAvoid }
     var weekly: Bool { period == "week" }
+    var isOver: Bool { over == true }
+    var streakCount: Int { streak ?? 0 }
 
-    var valueLabel: String {
-        let amount = { (v: Double) in [Plural.number(v), self.unit].compactMap { $0 }.joined(separator: " ") }
-        switch kind {
-        case "check" where weekly: return "\(Plural.number(value)) de \(Plural.number(target))"
-        case "check": return met ? "Hecho" : "Sin hacer"
-        case "quantity": return "\(Plural.number(value)) / \(amount(target))"
-        default: return "\(Plural.number(value)) de \(amount(target))"
-        }
+    var valueLabel: String { HabitFormat.valueLabel(self) }
+
+    /// What a tap logs today: checks toggle, quantities and avoid habits add one.
+    var nextTapValue: Double {
+        habit.kind == .check ? (todayValue > 0 ? 0 : 1) : todayValue + 1
     }
 
-    /// What a tap logs today: checks toggle, quantities add one.
-    var nextTapValue: Double {
-        kind == "check" ? (todayValue > 0 ? 0 : 1) : todayValue + 1
+    /// Target for the log sheet: weekly amounts count against the week, the rest against the goal.
+    var logTarget: Double {
+        weekly && habit.kind != .check ? target : habit.goal.target
     }
 }
 
@@ -225,13 +242,17 @@ struct HabitsToday: Decodable, Equatable {
     struct Summary: Decodable, Equatable {
         var done: Int
         var total: Int
+        var consistency: Int?
     }
 
     var date: String
+    var onBreak: Bool?
     var summary: Summary
     var habits: [HabitToday]
 
     var pending: [HabitToday] { habits.filter { !$0.isAvoid && !$0.met } }
+    var avoid: [HabitToday] { habits.filter(\.isAvoid) }
+    var completed: [HabitToday] { habits.filter { !$0.isAvoid && $0.met } }
 }
 
 // MARK: Notes

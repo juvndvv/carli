@@ -47,7 +47,10 @@ struct HomeView: View {
             }
             .refreshable { await model.load() }
             .task { await model.load() }
+            .onHabitsChanged { await model.loadHabits() }
+            .onTasksChanged { await model.loadTasks() }
         }
+        .habitActions(model.habitActions)
         .carliToast($model.toast)
     }
 
@@ -350,15 +353,8 @@ private struct HabitsCard: View {
             .accessibilityHint("Abrir Hábitos")
 
             if !habits.pending.isEmpty {
-                ScrollView(.horizontal) {
-                    HStack(alignment: .top, spacing: CarliSpace.s8) {
-                        ForEach(habits.pending) { habit in
-                            HabitRingButton(habit: habit) { Task { await model.tap(habit) } }
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-                .padding(.top, CarliSpace.s12)
+                HabitRingStrip(habits: habits.pending, actions: model.habitActions)
+                    .padding(.top, CarliSpace.s12)
             }
         }
     }
@@ -367,38 +363,6 @@ private struct HabitsCard: View {
         let s = habits.summary
         if s.total == 0 { return "Nada que hacer hoy" }
         return habits.pending.isEmpty ? "Todo hecho · \(s.done) de \(s.total)" : "\(s.done) de \(s.total)"
-    }
-}
-
-private struct HabitRingButton: View {
-    var habit: HabitToday
-    var tap: () -> Void
-
-    var body: some View {
-        Button(action: tap) {
-            VStack(spacing: CarliSpace.s4) {
-                ZStack {
-                    ActivityRing(progress: habit.progress, lineWidth: 6)
-                    Image(systemName: CarliIcon.symbol(habit.icon))
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(CarliColor.text)
-                }
-                .frame(width: 52, height: 52)
-                Text(habit.name)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(CarliColor.text)
-                    .lineLimit(1)
-                Text(habit.valueLabel)
-                    .font(.caption2)
-                    .foregroundStyle(CarliColor.text2)
-                    .lineLimit(1)
-            }
-            .frame(width: 72)
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(habit.name), \(habit.valueLabel). Registrar")
-        .accessibilityAddTraits(.isButton)
     }
 }
 

@@ -45,3 +45,30 @@ struct UndoBar: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }
+
+/// A pending "Deshacer" offer: shown for a few seconds after a reversible action.
+struct UndoOffer: Identifiable, Equatable {
+    let id = UUID()
+    var text: String
+    var perform: () async -> Void
+
+    static func == (lhs: UndoOffer, rhs: UndoOffer) -> Bool { lhs.id == rhs.id }
+}
+
+extension View {
+    func undoBar(_ offer: Binding<UndoOffer?>, seconds: Double = 5) -> some View {
+        overlay(alignment: .bottom) {
+            if let current = offer.wrappedValue {
+                UndoBar(text: current.text) {
+                    offer.wrappedValue = nil
+                    Task { await current.perform() }
+                }
+                .task(id: current.id) {
+                    try? await Task.sleep(for: .seconds(seconds))
+                    if offer.wrappedValue?.id == current.id { offer.wrappedValue = nil }
+                }
+            }
+        }
+        .animation(.smooth, value: offer.wrappedValue)
+    }
+}

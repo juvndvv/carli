@@ -62,7 +62,7 @@ struct ShellView: View {
 
             ForEach(modules, id: \.self) { module in
                 Tab(module.title, image: module.icon, value: module.rawValue) {
-                    ModuleRootView(module: module)
+                    ModuleRootView(module: module) { selection = $0 }
                 }
             }
         }
@@ -85,6 +85,8 @@ struct ShellView: View {
 /// with a centred inline title, so the selector is a toolbar Menu instead.
 struct ModuleRootView: View {
     var module: ModuleTab
+    /// Switches the tab bar to another module (Hoy in Tareas links to Hábitos).
+    var openTab: (String) -> Void = { _ in }
     @Environment(AuthModel.self) private var auth
     @State private var section: ModuleSection
     @State private var adding = false
@@ -93,8 +95,9 @@ struct ModuleRootView: View {
     @State private var transactionFilters = TransactionFilters()
     @State private var path = NavigationPath()
 
-    init(module: ModuleTab) {
+    init(module: ModuleTab, openTab: @escaping (String) -> Void = { _ in }) {
         self.module = module
+        self.openTab = openTab
         _section = State(initialValue: module.sections[0])
     }
 
@@ -139,6 +142,20 @@ struct ModuleRootView: View {
                 .id(transactionFilters)
         case (.finance, "more"):
             FinanceMoreView(api: auth.api, go: open)
+        case (.tasks, "today"):
+            TasksTodayView(api: auth.api) { openTab(ModuleTab.habits.rawValue) }
+        case (.tasks, "upcoming"):
+            TasksUpcomingView(api: auth.api)
+        case (.tasks, "lists"):
+            TaskListsView(api: auth.api)
+        case (.tasks, "templates"):
+            TemplatesView(api: auth.api)
+        case (.habits, "today"):
+            HabitsTodayView(api: auth.api) { adding = true }
+        case (.habits, "list"):
+            HabitsListView(api: auth.api) { adding = true }
+        case (.habits, "progress"):
+            HabitsProgressView(api: auth.api)
         default:
             ScrollView {
                 ContentUnavailableView {
@@ -158,6 +175,12 @@ struct ModuleRootView: View {
         switch module {
         case .finance:
             TransactionSheet(model: TransactionFormModel(api: auth.api)) { toast = $0 }
+        case .tasks:
+            NewTaskSheet(api: auth.api, onSaved: { toast = $0 }) { seed in
+                path.append(TemplateRoute(id: nil, seed: seed))
+            }
+        case .habits:
+            HabitEditorView(api: auth.api) { id in path.append(HabitRoute(id: id)) }
         default:
             NavigationStack {
                 PendingMigrationView(title: module.addLabel, symbol: "plus")
@@ -185,6 +208,7 @@ struct ModuleRootView: View {
         Menu {
             Picker("Vista", selection: Binding(get: { section }, set: { picked in
                 transactionFilters = TransactionFilters()
+                path = NavigationPath()
                 section = picked
             })) {
                 ForEach(module.sections) { Text($0.title).tag($0) }
