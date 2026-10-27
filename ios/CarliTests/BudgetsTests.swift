@@ -37,6 +37,6 @@ struct BudgetsTests {
         #expect(changes == [BudgetChange(categoryId: "food", amountCents: nil, rollover: false),
                             BudgetChange(categoryId: "bar", amountCents: 3000, rollover: false)])
         let encoded = String(decoding: try APIClient.encoder.encode(changes[0]), as: UTF8.self)
-        #expect(encoded.contains("\\"amount_cents\\":null"))
+        #expect(encoded.contains(#""amount_cents":null"#))
     }
 }
