@@ -36,6 +36,14 @@ final class APIClient {
         try await request("POST", path, body: body)
     }
 
+    func post<T: Decodable>(_ path: String) async throws -> T {
+        try await request("POST", path, body: Optional<Empty>.none)
+    }
+
+    func put<T: Decodable>(_ path: String, body: some Encodable) async throws -> T {
+        try await request("PUT", path, body: body)
+    }
+
     func delete(_ path: String) async throws {
         let _: Empty = try await request("DELETE", path, body: Optional<Empty>.none)
     }

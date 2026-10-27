@@ -14,7 +14,7 @@ struct RootView: View {
                 LoginView(expired: expired)
                     .transition(.opacity)
             case .signedIn:
-                HomePlaceholderView()
+                ShellView()
                     .transition(.opacity)
             }
 
