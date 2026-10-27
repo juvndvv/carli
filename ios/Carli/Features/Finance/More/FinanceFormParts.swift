@@ -45,13 +45,16 @@ struct AmountRow: View {
                     .controlSize(.small)
                     .accessibilityLabel(negative.wrappedValue ? "Negativo" : "Positivo")
             }
-            // Sized to its digits so the sign button sits right next to them.
-            TextField(placeholder, text: $text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .monospacedDigit()
-                .fixedSize()
-                .frame(minWidth: 44, alignment: .trailing)
+            // A hidden copy of the digits sizes the field, so the sign button hugs them.
+            ZStack(alignment: .trailing) {
+                Text(text.isEmpty ? placeholder : text).monospacedDigit().hidden()
+                TextField(placeholder, text: $text)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .monospacedDigit()
+            }
+            .frame(minWidth: 24)
+            .fixedSize()
             Text("€").foregroundStyle(CarliColor.text3)
         }
     }
