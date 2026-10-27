@@ -115,6 +115,8 @@ private struct SummaryBody: View {
             .foregroundStyle(CarliColor.text2)
             .padding(.top, CarliSpace.s4)
 
+        MetricsGrid(data: data, go: go)
+
         SummarySection(title: "Próximos cargos", padded: data.upcoming.isEmpty) {
             if data.upcoming.isEmpty {
                 Muted("No hay cargos recurrentes en los próximos 7 días.")
@@ -150,8 +152,6 @@ private struct SummaryBody: View {
         if let summary = data.uncategorized, summary.expenseCents != 0 {
             UncategorizedNotice(summary: summary) { go("transactions") }
         }
-
-        MetricsGrid(data: data, go: go)
 
         SummarySection(title: "Ingresos y gastos") {
             if data.history.isEmpty {
