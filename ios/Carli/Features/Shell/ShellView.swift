@@ -85,6 +85,7 @@ struct ShellView: View {
 /// with a centred inline title, so the selector is a toolbar Menu instead.
 struct ModuleRootView: View {
     var module: ModuleTab
+    @Environment(AuthModel.self) private var auth
     @State private var section: ModuleSection
     @State private var adding = false
 
@@ -95,6 +96,38 @@ struct ModuleRootView: View {
 
     var body: some View {
         NavigationStack {
+            content
+                .navigationTitle(section.title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(removing: .title)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        sectionMenu
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(module.addLabel, systemImage: "plus") { adding = true }
+                            .buttonStyle(.glassProminent)
+                            .tint(CarliColor.primary)
+                    }
+                }
+                .sheet(isPresented: $adding) {
+                    NavigationStack {
+                        PendingMigrationView(title: module.addLabel, symbol: "plus")
+                    }
+                    .presentationDetents([.medium, .large])
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch (module, section.id) {
+        case (.finance, "summary"):
+            FinanceSummaryView(model: FinanceSummaryModel(api: auth.api)) { id in
+                if let target = module.sections.first(where: { $0.id == id }) { section = target }
+            }
+        default:
             ScrollView {
                 ContentUnavailableView {
                     Label(section.title, systemImage: "hammer")
@@ -105,26 +138,6 @@ struct ModuleRootView: View {
                 .padding(.horizontal, CarliSpace.s16)
             }
             .background(CarliColor.bg)
-            .navigationTitle(section.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(removing: .title)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    sectionMenu
-                }
-                .sharedBackgroundVisibility(.hidden)
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(module.addLabel, systemImage: "plus") { adding = true }
-                        .buttonStyle(.glassProminent)
-                        .tint(CarliColor.primary)
-                }
-            }
-            .sheet(isPresented: $adding) {
-                NavigationStack {
-                    PendingMigrationView(title: module.addLabel, symbol: "plus")
-                }
-                .presentationDetents([.medium, .large])
-            }
         }
     }
 

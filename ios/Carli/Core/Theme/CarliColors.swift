@@ -21,6 +21,12 @@ enum CarliColor {
     static let negative = dynamic(0xC8281C, 0xED5A46)
     static let dangerFill = Color(hex: 0xC8281C)
 
+    /// Validated categorical chart palette, slots c1…c8.
+    static let chart = [
+        dynamic(0x2A78D6, 0x3987E5), dynamic(0xEB6834, 0xD95926), dynamic(0x1BAF7A, 0x199E70), dynamic(0xEDA100, 0xC98500),
+        dynamic(0xE87BA4, 0xD55181), dynamic(0x008300, 0x008300), dynamic(0x6250D6, 0x9085E9), dynamic(0xE34948, 0xE66767),
+    ]
+
     /// Activity rings, outer to inner: disponible, ahorro, ritmo.
     static let rings = [dynamic(0xE5063F, 0xFA114F), dynamic(0x3D9C0E, 0xA6FF00), dynamic(0x0091B3, 0x00F0FF)]
     static let ringInk = [dynamic(0xD90033, 0xFF5C85), dynamic(0x2E7D0C, 0xA6FF00), dynamic(0x007E9C, 0x00F0FF)]

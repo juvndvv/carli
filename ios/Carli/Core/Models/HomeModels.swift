@@ -22,9 +22,10 @@ struct AppModule: Decodable, Identifiable, Equatable {
 
 // MARK: Finance
 
-struct FinancePeriod: Decodable, Equatable {
+struct FinancePeriod: Decodable, Equatable, Identifiable, Hashable {
     var id: String
     var name: String
+    var startDate: String?
     var shortName: String?
     var rangeLabel: String?
     var daysRemaining: Int?
@@ -47,6 +48,7 @@ struct FinanceSummary: Decodable, Equatable {
 
 struct FinanceSettings: Decodable, Equatable {
     var budgetWarningThreshold: Int?
+    var savingsTargetPercent: Int?
 }
 
 // MARK: Pending
