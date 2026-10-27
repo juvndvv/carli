@@ -19,6 +19,8 @@ struct TransactionsView: View {
         }
         .listStyle(.insetGrouped)
         .listSectionSpacing(.compact)
+        // insetGrouped leaves a header-sized gap above the first section (the chips).
+        .contentMargins(.top, CarliSpace.s4, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(CarliColor.bg)
         .searchable(text: $model.filters.query, placement: .navigationBarDrawer(displayMode: .always),
@@ -101,6 +103,7 @@ struct TransactionsView: View {
                 } label: {
                     Label("Eliminar", systemImage: "trash")
                 }
+                .tint(CarliColor.dangerFill)
             }
     }
 
