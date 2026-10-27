@@ -17,7 +17,7 @@ else
   [[ -z "$UDID" ]] && UDID=$(xcrun simctl list devices available | grep -m1 -E '    iPhone [0-9]+ Pro \(' | grep -oE '[0-9A-F-]{36}')
 fi
 xcrun simctl boot "$UDID" 2>/dev/null || true
-open -a Simulator
+open -a Simulator 2>/dev/null || true
 
 xcodebuild -project Carli.xcodeproj -scheme Carli -configuration Debug \
   -destination "id=$UDID" -derivedDataPath build build -quiet
