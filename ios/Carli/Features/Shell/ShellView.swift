@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A module's own sections, shown as a segmented control inside its tab.
+/// A module's own sections, picked from the title menu inside its tab.
 struct ModuleSection: Identifiable, Hashable {
     var id: String
     var title: String
@@ -80,7 +80,8 @@ struct ShellView: View {
     }
 }
 
-/// A module tab: large title, its sections in a segmented control, "+" top right.
+/// A module tab: the current section is the title, and the title menu switches
+/// between sections; "+" sits top right.
 struct ModuleRootView: View {
     var module: ModuleTab
     @State private var section: ModuleSection
@@ -94,24 +95,21 @@ struct ModuleRootView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: CarliSpace.s16) {
-                    Picker("Sección", selection: $section) {
-                        ForEach(module.sections) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .controlSize(.large)
-
-                    ContentUnavailableView {
-                        Label(section.title, systemImage: "hammer")
-                    } description: {
-                        Text("Esta sección todavía no está migrada a la app nativa.")
-                    }
-                    .padding(.top, CarliSpace.s48)
+                ContentUnavailableView {
+                    Label(section.title, systemImage: "hammer")
+                } description: {
+                    Text("Esta sección de \(module.title) todavía no está migrada a la app nativa.")
                 }
+                .padding(.top, CarliSpace.s48)
                 .padding(.horizontal, CarliSpace.s16)
             }
             .background(CarliColor.bg)
-            .navigationTitle(module.title)
+            .navigationTitle(section.title)
+            .toolbarTitleMenu {
+                Picker("Vista", selection: $section) {
+                    ForEach(module.sections) { Text($0.title).tag($0) }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(module.addLabel, systemImage: "plus") { adding = true }
@@ -128,4 +126,3 @@ struct ModuleRootView: View {
         }
     }
 }
-
