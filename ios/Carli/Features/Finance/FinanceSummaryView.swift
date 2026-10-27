@@ -459,9 +459,11 @@ private struct CategoryDonut: View {
         VStack(spacing: CarliSpace.s12) {
             Chart(slices) { slice in
                 SectorMark(angle: .value("Gasto", slice.amountCents), innerRadius: .ratio(0.64), angularInset: 1.5)
+                    .foregroundStyle(by: .value("Categoría", slice.id))
                     .cornerRadius(4)
-                    .foregroundStyle(color(slice))
             }
+            .chartForegroundStyleScale(domain: slices.map(\.id), range: slices.map(color))
+            .chartLegend(.hidden)
             .chartBackground { _ in
                 VStack(spacing: 0) {
                     Text("Gastado")

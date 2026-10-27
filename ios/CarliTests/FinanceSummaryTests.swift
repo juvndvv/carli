@@ -9,7 +9,8 @@ struct FinanceSummaryTests {
         #expect(slices.count == 8)
         #expect(slices[0].slot == 5)
         #expect(slices[1].slot == 1)
-        #expect(slices.last?.label == "Otros")
+        #expect(slices.last?.label == "Otras categorías")
+        #expect(Set(slices.map(\.id)).count == slices.count)
         #expect(slices.last?.slot == nil)
     }
 

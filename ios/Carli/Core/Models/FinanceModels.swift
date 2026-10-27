@@ -213,10 +213,11 @@ struct RingFigures: Equatable {
 
 /// Category slices for the donut: top seven plus "Otros", keeping each category's own chart slot when free.
 struct DonutSlice: Identifiable, Equatable {
+    /// Position-based so a real category named like the rest bucket never collides.
+    var id: String
     var label: String
     var amountCents: Int
     var slot: Int?
-    var id: String { label }
 
     static func build(_ groups: [CategoryGroup], max: Int = 8) -> [DonutSlice] {
         let sorted = groups.sorted { $0.amountCents > $1.amountCents }
@@ -229,11 +230,13 @@ struct DonutSlice: Identifiable, Equatable {
             return slot
         }
         var free = (1...8).filter { !used.contains($0) }
-        var slices = zip(head, wanted).map { group, slot in
-            DonutSlice(label: group.name, amountCents: group.amountCents, slot: slot ?? (free.isEmpty ? nil : free.removeFirst()))
+        var slices = zip(head, wanted).enumerated().map { index, pair in
+            DonutSlice(id: "slice-\(index)", label: pair.0.name, amountCents: pair.0.amountCents,
+                       slot: pair.1 ?? (free.isEmpty ? nil : free.removeFirst()))
         }
         if !tail.isEmpty {
-            slices.append(DonutSlice(label: "Otros", amountCents: tail.reduce(0) { $0 + $1.amountCents }, slot: nil))
+            slices.append(DonutSlice(id: "rest", label: "Otras categorías",
+                                     amountCents: tail.reduce(0) { $0 + $1.amountCents }, slot: nil))
         }
         return slices
     }
