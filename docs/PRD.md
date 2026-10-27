@@ -1,4 +1,4 @@
-# PRD · Personal App (shell modular + módulos Finanzas y Tareas)
+# PRD · Personal App (shell modular + módulos Finanzas, Tareas, Notas y Hábitos)
 
 | | |
 |---|---|
@@ -375,7 +375,7 @@ Tareas compartidas, avisos por ubicación, sincronización con Calendario/Record
 3. Organización: **listas simples**, sin etiquetas.
 4. Pestañas: **Plantillas como pestaña propia** (Inicio · Hoy · Próximas · Listas · Plantillas) y **botón "+" también en Tareas**.
 5. Avisos a hora concreta: **TODO, se decide más adelante**. TA-06 y §8.5 quedan fuera de la v1; la hora de una tarea se guarda y se muestra, pero no avisa.
-6. Hábitos: **sin marca de hábito en Tareas**. Se deja la puerta abierta con el historial por ocurrencia (TA-PL-09); el módulo Hábitos podrá leerlo o importar una plantilla. Mientras tanto, una lista "Hábitos" sirve para agruparlas.
+6. Hábitos: **sin marca de hábito en Tareas**. Se deja la puerta abierta con el historial por ocurrencia (TA-PL-09); el módulo Hábitos lo importa al convertir una plantilla (§10.2 B).
 
 ## 9. Módulo Notas
 
@@ -523,7 +523,176 @@ Pendiente:
 - Enlaces detectados en las notas de texto (abrirlos con un toque): hoy el cuerpo es un campo de texto plano sin detección.
 - NO-CO-07 (pantalla siempre encendida en el súper).
 
-## 10. Requisitos no funcionales
+## 10. Módulo Hábitos
+
+Mockups (8 pantallas, claro y oscuro): https://claude.ai/artifact/Ua9uKcrvjXDgYRK5AEriLr
+
+### 10.1 Conceptos
+
+- **Hábito**: algo que quieres hacer con regularidad y donde lo que importa es la **constancia**, no una fecha límite. Nombre, icono, tipo, objetivo, fecha de inicio. No vence nunca.
+- **Tipo**:
+  - *Sí/No*: lo hiciste o no (meditar, gimnasio, leer).
+  - *Cantidad*: con unidad y objetivo mínimo (8 vasos de agua, 20 páginas, 150 minutos).
+  - *Evitar*: algo que quieres no hacer o limitar, con un **máximo** (0 por defecto). "No fumar" (máx. 0 al día), "Café" (máx. 2 al día), "Alcohol" (máx. 2 por semana). Lo que registras son las **recaídas** o consumos; un día sin registro cuenta como cumplido.
+- **Objetivo** (la frecuencia de un hábito no es un calendario, es una meta por periodo):
+
+| Objetivo | Ejemplo | Periodo que se evalúa |
+|---|---|---|
+| Cada día | Meditar | día |
+| Días concretos | Gimnasio L, X, V | día (solo los marcados) |
+| N veces por semana | Correr 3 veces/semana, cualquier día | semana (lunes a domingo) |
+| Cantidad por día | 8 vasos de agua | día |
+| Cantidad por semana | 150 min de ejercicio | semana |
+| Evitar (máximo por día o semana) | Sin fumar; máx. 2 cafés al día; máx. 2 cervezas por semana | día o semana |
+
+- **Registro**: un valor por hábito y día (1 en Sí/No, la suma en Cantidad). Se puede registrar cualquier día pasado desde el inicio del hábito.
+- **Periodo cumplido / no cumplido / en curso / excusado**. Calculado, nunca guardado.
+- **Constancia**: % de periodos cumplidos en las últimas 4 semanas. Es la **métrica principal**.
+- **Racha**: periodos cumplidos seguidos (en Evitar se muestra como "12 días sin"). El periodo en curso no la rompe hasta que termina. Métrica secundaria (ver 10.8).
+- **Descanso**: rango de fechas (vacaciones, enfermo) en el que no se evalúa nada. Para todos los hábitos o para uno. No rompe la racha ni baja la constancia.
+
+### 10.2 Frontera con Tareas
+
+Regla: **Tareas dice qué toca hacer y cuándo; Hábitos mide con qué constancia lo haces.** Una cosa es plantilla *o* hábito, nunca las dos.
+
+| Caso | Dónde | Por qué |
+|---|---|---|
+| Pagar la comunidad el día 1 | Tareas (plantilla) | Tiene fecha; si no se hace, vence y debe salir en Pendientes |
+| Sacar la basura L, X, V | Tareas (plantilla) | Es una obligación con día. Si no la haces, sigue pendiente |
+| Gimnasio 3 veces por semana | Hábitos | Sin día fijo; importa la semana, no el día |
+| Beber 8 vasos de agua | Hábitos | Cantidad que se acumula a lo largo del día |
+| Meditar cada día | Hábitos | Si un día no lo haces, ese día se pierde; no queda nada "vencido" |
+
+Diferencias de comportamiento que justifican dos módulos:
+
+1. Un hábito **no vence**: el día que no lo haces queda como no cumplido y desaparece. Nunca entra en Pendientes.
+2. Un hábito tiene **objetivos flexibles** (N veces por semana) y **cantidades**; una plantilla de Tareas no.
+3. Un hábito se mide con **constancia y racha**; una tarea con hecha / no hecha.
+
+### Cómo se conectan (decidido)
+
+**A. Los hábitos de hoy aparecen en Hoy de Tareas** (Hábitos → Tareas). Hoy de Tareas gana una fila de anillos "Hábitos" encima de las tareas, con los hábitos que tocan hoy y aún no están cumplidos. Un toque registra (Sí/No) o suma 1 (Cantidad); mantener pulsado abre el registro de cantidad. Los hábitos *Evitar* no salen en la fila (no hay nada que hacer). No son tareas: no se guardan en `tasks`, no cuentan en "3 de 7", no vencen ni van a Pendientes. Se puede apagar por hábito ("Mostrar en Hoy de Tareas").
+
+**B. Convertir una plantilla en hábito** (Tareas → Hábitos). Desde una plantilla, "Convertir en hábito": crea el hábito con el objetivo deducido de la RRULE (`FREQ=DAILY` → cada día; `WEEKLY;BYDAY=MO,WE,FR` → días concretos) e **importa el historial** de ocurrencias (TA-PL-09): *hecha* → registro, *saltada a mano* → descanso, *omitida / sustituida* → no cumplido. La plantilla queda pausada (se puede borrar después) y la tarea abierta de hoy se borra. Es una conversión única, no un vínculo vivo.
+
+### Alternativa descartada: vínculo vivo plantilla ↔ hábito
+
+Que una plantilla siga generando tareas y cada tarea hecha cuente para el hábito. Problemas:
+
+- Dos dueños para lo mismo: hay que sincronizar hecha/deshecha en los dos sentidos (marcar en Hábitos debe completar la tarea, deshacer la tarea debe borrar el registro).
+- Tareas tendría que cambiar su semántica para esas plantillas: no vencer, cerrarse solas a medianoche, no salir en Pendientes. Es justo lo que se decidió no hacer en Tareas (decisión 6).
+- No encaja con "3 veces por semana": no hay días para generar tareas.
+
+Lo que se pierde al no vincular: subtareas, lista y notas de la plantilla. Para un hábito no hacen falta; si una rutina tiene pasos (revisar el coche), es una tarea, no un hábito.
+
+### 10.3 Requisitos funcionales
+
+#### Hábitos
+| ID | Requisito | Prio |
+|---|---|---|
+| HA-01 | Crear hábito: nombre, icono (de un set cerrado), tipo (Sí/No, Cantidad con unidad, Evitar con máximo y unidad), objetivo (10.1), fecha de inicio (hoy por defecto), hora orientativa opcional (solo ordena). | Must |
+| HA-02 | Registrar con un toque en el anillo (Sí/No: marca; Cantidad: +1). Mantener pulsado: hoja con +/−, valor exacto y día. Deshacer en toast 4 s. | Must |
+| HA-03 | Registrar o corregir días pasados desde el calendario del detalle. | Must |
+| HA-04 | Editar hábito. Cambiar el objetivo aplica **desde hoy**: los periodos pasados se evalúan con el objetivo que tenían (se guarda el historial de objetivos). | Must |
+| HA-05 | Pausar / archivar / borrar. Pausado: no sale en Hoy ni se evalúa. Archivado: fuera de la lista, conserva estadísticas. Borrar pide confirmación. | Must |
+| HA-06 | Descansos: "Modo descanso" global (de / hasta) y descanso por hábito. Los días en descanso salen en gris en el calendario y no cuentan para nada. | Must |
+| HA-07 | Reordenar hábitos (orden manual en Hoy y en la lista). | Should |
+| HA-08 | Nota corta opcional en un registro ("10 km, rodaje suave"). | Could |
+| HA-09 | Tipo *Evitar*: en Hoy sale aparte ("Evitar") con el botón "Registrar" (+1 recaída o consumo) y lo que queda ("1 de 2 cafés", "12 días sin"). Pasarse del máximo marca el periodo como no cumplido en ese momento. | Must |
+
+#### Vistas
+| ID | Requisito | Prio |
+|---|---|---|
+| HA-VI-01 | **Hoy**: anillo total del día ("3 de 5") y una tarjeta por hábito con su anillo (día o semana en curso), valor y racha. Los cumplidos bajan al final. Los semanales ya cumplidos salen como "Hecho esta semana". | Must |
+| HA-VI-02 | **Hábitos**: todos los activos con objetivo en texto, constancia % y la semana actual en 7 puntos (L–D). Pausados y archivados abajo, plegados. | Must |
+| HA-VI-03 | **Detalle**: constancia (4 semanas y desde el inicio), racha actual y mejor racha, calendario mensual (cumplido / no / descanso / futuro) y barras por semana para objetivos semanales o de cantidad. | Must |
+| HA-VI-05 | **Progreso** (pestaña): constancia global (todos los hábitos, últimas 4 semanas) con su anillo, selector Semana / Mes / Año, cuadrícula hábitos × días del periodo, y lista de hábitos ordenada por constancia con la tendencia frente al periodo anterior (↑ / ↓ en la cifra, sin color). | Must |
+| HA-VI-04 | Tarjeta en **Inicio**: "Hábitos · 3 de 5" con los anillos de los pendientes de hoy, registrables en línea. | Must |
+
+#### Integración
+| ID | Requisito | Prio |
+|---|---|---|
+| HA-TA-01 | Fila "Hábitos" en Hoy de Tareas (10.2 A). Solo si el módulo Hábitos está activo. | Must |
+| HA-TA-02 | "Convertir en hábito" desde el detalle de una plantilla con RRULE diaria o semanal, con vista previa del historial importado (10.2 B). Plantillas "tras completarla", mensuales o anuales no se pueden convertir (no son hábitos). | Should |
+| HA-SH-01 | **Pendientes**: los hábitos **nunca** entran. | Must |
+| HA-SH-02 | **Aviso de las 20:00**: una línea "Te quedan 2 hábitos de hoy" si hay hábitos diarios sin cumplir, y "Correr: 1 de 3, quedan 2 días" solo cuando un objetivo semanal está en riesgo (días que quedan = veces que faltan). Los Evitar no entran. Sigue siendo un solo aviso. Desactivable. | Must |
+| HA-SH-03 | Ajustes del módulo: mostrar en Hoy de Tareas (por defecto sí), línea en el aviso de las 20:00, primer día de la semana (lunes). | Should |
+
+### 10.4 Reglas de cálculo
+
+1. **Día**: Europe/Madrid. Un día cumple si `valor ≥ objetivo` (Evitar: `valor ≤ máximo`; sin registro = 0 = cumplido).
+2. **Semana**: lunes a domingo. Sí/No semanal cuenta días con registro (máximo 1 por día); Cantidad semanal suma valores.
+3. **Primera semana incompleta**: objetivo = `min(objetivo, días que quedan)`. Empezar un jueves "3 veces por semana" pide 3 de 4 días; empezar un sábado pide 2.
+4. **Días concretos**: los días no marcados no se evalúan; registrar en uno de ellos cuenta como extra y no afecta.
+5. **Racha**: periodos evaluables cumplidos seguidos hasta el último cerrado, más el actual si ya está cumplido. Descanso y días no marcados se saltan sin romperla.
+6. **Constancia**: cumplidos / evaluables en las últimas 4 semanas cerradas + la actual si ya está cumplida (para no castigar el periodo en curso).
+7. Nada de esto se guarda: se calcula al leer. Con un usuario y pocos hábitos son unos cientos de filas al año.
+
+### 10.5 Notificaciones
+
+Sin avisos por hábito en la v1, por el mismo motivo que Tareas (decisión 5: avisos a hora = TODO, sin APNs). La hora orientativa se guarda para cuando se decida. Solo la línea del aviso de las 20:00 (HA-SH-02).
+
+### 10.6 Fuera de alcance
+
+Hábitos compartidos o con amigos, logros e insignias, recordatorios por hábito, registro automático desde Salud (WHOOP/HealthKit: sueño, pasos), widgets, Siri. El modelo deja la puerta abierta a Salud con `source` en cada registro.
+
+### 10.7 Notas técnicas
+
+Detalle en TRD §4.1.5, §5.7, §6.6 y §7.7.
+
+
+- Esquema `habits`:
+  - `habits` (user_id, name, icon, kind `check|quantity|avoid`, unit, show_in_tasks, sort, start_date, preferred_time, paused_at, archived_at, converted_from_template_id).
+  - `habit_goals` (habit_id, valid_from, period `day|week`, target numeric (mínimo; en `avoid`, máximo), days_of_week smallint[] nulo): historial de objetivos para HA-04.
+  - `habit_entries` (habit_id, date, value numeric, note, source `manual|task_import|health`, unique `(habit_id, date)`).
+  - `habit_breaks` (user_id, habit_id nulo = todos, from_date, to_date).
+- Sin FK hacia `tasks`: la conversión lee el historial por un servicio del módulo Tasks (`TemplateHistoryReader`) y pausa la plantilla con su propio servicio. Hábitos no escribe en el esquema `tasks`.
+- La fila de Hoy de Tareas la pinta la app llamando a `GET /habits/today` cuando el módulo está activo; el backend de Tasks no sabe nada de hábitos.
+- `RecurrenceRule` de `Core/Recurrence` solo se usa para deducir el objetivo al convertir; los hábitos no usan RRULE.
+- `HabitsDigestProvider` para la línea de las 20:00. No implementa `PendingItemsProvider`.
+- `ModuleRegistry`: `habits` deja de ser "Próximamente".
+
+### 10.8 Riesgos y críticas
+
+| Tema | Comentario |
+|---|---|
+| Apps de hábitos se abandonan | Es el módulo con más riesgo de dejarse a las 3 semanas. Mitigación: registrar desde Inicio y desde Hoy de Tareas sin entrar al módulo, y pocos hábitos (avisar a partir de 7 activos). |
+| Rachas | Una racha que vuelve a 0 por un mal día desmotiva más de lo que ayuda (efecto "ya la he roto, da igual"). Por eso la cifra grande es la constancia y la racha va en pequeño. |
+| Anillos y color | Todos en ember, icono neutro (decidido). |
+| Evitar sin registrar | Un día sin registro cuenta como cumplido, así que olvidarse de apuntar una recaída infla la constancia. Asumible con un solo usuario; no se pide confirmación diaria. |
+| Cinco pestañas en Hábitos | Inicio · Hoy · Hábitos · Progreso + "+" caben, pero Progreso y el detalle repiten estadísticas. Progreso es la vista de conjunto; el detalle, la de un hábito. |
+| Fila en Hoy de Tareas | Mezcla dos cosas en una pantalla. Se mitiga con anillos compactos (no filas de tarea) y sin contar en "3 de 7". Si molesta, se apaga en ajustes. |
+| Online-only | Registrar un hábito con el Mac dormido falla. A diferencia de Notas, no es crítico: se registra luego (HA-03). No se propone offline. |
+| Convertir plantilla | Pierde subtareas, lista y notas. Es intencionado (10.2). |
+
+### 10.9 Decisiones (Juanda, 2026-10-27)
+
+1. Conexión con Tareas: **fila de anillos en Hoy de Tareas + "Convertir en hábito" única**. Sin vínculo vivo.
+2. Tipos en la v1: **Sí/No, Cantidad y Evitar**.
+3. Métrica principal: **constancia %**; la racha en pequeño.
+4. Anillos: **todos en ember**.
+5. Pestañas: **Inicio · Hoy · Hábitos · Progreso** + botón "+".
+6. Aviso de las 20:00: **incluye la línea de hábitos** (HA-SH-02, Must).
+7. Descansos: **entran en la v1** (HA-06, Must).
+
+### 10.10 Estado (v1, 2026-10-27)
+
+Implementado: todo lo Must, más HA-07 (ordenar, desde la lista), HA-08 (nota en el registro), HA-TA-02 (convertir plantilla con vista previa) y HA-SH-03 (ajustes del módulo).
+
+Detalles que fija la implementación:
+- Cantidad semanal con primera semana incompleta: el objetivo se prorratea por días (`objetivo × días / 7`); Sí/No semanal usa `min(objetivo, días)` (10.4.3). Los días de descanso dentro de una semana cuentan igual que los días que faltan. En *Evitar* el máximo nunca se prorratea.
+- Pausar o archivar deja de evaluar desde ese día; al reanudar, los días parado se guardan como descanso del hábito, así no rompen la racha.
+- Un cambio de objetivo en mitad de la semana manda en toda esa semana (la semana se evalúa con el objetivo vigente al cerrarla, o hoy si está en curso). Cambiar dos veces el mismo día sobrescribe el cambio de ese día.
+- El tipo de un hábito no se puede cambiar después de crearlo.
+- Al convertir una plantilla se borran **todas** sus tareas abiertas, no solo la de hoy: una abierta atrasada de la política *acumular* seguiría saliendo en Pendientes. La tarea abierta de hoy no cuenta como "sin hacer" en la vista previa (hoy sigue en curso).
+- Si en el aviso de las 20:00 solo hay líneas de hábitos, el aviso se titula "Hábitos de hoy" y abre `/habitos/hoy`.
+
+Pendiente:
+- Navegar a semanas, meses o años anteriores en Progreso (hoy muestra el periodo actual frente al anterior).
+- Aviso al pasar de 7 hábitos activos: hoy es un texto en la lista, no un aviso al crear.
+
+
+## 11. Requisitos no funcionales
 
 - **Privacidad**: autoalojado en VPS propio; ningún dato sale a terceros salvo el servicio push del navegador (contenido cifrado extremo a extremo por Web Push).
 - **Seguridad**: HTTPS obligatorio, 2FA opcional, rate limit en login, backups diarios cifrados de la BD fuera del VPS.
@@ -532,7 +701,7 @@ Pendiente:
 - **Responsive**: desde 360 px de ancho.
 - **Exactitud**: los importes nunca se calculan con coma flotante (ver TRD).
 
-## 11. Riesgos y decisiones abiertas
+## 12. Riesgos y decisiones abiertas
 
 | Tema | Comentario |
 |---|---|
@@ -545,6 +714,6 @@ Pendiente:
 | Doble conteo (F3) | Lo manual y lo importado pueden duplicarse; responsabilidad del usuario. Mitigación: saldo del banco visible (FI-BK-07). |
 | Periodo financiero | Decidido: de nómina a nómina con fecha variable (§7.5). Riesgo: si un mes no se registra la nómina, el periodo se alarga; se mitiga con el recurrente de la nómina en modo "con confirmación" y un aviso. |
 
-## 12. Glosario
+## 13. Glosario
 
 Patrimonio neto, saldo, conciliación, recurrente, split, rollover: ver §7.1.

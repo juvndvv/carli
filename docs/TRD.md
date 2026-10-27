@@ -1,4 +1,4 @@
-# TRD · Personal App (shell modular + módulos Finanzas y Tareas)
+# TRD · Personal App (shell modular + módulos Finanzas, Tareas, Notas y Hábitos)
 
 | | |
 |---|---|
@@ -16,7 +16,7 @@
 | Cliente | App nativa iOS en Flutter 3.47 / Dart 3.13 (bundle `dev.jotade.personal`, solo iOS). Riverpod 3, go_router 18, dio |
 | UI | Librería propia "Ember" en `app/lib/ui` (widgets `Carli*`) sobre `ThemeExtension` de tokens. Iconos Hugeicons, gráficos fl_chart |
 | Backend | Laravel 13, PHP 8.4, arquitectura modular por dominio (`app/Modules/*`) |
-| BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`, `notes.*`), PK UUIDv7 |
+| BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`, `notes.*`, `habits.*`), PK UUIDv7 |
 | Auth | Laravel Sanctum: token personal (Bearer) en la app iOS, guardado en el Keychain. Laravel Fortify headless para 2FA TOTP. Bloqueo local con Face ID |
 | Avisos | Notificación local diaria (20:00) con el número de pendientes y bandeja in-app. Sin push remoto hasta tener APNs |
 | Colas y cron | Queue driver `database` + `schedule:work` en contenedor propio (sin Redis en v1) |
@@ -186,7 +186,7 @@ final class RecurrenceDescriber {
 - Fechas saltadas (`task_template_exceptions`, el EXDATE): al llegar su día se guarda una fila `skipped/manual` y no se toca la abierta anterior. Saltar una fecha que ya tiene tarea omite esa tarea.
 - Tipo "tras completarla" (`after_done_interval_days`, sin `rrule`): `next_due_date` es la siguiente fecha. Se genera cuando `next_due_date − lead_days ≤ hoy` y no hay ninguna abierta; al crearla pasa a `null`. Completar u omitir pone `next_due_date = hoy + intervalo` (y genera si ya toca); deshacer la vuelve a `null`. `until`/`count` cortan la serie.
 - Una tarea generada copia título, notas, hora, importancia y subtareas de la plantilla. Editar la plantilla solo afecta a las futuras; con `apply_to_open` copia título, notas, lista, hora e importancia a las abiertas. Las hechas nunca cambian.
-- Historial por ocurrencia: cada fecha procesada deja una fila (`open`, `done` o `skipped` con motivo), base del historial de la plantilla y del futuro módulo Hábitos (PRD TA-PL-09).
+- Historial por ocurrencia: cada fecha procesada deja una fila (`open`, `done` o `skipped` con motivo), base del historial de la plantilla y de la conversión a hábito (PRD TA-PL-09, §4.1.5).
 - Dos disparadores con el mismo código: `tasks:generate` (diario 00:05) y la **puesta al día perezosa** al pedir Hoy, Próximas o los contadores de Pendientes (`catchUp($user)`, memorizado por petición).
 
 **Pendientes y aviso de las 20:00**: `TasksPendingItems` implementa `PendingItemsProvider` con el tipo `overdue_task` (abiertas con `due_date < hoy`; acción en línea Hecha / Pasar a hoy / Omitir) y además `Core/Pending/DailyDigestContributor`:
@@ -196,6 +196,8 @@ interface DailyDigestContributor { public function digestCounts(User $user): arr
 ```
 
 `PendingRegistry::digest()` suma a los contadores de Pendientes lo que aportan estos contribuidores y `SendPendingDigests` lo usa, así las tareas abiertas de hoy entran en el aviso ("Tienes 1 tarea vencida y 2 tareas de hoy por hacer") sin aparecer en Pendientes.
+
+Un módulo que no tiene Pendientes puede añadir frases sueltas al mismo aviso con `Core/Pending/DigestLineProvider` (`moduleId()`, `digestLines(User): list<string>`), registrado con `PendingRegistry::registerDigestLines(...)`. Las líneas van detrás de la frase de Pendientes ("Tienes 1 tarea de hoy por hacer. Te quedan 2 hábitos de hoy"); si solo hay líneas, el aviso se manda igual, con el título "Hábitos de hoy" y la URL `/habitos/hoy`. Lo usa Hábitos (§4.1.5).
 
 ### 4.1.4 Notas: sincronización y reposición (PRD §9)
 
@@ -208,6 +210,22 @@ Notas es el único módulo que funciona sin conexión (ADR-014). La app escribe 
 - **Terminar compra**: `shopping.finish {note_id, item_ids, finished_at}` borra los elementos del carro, pone `last_bought_at = finished_at` (a segundos) y suma `times_bought` a sus productos, y repone. Deshacer en la app manda operaciones compensatorias (restaura los elementos y `last_bought_at`, `times_bought` y `restocked_for` vía `product.upsert`, y borra lo repuesto).
 - **Búsqueda**: `notes.immutable_unaccent()` (envoltorio `IMMUTABLE` de `unaccent`) alimenta columnas `tsvector` generadas en español sobre título + cuerpo y sobre cada elemento, con índices GIN. La consulta convierte cada palabra en prefijo (`palabra:*`) y añade un `ILIKE` sin acentos de respaldo. `NotesSearcher` reutiliza la consulta para la búsqueda global.
 - Notas no aporta nada a Pendientes ni al aviso de las 20:00.
+
+### 4.1.5 Hábitos: evaluación, descansos y conversión (PRD §10)
+
+Nada de lo que se ve en Hábitos se guarda: periodos, estado, racha y constancia se calculan al leer (ADR-015). Con un usuario son unos cientos de filas por hábito y año.
+
+- **Línea de tiempo** (`Domain/Evaluation/Timeline`): tipo, `start_date`, día de parada (el local de `min(paused_at, archived_at)`), objetivos ordenados por `valid_from`, valores por fecha y descansos (los del hábito más los globales). `goalOn(día)` es el último objetivo con `valid_from ≤ día` (o el primero).
+- **Periodos** (`HabitEvaluator::periods`): de `start_date` a `min(hoy, parada − 1)`, en Europe/Madrid. Un objetivo diario da un periodo por día: `off` si el día no está marcado, `excused` si hay descanso y si no `met|missed|current`. Un objetivo semanal da un periodo de ese día al domingo (corta antes si un día posterior de la semana pasa a objetivo diario) y se evalúa con el objetivo vigente al final del periodo, o hoy si está en curso. Sí/No semanal cuenta días con valor > 0; Cantidad y Evitar suman.
+- **Semanas incompletas**: con `d` días disponibles (dentro del seguimiento y sin descanso) y `d < 7`, el objetivo es `min(objetivo, d)` en Sí/No y `objetivo × d / 7` en Cantidad; el máximo de Evitar no cambia. Con `d = 0` el periodo es `excused`.
+- **Estado**: Sí/No y Cantidad cumplen con `valor ≥ objetivo`; si no, `missed` al cerrar y `current` mientras dura. Evitar falla en cuanto `valor > máximo` (también el periodo en curso), cumple al cerrar y si no está `current`.
+- **Estadísticas** (`HabitStats`): constancia = cumplidos / (cumplidos + no cumplidos) de los periodos que terminan desde el lunes de hace 4 semanas; el periodo en curso solo entra si ya está `met`. Racha = `met` seguidos desde el final saltando `off`, `excused` y `current`; mejor racha, la tirada más larga con su fecha final. Progreso usa la misma cuenta acotando por la fecha final del periodo al rango (semana, mes o año) y al anterior para la tendencia.
+- **Objetivos con historial** (HA-04): cambiar periodo, objetivo o días hace `updateOrCreate` de una fila con `valid_from = max(hoy, start_date)` y borra las de fechas posteriores; si no cambia nada no se crea fila.
+- **Pausar / archivar**: deja de evaluar desde ese día. Al reanudar o desarchivar se crea un descanso del hábito desde el día de parada hasta ayer, para que el hueco no cuente como no cumplido.
+- **Registro**: `PUT /habits/{id}/entries/{fecha}` guarda el valor del día (único `habit_id + date`); valor 0 sin nota borra la fila. Deshacer en la app es otro `PUT` con el valor anterior.
+- **Conversión de plantilla** (HA-TA-02): Hábitos no lee ni escribe el esquema `tasks`. Usa dos servicios del módulo Tasks: `Domain/Conversion/TemplateHistoryReader::read()` devuelve un DTO con la RRULE y las ocurrencias hasta hoy (`done`; `skipped` si se saltó a mano o es una excepción; `missed` el resto; la abierta de hoy se ignora) y `TemplateService::retire()` pausa la plantilla y borra sus tareas abiertas. El objetivo sale de la RRULE con `Core/Recurrence/RecurrenceRule`: `DAILY` → cada día, `WEEKLY` con o sin `BYDAY` (sin intervalo ni otras partes) → días concretos; lo demás es un 422. Hecha → registro con `source = task_import`; saltadas consecutivas → un descanso del hábito; `start_date` = primera ocurrencia. `habits.converted_from_template_id` guarda el id sin clave foránea.
+- **Aviso de las 20:00** (HA-SH-02): `HabitsDigestProvider` implementa `DigestLineProvider` (no `PendingItemsProvider`: los hábitos nunca entran en Pendientes). "Te quedan N hábitos de hoy" con los diarios sin cumplir (sin Evitar) y "Correr: 1 de 3, quedan 2 días" para cada Sí/No semanal en riesgo (`días libres ≤ veces que faltan`, sin contar hoy si ya está registrado). Se apaga con el ajuste `digest`.
+- `HabitsSearcher` aporta los hábitos a la búsqueda global (`/habitos/habito/{id}`).
 
 ### 4.2 Registro de módulos
 
@@ -434,6 +452,24 @@ sync_operations (id = id de la operación, user_id, type, status, processed_at)
 
 Borrar una carpeta sube sus subcarpetas y notas a la carpeta padre. Las notas borradas quedan en la papelera (`deleted_at`) y se purgan a los 30 días al construir el snapshot. Los modelos usan nombres cualificados (`notes.notes`); `notes` está en `DB_SEARCH_PATH` para que `migrate:fresh` (y los tests) también vacíen el esquema.
 
+### 5.7 Hábitos (`habits`)
+
+```sql
+habits (id, user_id, name, icon, kind CHECK IN ('check','quantity','avoid'), unit NULL,
+  show_in_tasks bool, sort, start_date, preferred_time NULL, paused_at NULL, archived_at NULL,
+  converted_from_template_id uuid NULL /* sin FK hacia tasks */, timestamps)
+habit_goals (id, habit_id → habits CASCADE, valid_from, period CHECK IN ('day','week'),
+  target numeric(12,2) CHECK (>= 0) /* mínimo; en avoid, máximo */,
+  days_of_week smallint[] NULL /* ISO 1–7, solo con period = 'day' */, timestamps)       -- único (habit_id, valid_from)
+habit_entries (id, habit_id → habits CASCADE, date, value numeric(12,2) CHECK (>= 0), note NULL,
+  source CHECK IN ('manual','task_import','health'), timestamps)                        -- único (habit_id, date)
+habit_breaks (id, user_id, habit_id NULL → habits CASCADE /* NULL = todos */, from_date, to_date CHECK (>= from_date), timestamps)
+```
+
+- El primer objetivo tiene `valid_from = start_date`. Sí/No diario siempre guarda `target = 1`; una lista con los 7 días se guarda como `NULL`.
+- Ajustes del módulo en `user_modules.settings`: `show_in_tasks` (fila de anillos en Hoy de Tareas), `digest` (línea en el aviso de las 20:00) y `week_start` (`monday`, fijo en la v1).
+- Los modelos usan nombres cualificados (`habits.habits`); `habits` está en `DB_SEARCH_PATH` (por defecto `public,finance,tasks,notes,habits`) para que `migrate:fresh` y los tests vacíen el esquema.
+
 ## 6. API REST
 
 Prefijo `/api/v1`. JSON. Autenticación con token Bearer de Sanctum. Errores con formato Laravel (`message`, `errors`). Paginación por cursor en listados largos.
@@ -565,6 +601,25 @@ El backend todavía conserva piezas del cliente Angular, retirado el 2026-10-26.
 
 `POST /sync` no pasa por el middleware que recorta textos y convierte `''` en `null`: los cuerpos se guardan tal cual y un elemento de lista puede crearse vacío. Ajustes del módulo en `user_modules.settings` (`checked_behavior` por defecto).
 
+### 6.6 Hábitos (`/api/v1/habits`)
+
+Middleware `module:habits`. Las fechas van en `Y-m-d` y los días se interpretan en Europe/Madrid.
+
+| Método | Ruta | Notas |
+|---|---|---|
+| GET | `/today` | `{date, on_break, summary: {done, total, consistency}, habits[]}`. Solo los activos que se evalúan hoy (sin días no marcados ni en descanso). Cada hábito lleva el periodo en curso: `period`, `period_start/end`, `target` (prorrateado), `value`, `today_value`, `today_note`, `status`, `met`, `over`, `progress`, `days_left`, `streak`, `streak_unit`, `consistency`. `summary` no cuenta los Evitar. Lo usan Hoy de Hábitos, la tarjeta de Inicio y la fila de Hoy de Tareas |
+| GET | `/` | Todos (activos, pausados y archivados) con `consistency`, `streak` y `week[7]` (`{date, state}`, estados `done|miss|today|future|off|rest|none`) |
+| POST/GET/PATCH/DELETE | `/[{id}]` | Alta: `{name, icon (set cerrado), kind, unit?, period, target?, days_of_week?, start_date?, preferred_time?, show_in_tasks?}`; `kind` no se cambia después. El detalle añade `stats` (constancia 4 semanas y desde el inicio, racha, mejor racha y su fecha), `goals[]` (historial), `weeks[8]` (`{start, value, target}`) y `today` |
+| POST | `/{id}/pause`, `/resume`, `/archive`, `/unarchive` | Reanudar crea el descanso de los días parado |
+| PUT | `/order` | `{ids: []}` |
+| GET | `/{id}/calendar?month=Y-m` | `{month, days[]: {date, state, value, note}}` |
+| PUT/DELETE | `/{id}/entries/{fecha}` | `{value, note?}`; 422 si es futura o anterior al inicio, o un Sí/No distinto de 0/1. Devuelve `{entry, today}` |
+| GET | `/progress?range=week\|month\|year&date=` | `{from, to, consistency, met, total, previous_consistency, trend, columns[], habits[]}`; cada hábito con `consistency`, `trend` (puntos frente al periodo anterior) y `cells` (por día; en `year`, `{month, consistency}`) |
+| GET/POST/PATCH/DELETE | `/breaks[/{id}]` | `{from_date, to_date, habit_id?}` (`NULL` = modo descanso global) |
+| POST | `/breaks/{id}/end` | Lo acorta hasta ayer, o lo borra si aún no ha empezado |
+| GET | `/conversions/{template}` | Vista previa: objetivo deducido, `done/skipped/missed`, constancia y racha de partida y `cells` de 8 semanas. 404 si la plantilla no es tuya o Tareas está desactivado; 422 si no es diaria o semanal |
+| POST | `/conversions` | `{template_id, name?, icon?, show_in_tasks?}` → detalle del hábito creado (201) |
+
 ## 7. App iOS (Flutter)
 
 Cliente principal: app nativa en `app/` (Flutter 3.47, Dart 3.13), solo iOS (bundle `dev.jotade.personal`, iOS 15+). Sustituye a la PWA Angular, retirada del repo el 2026-10-26.
@@ -594,10 +649,14 @@ app/lib/
 │   │   ├── data/         # FinanceApi, modelos, providers, repositorios, Enable Banking
 │   │   ├── screens/      # resumen, movimientos, presupuestos, cuentas, categorías, recurrentes, objetivos, deudas, compartidos, ajustes, bancos
 │   │   └── ui/           # widgets propios del módulo (transaction-row, budget-line, period-selector, tarjeta de Inicio…)
-│   └── tasks/
-│       ├── data/         # TasksApi, modelos, providers (un contador de cambios refresca todas las vistas), TaskActions, FrequencyDraft (RRULE ↔ editor)
-│       ├── screens/      # Hoy, Próximas, Listas (+ lista, hechas, archivadas), Plantillas, editor de plantilla, detalle, alta rápida, ajustes
-│       └── ui/           # fila de tarea con check y deslizar para posponer, tarjeta de Inicio, acción en Pendientes, rutas
+│   ├── tasks/
+│   │   ├── data/         # TasksApi, modelos, providers (un contador de cambios refresca todas las vistas), TaskActions, FrequencyDraft (RRULE ↔ editor)
+│   │   ├── screens/      # Hoy, Próximas, Listas (+ lista, hechas, archivadas), Plantillas, editor de plantilla, detalle, alta rápida, ajustes
+│   │   └── ui/           # fila de tarea con check y deslizar para posponer, tarjeta de Inicio, acción en Pendientes, rutas
+│   └── habits/
+│       ├── data/         # HabitsApi, modelos, providers (contador de cambios), HabitActions, formatos
+│       ├── screens/      # Hoy, Hábitos, Progreso, detalle, editor, ajustes
+│       └── ui/           # anillo, puntos de día, hoja de registro, descansos, tarjeta de Inicio, fila de Hoy de Tareas, conversión de plantilla
 └── dev/                  # catálogo de componentes (solo debug, /dev/catalogo)
 ```
 
@@ -664,6 +723,9 @@ Shell con `StatefulShellRoute.indexedStack`: cada pestaña conserva su pila (las
 /tareas                         → /tareas/hoy
 /tareas/hoy, /tareas/proximas, /tareas/listas[/:id|/hechas|/archivadas], /tareas/plantillas   pestañas de Tareas
 /tareas/tarea/:id, /tareas/plantillas/nueva, /tareas/plantillas/:id, /tareas/ajustes          fuera del shell
+/habitos                        → /habitos/hoy
+/habitos/hoy, /habitos/lista, /habitos/progreso                                                pestañas de Hábitos
+/habitos/habito/:id[/editar], /habitos/nuevo, /habitos/ajustes                                 fuera del shell
 /dev/catalogo                   solo en debug
 ```
 
@@ -680,6 +742,13 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 - Secciones del súper para productos nuevos: diccionario de palabras clave en la app (`data/section_guess.dart`); después se aprende por producto.
 - Rutas: `/notas` (Notas: `/n/:id`, `/carpeta/:id`, `/archivadas`, `/papelera`, `/ajustes`) y `/compra` (lista principal). La barra contextual es Inicio · Notas · Compra; "+" abre el selector de tipo o enfoca el alta de producto. El editor de una nota (`/notas/n/:id`) oculta la barra.
 
+### 7.7 Hábitos (`modules/habits`)
+
+- Online, como Tareas: un `habitsChangesProvider` (contador) refresca Hoy, la lista, el detalle, el calendario, Progreso, la tarjeta de Inicio y la fila de Tareas tras cada cambio. Todas las mutaciones pasan por `HabitActions`; registrar muestra un toast de 4 s con "Deshacer" (un `PUT` con el valor anterior).
+- Anillo (`HabitRing`, sobre `CarliRings`): siempre en ember (`colors.rings.first`) con el icono neutro. Un toque marca o desmarca un Sí/No y suma 1 en Cantidad y Evitar; mantener pulsado abre la hoja de registro (−/+, valor exacto, día y nota).
+- Integración con el shell: `ShellContext.habits` (Inicio · Hoy · Hábitos · Progreso, "+" = nuevo hábito), `HabitsHomeCard` en Inicio y `HabitsTasksRow` en Hoy de Tareas. La fila solo aparece con el módulo activo y el ajuste `show_in_tasks`, muestra los pendientes de hoy con `show_in_tasks` y nunca los Evitar, y no suma a "3 de 7". El editor de plantilla ofrece "Convertir en hábito" cuando la RRULE es diaria o semanal (`canConvertToHabit`).
+- Iconos: set cerrado de 32 nombres de `icon_names.dart` (el backend valida la misma lista en `HabitIcons`).
+
 ## 8. Procesos en segundo plano
 
 | Tarea | Frecuencia | Qué hace |
@@ -694,7 +763,7 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 | `finance:refresh-bank-account-names` (F3) | A mano | Relee `/accounts/{uid}/details` de las cuentas vinculadas, guarda `details`/`product` en el snapshot y renombra a «Banco · details» solo las cuentas que conservan el nombre por defecto antiguo («Banco titular»); `--dry-run`. Al renovar la conexión se aplica el mismo renombrado con los datos nuevos |
 | `finance:detect-transfers` (F3) | A mano | Reprocesa todo lo importado; `--dry-run` lista lo que convertiría y lo que quedaría como sugerencia |
 | `tasks:generate` | Diario 00:05 | Pone al día todas las plantillas activas (§4.1.3). Idempotente; la misma puesta al día corre al abrir Hoy o Próximas |
-| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry::digest()` (Pendientes + tareas abiertas de hoy) suma > 0, un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
+| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry::digest()` (Pendientes + tareas abiertas de hoy) suma > 0 o algún módulo aporta líneas (Hábitos, §4.1.5), un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
 
@@ -773,3 +842,4 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 - ADR-012 Transferencias entre cuentas propias detectadas por emparejamiento (§4.1.2). Contexto: una recarga BBVA → Revolut entraba como gasto + ingreso e inflaba ambos. Decisión: convertir solo parejas claras (importe exacto, ≤ 3 días, candidato único en ambos sentidos, al menos una señal fuerte, sin categoría) y proponer el resto en Pendientes como estado calculado (coherente con ADR-009); las únicas filas nuevas son las exclusiones, para que deshacer y "No es transferencia" sean definitivos. El IBAN se compara enmascarado para no guardar IBAN completos. Descartado: emparejar por importe y fecha sin señales (falsos positivos con Bizums y devoluciones) y guardar sugerencias en tabla (se quedarían obsoletas al borrar o categorizar).
 - ADR-013 Tareas repetitivas con RRULE (RFC 5545) y una fila por ocurrencia. Contexto: cron no expresa "cada 2 semanas desde el 4 de marzo" ni "el último viernes del mes", y hace falta el tipo "tras completarla". Decisión: la plantilla guarda una RRULE limitada al subconjunto del editor (motor en `Core/Recurrence` sobre `rlanvin/php-rrule`, reutilizable por otros módulos) o un intervalo en días desde que se completa; cada ocurrencia procesada se guarda como tarea (abierta, hecha u omitida con motivo) con clave única `plantilla + fecha`, y la generación es idempotente (job a las 00:05 + puesta al día perezosa, para que el Mac dormido no deje huecos). Las ocurrencias futuras de Próximas se calculan al vuelo. Descartado: expresiones cron (no cubren los casos), materializar el futuro (habría que regenerarlo al editar) y guardar solo la abierta (se pierde el historial que necesitará Hábitos).
 - ADR-014 Notas funciona sin conexión: caché local (drift) y cola de operaciones idempotentes con id del cliente (UUID v7), sincronizada por lotes con `POST /notes/sync` y "último en escribir gana" por fila. Contexto: el backend vive en un Mac que se duerme y la lista de la compra se usa en el súper, a menudo sin cobertura. Es la única excepción a "sin offline"; el resto de módulos sigue online. La reposición se calcula igual en PHP y Dart con ids deterministas (UUID v5) para que los dos lados no dupliquen productos. Descartado: offline en toda la app (coste alto y sin necesidad fuera de Notas) y CRDTs (un solo usuario y un dispositivo).
+- ADR-015 Hábitos se evalúa al leer, con historial de objetivos y sin vínculo vivo con Tareas. Contexto: un hábito se mide por constancia sobre periodos (día o semana, con objetivos flexibles, cantidades y máximos) y no vence; cambiar el objetivo no debe reescribir el pasado, y los descansos no deben romper rachas. Decisión: se guardan solo registros (uno por hábito y día), objetivos con `valid_from` y descansos; periodos, rachas y constancia se calculan en `HabitEvaluator`/`HabitStats` en cada lectura (Europe/Madrid, semanas de lunes a domingo, periodo en curso sin penalizar). Tareas y Hábitos se conectan solo por la fila de anillos de Hoy (la app llama a `/habits/today`) y por una conversión única de plantilla que lee el historial y pausa la plantilla a través de servicios del módulo Tasks, sin claves foráneas entre esquemas. Descartado: guardar el estado de cada periodo (habría que recalcularlo al editar el objetivo, un registro pasado o un descanso), modelar los hábitos con RRULE (no expresa "3 veces por semana" ni cantidades) y el vínculo vivo plantilla ↔ hábito (dos dueños de lo mismo y cambiar la semántica de Tareas).
