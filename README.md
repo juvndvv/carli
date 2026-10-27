@@ -21,7 +21,7 @@ flutter pub get
 flutter run -d <simulador> --dart-define=API_URL=http://<host>:8180/api
 ```
 
-`API_URL` apunta al backend (por defecto `http://MacBook-Pro-van-Yurest.local:8180/api`, ver `lib/core/api/api_config.dart`). En builds de depuración hay un catálogo de componentes en `/dev/catalogo`.
+`API_URL` apunta al backend (por defecto producción, `https://carli.jotade.io/api`, ver `lib/core/api/api_config.dart`; para un backend local pasa `--dart-define=API_URL=http://<host>:8180/api`). En builds de depuración hay un catálogo de componentes en `/dev/catalogo`.
 
 | Comando (en `app/`) | Qué hace |
 |---|---|
