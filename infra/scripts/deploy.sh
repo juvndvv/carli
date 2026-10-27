@@ -26,6 +26,11 @@ main() {
     git merge --ff-only --quiet "$sha"
     log "at $(git log --oneline -1)"
 
+    # The fast-forward may have changed this script: carry on with the version being deployed.
+    if [[ -z "${DEPLOY_REEXECUTED:-}" ]]; then
+        DEPLOY_REEXECUTED=1 exec "$REPO_DIR/infra/scripts/deploy.sh" "$sha"
+    fi
+
     log "building images"
     docker compose build --quiet
 
