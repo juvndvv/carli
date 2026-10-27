@@ -36,8 +36,8 @@ enum CarliColor {
     static let chartAccent = dynamic(0xE89A00, 0xFFC300)
 
     /// Activity rings, outer to inner: disponible, ahorro, ritmo.
-    static let rings = [dynamic(0xE5063F, 0xFA114F), dynamic(0x3D9C0E, 0xA6FF00), dynamic(0x0091B3, 0x00F0FF)]
-    static let ringInk = [dynamic(0xD90033, 0xFF5C85), dynamic(0x2E7D0C, 0xA6FF00), dynamic(0x007E9C, 0x00F0FF)]
+    static let rings = [dynamic(0xF2A900, 0xFFC300), dynamic(0x3D9C0E, 0xA6FF00), dynamic(0x0091B3, 0x00F0FF)]
+    static let ringInk = [dynamic(0x9A6200, 0xFFD24D), dynamic(0x2E7D0C, 0xA6FF00), dynamic(0x007E9C, 0x00F0FF)]
 
     private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
         Color(uiColor: UIColor { traits in

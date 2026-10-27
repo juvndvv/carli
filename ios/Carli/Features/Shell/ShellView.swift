@@ -106,10 +106,14 @@ struct ModuleRootView: View {
                     }
                     .sharedBackgroundVisibility(.hidden)
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(module.addLabel, systemImage: "plus") { adding = true }
-                            .buttonStyle(.glassProminent)
-                            .tint(CarliColor.primary)
-                            .foregroundStyle(CarliColor.onPrimary)
+                        Button { adding = true } label: {
+                            // glassProminent picks white glyphs from the tint; force ink so "+" reads on yellow.
+                            Image(systemName: "plus")
+                                .foregroundStyle(CarliColor.onPrimary)
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(CarliColor.primary)
+                        .accessibilityLabel(module.addLabel)
                     }
                 }
                 .sheet(isPresented: $adding) {
