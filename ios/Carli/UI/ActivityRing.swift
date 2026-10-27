@@ -13,18 +13,18 @@ struct ActivityRing: View {
             Circle().stroke(color.opacity(0.18), lineWidth: lineWidth)
             arc(to: min(value, 1))
             if value > 1 {
-                arc(to: min(value - 1, 1))
-                    .shadow(color: .black.opacity(0.25), radius: 2)
+                arc(to: min(value - 1, 1), color: color.mix(with: .black, by: 0.25))
+                    .shadow(color: .black.opacity(0.35), radius: 3)
             }
         }
         .padding(lineWidth / 2)
         .animation(.smooth(duration: 0.9), value: value)
     }
 
-    private func arc(to end: Double) -> some View {
+    private func arc(to end: Double, color: Color? = nil) -> some View {
         Circle()
             .trim(from: 0, to: max(0.001, end))
-            .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            .stroke(color ?? self.color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             .rotationEffect(.degrees(-90))
     }
 }

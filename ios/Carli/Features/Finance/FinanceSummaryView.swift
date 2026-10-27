@@ -55,6 +55,7 @@ private struct PeriodBar: View {
             }
             .labelStyle(.iconOnly)
             .disabled(model.olderPeriod == nil)
+            .opacity(model.olderPeriod == nil ? 0.35 : 1)
 
             Menu {
                 Picker("Periodo", selection: Binding(
@@ -84,19 +85,16 @@ private struct PeriodBar: View {
             }
             .labelStyle(.iconOnly)
             .disabled(model.newerPeriod == nil)
+            .opacity(model.newerPeriod == nil ? 0.35 : 1)
         }
         .buttonStyle(.glass)
         .controlSize(.large)
         .tint(CarliColor.text)
     }
 
+    /// Just the name: the eyebrow below already says how many days are left.
     private var label: String {
-        guard let period = model.selectedPeriod else { return "Periodo" }
-        let range = period.rangeLabel ?? ""
-        if period.isCurrent == true, let dash = range.firstIndex(of: "–") {
-            return "\(period.name) · \(range[..<dash])– hoy"
-        }
-        return range.isEmpty ? period.name : "\(period.name) · \(range)"
+        model.selectedPeriod?.name ?? "Periodo"
     }
 }
 
@@ -478,7 +476,7 @@ private struct CategoryDonut: View {
             .frame(height: 180)
             .accessibilityLabel("Gasto por categoría")
 
-            ForEach(slices.prefix(6)) { slice in
+            ForEach(slices) { slice in
                 HStack(spacing: CarliSpace.s8) {
                     Circle().fill(color(slice)).frame(width: 10, height: 10)
                     Text(slice.label)
