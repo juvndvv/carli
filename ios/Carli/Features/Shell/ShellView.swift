@@ -109,7 +109,7 @@ struct ModuleRootView: View {
                     .sharedBackgroundVisibility(.hidden)
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { adding = true } label: {
-                            // glassProminent picks white glyphs from the tint; force ink so "+" reads on yellow.
+                            // glassProminent picks its glyph colour from the tint; force the inverse of the ink fill.
                             Image(systemName: "plus")
                                 .foregroundStyle(CarliColor.onPrimary)
                         }

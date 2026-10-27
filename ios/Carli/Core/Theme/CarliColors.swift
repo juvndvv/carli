@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// Sun palette (amber accent on neutral greys). Each colour resolves
+/// Neutral palette: the accent is ink (black in light, white in dark); sun amber is kept
+/// for the brand face, charts and rings. Each colour resolves
 /// light/dark at render time, so views never branch on the colour scheme.
 enum CarliColor {
     static let bg = dynamic(0xF2F2F7, 0x000000)
@@ -11,13 +12,14 @@ enum CarliColor {
     static let text = dynamic(0x1F1F1F, 0xFFFFFF)
     static let text2 = dynamic(0x666666, 0xA3A3A3)
     static let text3 = dynamic(0x6E6E6E, 0x8A8A8A)
-    static let primary = dynamic(0xF2A900, 0xFFC300)
-    static let primarySoft = dynamic(0xFFF4D6, 0x3A2C00)
-    static let primaryStrong = dynamic(0xE89A00, 0xFFC300)
-    /// Ink on sun fills: white fails contrast on yellow.
-    static let onPrimary = Color(hex: 0x1F1600)
-    /// Accent for text; the fill colour is too light to read on white.
-    static let brandInk = dynamic(0x9A6200, 0xFFD24D)
+    static let primary = dynamic(0x1F1F1F, 0xFFFFFF)
+    static let primarySoft = dynamic(0xF0F0F2, 0x2C2C2E)
+    static let primaryStrong = dynamic(0x1F1F1F, 0xFFFFFF)
+    static let onPrimary = dynamic(0xFFFFFF, 0x000000)
+    static let brandInk = dynamic(0x1F1F1F, 0xFFFFFF)
+    /// The carli face: sun amber with dark eyes.
+    static let brand = dynamic(0xF2A900, 0xFFC300)
+    static let onBrand = Color(hex: 0x1F1600)
     static let positive = dynamic(0x0F7B4A, 0x10B981)
     static let warning = dynamic(0xB45309, 0xF59E0B)
     static let negative = dynamic(0xC8281C, 0xED5A46)
