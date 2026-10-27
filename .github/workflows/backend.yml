@@ -88,31 +88,30 @@ jobs:
 
       - run: php artisan test --parallel
 
-  promote:
-    name: Promote to production
+  deploy:
+    name: Deploy to Lightsail
     needs: [quality, tests]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    environment: production
     concurrency:
-      group: promote-production
+      group: deploy-production
       cancel-in-progress: false
     defaults:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.LIGHTSAIL_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy ~/.ssh/known_hosts
 
-      # The server polls this branch (infra/systemd/carli-deploy.timer) and deploys
-      # whatever it points at, so only commits that passed the jobs above reach it.
-      # Fast-forward only, so a slower run of an older commit never moves it back.
-      - run: |
-          if git rev-parse --verify --quiet origin/production > /dev/null \
-              && ! git merge-base --is-ancestor origin/production HEAD; then
-            echo "production is ahead of $GITHUB_SHA; leaving it as is"
-            exit 0
-          fi
-          git push origin "HEAD:refs/heads/production"
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+        run: ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "ubuntu@$HOST" "$GITHUB_SHA"
