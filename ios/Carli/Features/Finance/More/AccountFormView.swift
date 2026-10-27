@@ -325,7 +325,7 @@ struct ReconcileView: View {
         }
     }
 
-    private struct Body: Encodable {
+    private struct Payload: Encodable {
         var actualBalanceCents: Int
         var date: String
     }
@@ -342,7 +342,7 @@ struct ReconcileView: View {
         Task {
             do {
                 let result: Result = try await api.post("v1/finance/accounts/\(account.id)/reconcile",
-                                                        body: Body(actualBalanceCents: actual, date: CarliDate.isoDay(date)))
+                                                        body: Payload(actualBalanceCents: actual, date: CarliDate.isoDay(date)))
                 NotificationCenter.default.post(name: .financeChanged, object: nil)
                 onDone(result.data.adjustment != nil
                        ? "Cuenta conciliada · ajuste de \(Money.format(result.data.differenceCents, .signed))"

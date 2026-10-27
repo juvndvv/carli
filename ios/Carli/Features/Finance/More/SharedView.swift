@@ -434,7 +434,7 @@ struct ContactFormView: View {
         _notes = State(initialValue: detail?.contact.notes ?? "")
     }
 
-    private struct Body: Encodable {
+    private struct Payload: Encodable {
         var name: String
         var notes: String?
 
@@ -498,7 +498,7 @@ struct ContactFormView: View {
         error = nil
         defer { saving = false }
         let note = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        let body = Body(name: trimmed, notes: note.isEmpty ? nil : note)
+        let body = Payload(name: trimmed, notes: note.isEmpty ? nil : note)
         do {
             if let contact = detail?.contact {
                 let _: Empty = try await api.patch("v1/finance/contacts/\(contact.id)", body: body)
@@ -553,7 +553,7 @@ struct SettleView: View {
 
     private var effectiveAccountId: String? { accountId ?? DebtsCopy.preferredAccount(accounts) }
 
-    private struct Body: Encodable {
+    private struct Payload: Encodable {
         var accountId: String
         var date: String
     }
@@ -628,7 +628,7 @@ struct SettleView: View {
         defer { saving = false }
         do {
             let result: Result = try await api.post("v1/finance/contacts/\(contact.id)/settle",
-                                                    body: Body(accountId: accountId, date: CarliDate.isoDay(date)))
+                                                    body: Payload(accountId: accountId, date: CarliDate.isoDay(date)))
             NotificationCenter.default.post(name: .financeChanged, object: nil)
             let name = accounts.first { $0.id == accountId }?.name
             onDone("Liquidado con \(contact.name): \(Money.format(result.data.netCents ?? contact.sharesPendingCents, .signed))\(name.map { " en \($0)" } ?? "")")

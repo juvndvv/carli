@@ -35,11 +35,16 @@ final class CategoriesModel {
 
     /// Where a deleted category's movements can go: same kind, active, not itself.
     func reassignTargets(for category: FinanceCategory) -> [(id: String, label: String, icon: String)] {
-        categories.filter { $0.kind == category.kind && !$0.isArchived }.flatMap { parent in
-            [(parent.id, parent.name, parent.icon ?? "tag")]
-                + (parent.children ?? []).filter { !$0.isArchived }.map { ($0.id, "\(parent.name) › \($0.name)", $0.icon ?? parent.icon ?? "tag") }
+        typealias Target = (id: String, label: String, icon: String)
+        let parents = categories.filter { $0.kind == category.kind && !$0.isArchived }
+        let targets = parents.flatMap { parent -> [Target] in
+            let own: Target = (parent.id, parent.name, parent.icon ?? "tag")
+            let children: [Target] = (parent.children ?? []).filter { !$0.isArchived }.map { child in
+                (child.id, "\(parent.name) › \(child.name)", child.icon ?? parent.icon ?? "tag")
+            }
+            return [own] + children
         }
-        .filter { $0.0 != category.id }
+        return targets.filter { $0.id != category.id }
     }
 
     func setArchived(_ category: FinanceCategory, _ archived: Bool) async throws {
