@@ -80,8 +80,9 @@ struct ShellView: View {
     }
 }
 
-/// A module tab: the current section is the title, and the title menu switches
-/// between sections; "+" sits top right.
+/// A module tab: the header is a large "Resumen ⌄" selector (module name below) that
+/// switches between sections; "+" sits top right. The system title menu only shows
+/// with a centred inline title, so the selector is a toolbar Menu instead.
 struct ModuleRootView: View {
     var module: ModuleTab
     @State private var section: ModuleSection
@@ -105,14 +106,13 @@ struct ModuleRootView: View {
             }
             .background(CarliColor.bg)
             .navigationTitle(section.title)
-            .navigationSubtitle(module.title)
-            .toolbarTitleDisplayMode(.inlineLarge)
-            .toolbarTitleMenu {
-                Picker("Vista", selection: $section) {
-                    ForEach(module.sections) { Text($0.title).tag($0) }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(removing: .title)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    sectionMenu
+                }
+                .sharedBackgroundVisibility(.hidden)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(module.addLabel, systemImage: "plus") { adding = true }
                         .buttonStyle(.glassProminent)
@@ -126,5 +126,30 @@ struct ModuleRootView: View {
                 .presentationDetents([.medium, .large])
             }
         }
+    }
+
+    private var sectionMenu: some View {
+        Menu {
+            Picker("Vista", selection: $section) {
+                ForEach(module.sections) { Text($0.title).tag($0) }
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 6) {
+                    Text(section.title)
+                        .font(.title2.weight(.bold))
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(CarliColor.text2)
+                }
+                Text(module.title)
+                    .font(.caption)
+                    .foregroundStyle(CarliColor.text2)
+            }
+            .foregroundStyle(CarliColor.text)
+            .fixedSize()
+        }
+        .accessibilityLabel("\(module.title), vista \(section.title)")
+        .accessibilityHint("Cambiar de vista")
     }
 }
