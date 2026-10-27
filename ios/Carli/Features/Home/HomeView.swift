@@ -239,28 +239,14 @@ private struct FinanceCard: View {
                 .monospacedDigit()
                 .foregroundStyle(CarliColor.text)
                 .contentTransition(.numericText())
-            HStack(spacing: CarliSpace.s8) {
-                Text("Gastado en \(data.period.shortName ?? data.period.name): \(Text(Money.format(data.spentCents)).fontWeight(.semibold).foregroundStyle(CarliColor.text))")
-                    .font(.footnote)
-                    .monospacedDigit()
-                    .foregroundStyle(CarliColor.text2)
-                if let badge = budgetBadge(data.budget) { badge }
-            }
+            Text("Gastado en \(data.period.shortName ?? data.period.name): \(Text(Money.format(data.spentCents)).fontWeight(.semibold).foregroundStyle(CarliColor.text))")
+                .font(.footnote)
+                .monospacedDigit()
+                .foregroundStyle(CarliColor.text2)
             Text("\(data.period.name) · \(Plural.daysLeft(data.period.daysRemaining ?? 0))")
                 .font(.footnote)
                 .foregroundStyle(CarliColor.text3)
         }
-    }
-
-    private func budgetBadge(_ budget: BudgetTotals) -> CarliBadge? {
-        guard budget.budgetedCents > 0, let percent = budget.percentBp else { return nil }
-        if percent > 10_000 {
-            return CarliBadge(label: "Presupuesto superado", symbol: "exclamationmark.triangle.fill", tone: .negative)
-        }
-        let label = "\(Plural.percent(basisPoints: percent)) del presupuesto"
-        return percent >= model.budgetWarningThreshold * 100
-            ? CarliBadge(label: label, symbol: "exclamationmark.triangle.fill", tone: .warning)
-            : CarliBadge(label: label, symbol: "gauge.with.dots.needle.50percent")
     }
 }
 

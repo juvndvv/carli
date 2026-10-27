@@ -15,7 +15,6 @@ final class HomeModel {
 
     var modules: [AppModule]?
     var finance: Slot<FinanceSummary> = .loading
-    var budgetWarningThreshold = 80
     var pending: PendingSummary?
     var notifications: Slot<[AppNotification]> = .loading
     var unreadCount = 0
@@ -57,9 +56,6 @@ final class HomeModel {
             finance = .loaded(summary.data)
         } catch {
             if finance.value == nil { finance = .failed }
-        }
-        if let settings: DataEnvelope<FinanceSettings> = try? await api.get("v1/finance/settings") {
-            budgetWarningThreshold = settings.data.budgetWarningThreshold ?? 80
         }
     }
 
