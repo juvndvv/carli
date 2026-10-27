@@ -15,7 +15,8 @@ final readonly class ApnsChannel
             return;
         }
 
-        $message = $notification->toApns($notifiable);
+        // Laravel gives every channel the same id, so the tap can mark the inbox entry as read.
+        $message = $notification->toApns($notifiable)->withNotificationId($notification->id);
 
         foreach ($notifiable->pushDevices()->get() as $device) {
             if ($this->client->send($device->token, $device->environment, $message) === ApnsDelivery::Unregistered) {

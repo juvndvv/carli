@@ -107,6 +107,64 @@ class NotificationsController extends AsyncNotifier<NotificationsState> {
       rethrow;
     }
   }
+
+  Future<void> markUnread(String id) async {
+    final current = state.value;
+    final item = current?.items.where((item) => item.id == id).firstOrNull;
+    if (current == null || item == null || item.unread) return;
+
+    final counter = _counter;
+    final previousCount = counter.current;
+    state = AsyncData(current.withItems([for (final other in current.items) other.id == id ? item.markedUnread() : other]));
+    counter.adopt(previousCount + 1);
+
+    try {
+      final remaining = await _api.markUnread([id]);
+      if (ref.mounted) counter.adopt(remaining);
+    } catch (_) {
+      if (!ref.mounted) rethrow;
+      if (state.value case final latest?) {
+        state = AsyncData(latest.withItems([for (final other in latest.items) other.id == id ? item : other]));
+      }
+      counter.adopt(previousCount);
+      rethrow;
+    }
+  }
+
+  Future<void> delete(String id) => _delete((item) => item.id == id, () => _api.delete(ids: [id]));
+
+  Future<void> deleteRead() => _delete((item) => !item.unread, () => _api.delete(onlyRead: true), resync: true);
+
+  Future<void> deleteAll() => _delete((_) => true, _api.delete, resync: true);
+
+  Future<void> _delete(
+    bool Function(AppNotification item) targeted,
+    Future<int> Function() request, {
+    bool resync = false,
+  }) async {
+    final counter = _counter;
+    final previousCount = counter.current;
+    final previous = state.value;
+
+    if (previous != null) {
+      final removedUnread = previous.items.where((item) => targeted(item) && item.unread).length;
+      state = AsyncData(previous.withItems([for (final item in previous.items) if (!targeted(item)) item]));
+      counter.adopt(max(0, previousCount - removedUnread));
+    }
+
+    try {
+      final remaining = await request();
+      if (!ref.mounted) return;
+      counter.adopt(remaining);
+      // Bulk deletes shift the server pages, so reload them instead of guessing.
+      if (resync) await refresh();
+    } catch (_) {
+      if (!ref.mounted) rethrow;
+      if (previous != null) state = AsyncData(previous);
+      counter.adopt(previousCount);
+      rethrow;
+    }
+  }
 }
 
 final unreadNotificationsCountProvider = AsyncNotifierProvider<UnreadNotificationsCount, int>(

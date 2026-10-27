@@ -35,9 +35,11 @@ it('sends an alert to every device of the user through its apns environment', fu
 
     $this->user->notify(new TestNotification);
 
+    $inboxId = $this->user->notifications()->sole()->id;
+
     Http::assertSentCount(2);
     Http::assertSent(fn (Request $request) => $request->url() === 'https://api.sandbox.push.apple.com/3/device/'.str_repeat('a1', 32));
-    Http::assertSent(function (Request $request) {
+    Http::assertSent(function (Request $request) use ($inboxId) {
         return $request->url() === 'https://api.push.apple.com/3/device/'.str_repeat('b2', 32)
             && $request->header('apns-topic') === ['dev.jotade.personal']
             && $request->header('apns-push-type') === ['alert']
@@ -47,6 +49,7 @@ it('sends an alert to every device of the user through its apns environment', fu
                     'sound' => 'default',
                 ],
                 'url' => '/ajustes',
+                'notification_id' => $inboxId,
             ];
     });
 });

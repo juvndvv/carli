@@ -28,7 +28,10 @@ final class PushBridge {
   }
 
   func opened(userInfo: [AnyHashable: Any]) {
-    let tap: [String: Any] = ["url": userInfo["url"] as? String ?? NSNull()]
+    let tap: [String: Any] = [
+      "url": userInfo["url"] as? String ?? NSNull(),
+      "notification_id": userInfo["notification_id"] as? String ?? NSNull(),
+    ]
     if dartListening {
       channel?.invokeMethod("opened", arguments: tap)
     } else {

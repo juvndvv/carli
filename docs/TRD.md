@@ -494,6 +494,8 @@ Prefijo `/api/v1`. JSON. Autenticación con token Bearer de Sanctum. Errores con
 | GET | `/api/v1/notifications` | Bandeja (paginada) |
 | GET | `/api/v1/notifications/unread-count` | Contador del punto de no leídas |
 | POST | `/api/v1/notifications/read` | Marcar leídas |
+| POST | `/api/v1/notifications/unread` | Marcar no leídas (`ids`) |
+| POST | `/api/v1/notifications/delete` | Borrar (`ids`, `read: true` para las leídas o `all: true`) |
 | GET/PUT | `/api/v1/notification-preferences` | Preferencias |
 | GET | `/api/v1/pending/summary` | `{ total, by_module: [{ module, type, count }] }` para contador y tarjeta de Inicio |
 | GET | `/api/v1/pending?module=&type=&cursor=` | Lista paginada de `PendingItem` |

@@ -37,7 +37,11 @@ class AppNotification {
 
   bool get unread => readAt == null;
 
-  AppNotification markedRead(DateTime at) => AppNotification(
+  AppNotification markedRead(DateTime at) => _withReadAt(at);
+
+  AppNotification markedUnread() => _withReadAt(null);
+
+  AppNotification _withReadAt(DateTime? at) => AppNotification(
     id: id,
     module: module,
     type: type,

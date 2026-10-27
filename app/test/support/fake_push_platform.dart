@@ -21,7 +21,7 @@ class FakePushPlatform implements PushPlatform {
 
   static const token = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
 
-  void tap(String? url) => _taps.add(PushTap(url));
+  void tap(String? url, {String? notificationId}) => _taps.add(PushTap(url, notificationId: notificationId));
 
   @override
   Stream<PushTap> get taps => _taps.stream;

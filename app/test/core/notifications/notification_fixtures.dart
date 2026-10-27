@@ -53,5 +53,7 @@ Map<String, FakeRoute> notificationRoutes({
     },
     'GET /v1/notifications/unread-count': (_) => (200, {'unread_count': unread}),
     'POST /v1/notifications/read': (_) => (200, {'marked': 1, 'unread_count': markedUnreadCount}),
+    'POST /v1/notifications/unread': (_) => (200, {'marked': 1, 'unread_count': unread + 1}),
+    'POST /v1/notifications/delete': (_) => (200, {'deleted': 1, 'unread_count': 0}),
   };
 }
