@@ -36,6 +36,7 @@ struct TaskDetailView: View {
                 ProgressView().frame(maxWidth: .infinity)
             }
         }
+        .contentMargins(.bottom, 72, for: .scrollContent)
         .navigationTitle("Tarea")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }

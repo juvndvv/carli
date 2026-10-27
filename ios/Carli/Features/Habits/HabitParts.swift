@@ -290,29 +290,25 @@ struct HabitBreakSheet: View {
                         .onChange(of: from) { _, value in if to < value { to = value } }
                     DatePicker("Hasta", selection: $to, in: from..., displayedComponents: .date)
                 }
-                Section {
-                    Button {
-                        Task {
-                            saving = true
-                            let saved = await actions.startBreak(from: from, to: to, habitId: habit?.id)
-                            saving = false
-                            if saved { dismiss() }
-                        }
-                    } label: {
-                        Text(saving ? "Guardando…" : "Empezar descanso").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(CarliColor.primary)
-                    .foregroundStyle(CarliColor.onPrimary)
-                    .disabled(saving)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                }
             }
             .navigationTitle(habit.map { "Descanso de \($0.name)" } ?? "Modo descanso")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cerrar", systemImage: "xmark") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    if saving { ProgressView() } else {
+                        Button("Empezar") {
+                            Task {
+                                saving = true
+                                let saved = await actions.startBreak(from: from, to: to, habitId: habit?.id)
+                                saving = false
+                                if saved { dismiss() }
+                            }
+                        }
+                        .buttonStyle(.glassProminent)
+                        .tint(CarliColor.primary)
+                    }
+                }
             }
             .task { await load() }
         }

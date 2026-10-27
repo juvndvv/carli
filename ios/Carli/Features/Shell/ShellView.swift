@@ -94,6 +94,10 @@ struct ModuleRootView: View {
     /// Filters a link asked for; entering Movimientos from the header menu starts clean.
     @State private var transactionFilters = TransactionFilters()
     @State private var path = NavigationPath()
+    /// Notas and Compra share one snapshot and write queue.
+    @State private var notesStore: NotesStore?
+    @State private var shoppingList: String?
+    @State private var shoppingFocus = 0
 
     init(module: ModuleTab, openTab: @escaping (String) -> Void = { _ in }) {
         self.module = module
@@ -113,14 +117,14 @@ struct ModuleRootView: View {
                     }
                     .sharedBackgroundVisibility(.hidden)
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button { adding = true } label: {
+                        Button(action: add) {
                             // glassProminent picks its glyph colour from the tint; force the inverse of the ink fill.
                             Image(systemName: "plus")
                                 .foregroundStyle(CarliColor.onPrimary)
                         }
                         .buttonStyle(.glassProminent)
                         .tint(CarliColor.primary)
-                        .accessibilityLabel(module.addLabel)
+                        .accessibilityLabel(module == .notes && section.id == "shopping" ? "Añadir producto" : module.addLabel)
                     }
                 }
                 .sheet(isPresented: $adding) {
@@ -156,6 +160,18 @@ struct ModuleRootView: View {
             HabitsListView(api: auth.api) { adding = true }
         case (.habits, "progress"):
             HabitsProgressView(api: auth.api)
+        case (.notes, "all"):
+            if let notesStore {
+                NotesHomeView(store: notesStore) { adding = true }
+            } else {
+                ProgressView().onAppear { notesStore = NotesStore(api: auth.api) }
+            }
+        case (.notes, "shopping"):
+            if let notesStore {
+                ShoppingSectionView(store: notesStore, selected: $shoppingList, focusRequest: shoppingFocus)
+            } else {
+                ProgressView().onAppear { notesStore = NotesStore(api: auth.api) }
+            }
         default:
             ScrollView {
                 ContentUnavailableView {
@@ -181,11 +197,24 @@ struct ModuleRootView: View {
             }
         case .habits:
             HabitEditorView(api: auth.api) { id in path.append(HabitRoute(id: id)) }
+        case .notes:
+            NewNoteSheet { type in
+                if let notesStore { path.append(NoteRoute(id: notesStore.createNote(type), fresh: true)) }
+            }
         default:
             NavigationStack {
                 PendingMigrationView(title: module.addLabel, symbol: "plus")
             }
             .presentationDetents([.medium, .large])
+        }
+    }
+
+    /// "+" opens the module's create sheet; in Compra it focuses the add-product field instead.
+    private func add() {
+        if module == .notes && section.id == "shopping" {
+            shoppingFocus += 1
+        } else {
+            adding = true
         }
     }
 

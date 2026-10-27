@@ -142,6 +142,7 @@ struct TasksTodayView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .contentMargins(.top, CarliSpace.s4, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(CarliColor.bg)
         .toolbar {
@@ -315,6 +316,7 @@ struct TasksUpcomingView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .contentMargins(.top, CarliSpace.s4, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(CarliColor.bg)
         .refreshable { await load() }
@@ -479,6 +481,7 @@ struct TaskListsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .contentMargins(.top, CarliSpace.s4, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(CarliColor.bg)
         .toolbar {
@@ -619,6 +622,7 @@ struct ListDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .contentMargins(.top, CarliSpace.s4, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(CarliColor.bg)
         .navigationTitle(list?.name ?? "Lista")

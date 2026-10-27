@@ -85,7 +85,6 @@ struct HabitDetailView: View {
             HStack(alignment: .top) {
                 stat("CONSTANCIA", HabitFormat.percent(detail.stats.consistency), "últimas 4 semanas", large: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .layoutPriority(1.3)
                 stat(habit.isAvoid ? "SIN PASARTE" : "RACHA", HabitFormat.streakLength(detail.stats.streak ?? 0, weekly: weekly),
                      "en curso")
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -95,6 +94,7 @@ struct HabitDetailView: View {
                      } ?? "—")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
         Text("Desde el inicio: \(HabitFormat.percent(detail.stats.consistencyAll))")
             .font(.footnote)
@@ -104,7 +104,11 @@ struct HabitDetailView: View {
         HabitCalendarCard(api: api, habit: habit, actions: actions)
 
         if weekly || habit.kind == .quantity || !detail.weeks.isEmpty {
-            WeekBarsCard(habit: habit, weeks: detail.weeks)
+            WeekBarsCard(habit: habit, weeks: detail.weeks.filter { week in
+                guard let start = CarliDate.day(week.start),
+                      let end = CarliDate.calendar.date(byAdding: .day, value: 6, to: start) else { return true }
+                return end >= CarliDate.calendar.startOfDay(for: habit.start)
+            })
         }
 
         VStack(spacing: 0) {
@@ -214,13 +218,13 @@ private struct HabitCalendarCard: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 6) {
-                    ForEach(TaskDates.weekdaysMondayFirst.indices, id: \.self) { index in
-                        Text(TaskDates.weekdaysMondayFirst[index])
+                    ForEach(TaskDates.weekdaysMondayFirst.indices.map { "weekday-\($0)" }, id: \.self) { key in
+                        Text(TaskDates.weekdaysMondayFirst[Int(key.dropFirst(8))!])
                             .font(.system(size: 11))
                             .foregroundStyle(CarliColor.text2)
                             .accessibilityHidden(true)
                     }
-                    ForEach(0..<blanks, id: \.self) { _ in Color.clear.frame(height: 36) }
+                    ForEach((0..<blanks).map { "blank-\($0)" }, id: \.self) { _ in Color.clear.frame(height: 36) }
                     ForEach(days) { day in cell(day) }
                 }
                 HStack(spacing: CarliSpace.s16) {

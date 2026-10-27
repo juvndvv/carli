@@ -412,7 +412,7 @@ struct HabitsListView: View {
             Text("4 sem")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(CarliColor.text2)
-                .frame(width: 44, alignment: .trailing)
+                .frame(width: 52, alignment: .trailing)
         }
         .padding(.horizontal, CarliSpace.s16)
         .accessibilityHidden(true)
@@ -435,7 +435,9 @@ struct HabitsListView: View {
                 Text(HabitFormat.percent(item.consistency))
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
-                    .frame(width: 44, alignment: .trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(width: 52, alignment: .trailing)
             }
             .foregroundStyle(CarliColor.text)
             .padding(.horizontal, CarliSpace.s16)

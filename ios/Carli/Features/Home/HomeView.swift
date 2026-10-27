@@ -49,6 +49,7 @@ struct HomeView: View {
             .task { await model.load() }
             .onHabitsChanged { await model.loadHabits() }
             .onTasksChanged { await model.loadTasks() }
+            .onReceive(NotificationCenter.default.publisher(for: .notesChanged)) { _ in Task { await model.loadNotes() } }
         }
         .habitActions(model.habitActions)
         .carliToast($model.toast)

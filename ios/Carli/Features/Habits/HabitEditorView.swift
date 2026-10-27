@@ -197,6 +197,7 @@ struct HabitEditorView: View {
                         Button(editing ? "Guardar" : "Añadir", systemImage: "checkmark") { Task { await save() } }
                             .buttonStyle(.glassProminent)
                             .tint(CarliColor.primary)
+                            .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
             }
