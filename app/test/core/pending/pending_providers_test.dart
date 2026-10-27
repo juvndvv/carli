@@ -128,18 +128,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(_calls(api, '/v1/pending/summary'), 2);
     });
-
-    test('reports the current pending count for reminders', () async {
-      var fail = false;
-      final api = FakeApi({
-        _summaryRoute: (_) => fail ? (500, {'message': 'boom'}) : (200, pendingSummaryJson(uncategorized: 4)),
-      });
-      final container = _container(api);
-
-      expect(await currentPendingCount(container.read), 5);
-      fail = true;
-      expect(await currentPendingCount(container.read), isNull);
-    });
   });
 
   group('pendingListProvider', () {

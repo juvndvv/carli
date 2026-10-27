@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Models\NotificationPreference;
+use App\Core\Models\PushDevice;
 use App\Core\Models\UserModule;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,6 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
-use NotificationChannels\WebPush\HasPushSubscriptions;
 
 /**
  * @property string $id
@@ -34,7 +34,7 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasPushSubscriptions, HasUuids, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasUuids, Notifiable, TwoFactorAuthenticatable;
 
     public const array DEFAULT_PREFERENCES = [
         'theme' => 'system',
@@ -72,6 +72,14 @@ class User extends Authenticatable
     public function moduleSettings(): HasMany
     {
         return $this->hasMany(UserModule::class);
+    }
+
+    /**
+     * @return HasMany<PushDevice, $this>
+     */
+    public function pushDevices(): HasMany
+    {
+        return $this->hasMany(PushDevice::class);
     }
 
     /**

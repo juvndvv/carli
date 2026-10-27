@@ -4,7 +4,7 @@ namespace App\Core\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class DeletePushSubscriptionRequest extends FormRequest
+class DeletePushDeviceRequest extends FormRequest
 {
     /**
      * @return array<string, mixed>
@@ -12,7 +12,7 @@ class DeletePushSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'endpoint' => ['required', 'string', 'max:2048'],
+            'token' => ['required', 'string', 'max:200'],
         ];
     }
 }

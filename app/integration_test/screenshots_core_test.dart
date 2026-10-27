@@ -6,8 +6,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:carli/app.dart';
 import 'package:carli/core/api/api_client.dart';
 import 'package:carli/core/auth/auth_controller.dart';
-import 'package:carli/core/pending/pending_providers.dart';
-import 'package:carli/core/reminders/pending_count_reader.dart';
 import 'package:carli/core/router/router.dart';
 import 'package:carli/shell/settings/settings_screen.dart';
 
@@ -32,10 +30,6 @@ void main() {
         unauthorizedHandlerProvider.overrideWith(
           (ref) =>
               () => ref.read(authControllerProvider.notifier).handleUnauthorized(),
-        ),
-        pendingCountReaderProvider.overrideWith(
-          (ref) =>
-              () => currentPendingCount(ref.read),
         ),
       ],
     );

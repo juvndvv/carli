@@ -2,12 +2,13 @@
 
 namespace App\Core\Notifications;
 
+use App\Core\Push\ApnsMessage;
+use App\Core\Push\ApnsNotification;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
-class TestNotification extends Notification
+class TestNotification extends Notification implements ApnsNotification
 {
     use Queueable;
 
@@ -24,7 +25,7 @@ class TestNotification extends Notification
     {
         $channels = [NotificationChannels::DATABASE];
 
-        if (WebPushConfiguration::isConfigured() && $notifiable->pushSubscriptions()->exists()) {
+        if (NotificationChannels::canPush($notifiable)) {
             $channels[] = NotificationChannels::PUSH;
         }
 
@@ -45,12 +46,8 @@ class TestNotification extends Notification
         ];
     }
 
-    public function toWebPush(User $notifiable, Notification $notification): WebPushMessage
+    public function toApns(User $notifiable): ApnsMessage
     {
-        return (new WebPushMessage)
-            ->title(self::TITLE)
-            ->body(self::BODY)
-            ->icon('/icons/icon-192x192.png')
-            ->data(['url' => self::URL, 'onActionClick' => ['default' => ['operation' => 'navigateLastFocusedOrOpen', 'url' => self::URL]]]);
+        return new ApnsMessage(title: self::TITLE, body: self::BODY, url: self::URL);
     }
 }

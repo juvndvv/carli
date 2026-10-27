@@ -37,7 +37,7 @@ Los tests de integración y las capturas usan el usuario demo: un backend local 
 Requisitos: Docker con Compose v2 y `make`. Todo corre en contenedores: `postgres`, `app` (php-fpm), `worker` (colas), `scheduler` (tareas programadas), `caddy` (TLS y proxy FastCGI de las rutas del backend; el resto responde 404) y `backup` (pg_dump diario).
 
 ```sh
-make setup        # crea .env desde .env.example, construye imágenes y genera APP_KEY (y claves VAPID, que hoy no usa ningún cliente)
+make setup        # crea .env desde .env.example, construye imágenes y genera APP_KEY
 make up           # levanta el stack (las migraciones se ejecutan al arrancar `app`)
 make create-user  # crea tu usuario (no hay registro público)
 ```
@@ -69,7 +69,7 @@ La configuración de Laravel llega a los contenedores por variables de entorno d
    APP_HTTPS_PORT=443
    DB_PASSWORD=<contraseña larga>
    ```
-   Cambia `DB_PASSWORD` antes del primer arranque (Postgres la fija al crear el volumen). `SESSION_*`, `SANCTUM_STATEFUL_DOMAINS` y `VAPID_*` siguen en `.env.example` como restos del cliente web; la app no los necesita.
+   Cambia `DB_PASSWORD` antes del primer arranque (Postgres la fija al crear el volumen). `SESSION_*` y `SANCTUM_STATEFUL_DOMAINS` siguen en `.env.example` como restos del cliente web; la app no los necesita.
 3. `make up` y `make create-user`. Compila la app con `--dart-define=API_URL=https://app.example.com/api`. Caddy obtiene y renueva el certificado TLS automáticamente y activa HSTS.
 4. Actualizar: `git pull && make up` (reconstruye las imágenes y migra al arrancar).
 
@@ -124,6 +124,22 @@ Opcional: sin configurar, la app funciona en manual y `Más → Ajustes de Finan
 6. El `scheduler` sincroniza a las 07:00, 13:00 y 19:00 (`finance:bank-sync`) y avisa a 7 y 1 día de que caduque el consentimiento (`finance:bank-consent-expiry`, 09:00). El botón "Sincronizar ahora" encola un job en el `worker`.
 
 Para desarrollo sin Docker, define `ENABLE_BANKING_APP_ID` y `ENABLE_BANKING_PRIVATE_KEY_PATH` en `backend/.env`.
+
+### Notificaciones push (APNs)
+
+Opcional: sin configurar, los avisos solo llegan a la bandeja de la app.
+
+1. En [developer.apple.com → Keys](https://developer.apple.com/account/resources/authkeys/list) crea una clave con **Apple Push Notifications service (APNs)** y descarga el `.p8` (solo se puede descargar una vez). Anota su Key ID.
+2. Guárdalo **fuera del repo**, legible por el contenedor (p. ej. `/etc/personal-app/apns.p8`, `chmod 644`).
+3. En `.env`:
+   ```dotenv
+   APNS_KEY_ID=<Key ID>
+   APNS_TEAM_ID=S5FFHKW385
+   APNS_BUNDLE_ID=dev.jotade.personal
+   APNS_PRIVATE_KEY_FILE=/etc/personal-app/apns.p8
+   ```
+   Compose monta el fichero como Docker secret en `/run/secrets/apns.p8` en `app`, `worker` y `scheduler`.
+4. `make up`. La app registra su token al iniciar sesión; las builds instaladas desde Xcode usan el entorno *sandbox* de APNs y las de TestFlight/App Store, *production*. La misma clave sirve para los dos.
 
 ### Backups
 

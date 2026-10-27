@@ -26,13 +26,6 @@ keys: env
 		key=$$($(PHP_RUN) php -r 'echo "base64:".base64_encode(random_bytes(32));') && \
 		$(SET_ENV) .env APP_KEY "$$key" && echo "APP_KEY generated"; \
 	fi
-	@if grep -Eq '^VAPID_PUBLIC_KEY=.+' .env && grep -Eq '^VAPID_PRIVATE_KEY=.+' .env; then \
-		echo "VAPID keys already set"; \
-	else \
-		keys=$$($(PHP_RUN) php -r 'require "vendor/autoload.php"; $$k = Minishlink\WebPush\VAPID::createVapidKeys(); echo $$k["publicKey"], " ", $$k["privateKey"];') && \
-		$(SET_ENV) .env VAPID_PUBLIC_KEY "$${keys%% *}" && \
-		$(SET_ENV) .env VAPID_PRIVATE_KEY "$${keys##* }" && echo "VAPID keys generated"; \
-	fi
 
 up: env
 	$(COMPOSE) up -d --build

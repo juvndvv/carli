@@ -1,17 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:carli/core/reminders/daily_reminder_controller.dart';
-import 'package:carli/core/reminders/pending_count_reader.dart';
-import 'package:carli/core/reminders/reminder_scheduler.dart';
-import 'package:carli/core/reminders/reminder_settings.dart';
-import 'package:carli/core/reminders/reminder_store.dart';
+import 'package:carli/core/push/push_platform.dart';
 import 'package:carli/shell/settings/notifications/notification_settings_screen.dart';
 import 'package:carli/ui/toast.dart';
 
 import '../../../support/fake_api.dart';
-import '../../../support/fake_reminder_scheduler.dart';
+import '../../../support/fake_push_platform.dart';
 import '../../../support/finance_app.dart';
 
 typedef Json = Map<String, dynamic>;
@@ -49,8 +44,21 @@ Json preferencesBody({bool weeklyPush = false}) => {
   'push_configured': true,
 };
 
-Map<String, FakeRoute> routes({bool failSave = false}) => {
+Map<String, FakeRoute> routes({bool failSave = false, bool serverPush = true}) => {
   'GET /v1/notification-preferences': (_) => (200, preferencesBody()),
+  'POST /v1/push-devices': (_) => (
+    201,
+    {
+      'data': {'id': 'device', 'environment': 'sandbox'},
+      'push_configured': serverPush,
+    },
+  ),
+  'POST /v1/notifications/test': (_) => (
+    202,
+    {
+      'channels': ['database', if (serverPush) r'App\Core\Push\ApnsChannel'],
+    },
+  ),
   'PUT /v1/notification-preferences': (_) =>
       failSave ? (500, {'message': 'error'}) : (200, preferencesBody(weeklyPush: true)),
 };
@@ -61,27 +69,26 @@ Finder labelled(String label) =>
 CupertinoSwitch switchFor(WidgetTester tester, String label) =>
     tester.widget<CupertinoSwitch>(find.descendant(of: labelled(label), matching: find.byType(CupertinoSwitch)));
 
-Future<void> pumpScreen(WidgetTester tester, FakeApi api, FakeReminderScheduler scheduler) => pumpFinance(
+Future<void> pumpScreen(WidgetTester tester, FakeApi api, FakePushPlatform platform) => pumpFinance(
   tester,
   const NotificationSettingsScreen(),
   api,
-  overrides: [
-    reminderSchedulerProvider.overrideWithValue(scheduler),
-    reminderClockProvider.overrideWithValue(() => DateTime(2026, 10, 26, 10)),
-    pendingCountReaderProvider.overrideWithValue(() async => 2),
-  ],
+  overrides: [pushPlatformProvider.overrideWithValue(platform)],
 );
 
-void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+FakePushPlatform granted() => FakePushPlatform(currentPermission: PushPermission.granted);
 
-  testWidgets('shows the daily reminder and the server preferences grouped by module', (tester) async {
-    await pumpScreen(tester, FakeApi(routes()), FakeReminderScheduler(permitted: true));
+Future<void> activatePush(WidgetTester tester) async {
+  await tester.tap(find.text('Activar notificaciones'));
+  await settle(tester);
+}
+
+void main() {
+  testWidgets('shows the push status and the server preferences grouped by module', (tester) async {
+    await pumpScreen(tester, FakeApi(routes()), granted());
 
     expect(find.text('Avisos'), findsWidgets);
-    expect(find.text('Recordatorio diario'), findsOneWidget);
-    expect(find.text('20:00'), findsOneWidget);
-    expect(switchFor(tester, 'Recordatorio diario').value, isTrue);
+    expect(find.text('Notificaciones push'), findsOneWidget);
     expect(find.textContaining('Ajustes de iOS'), findsNothing);
 
     await tester.scrollUntilVisible(find.text('Resumen semanal (lunes 09:00)'), 200);
@@ -95,7 +102,7 @@ void main() {
 
   testWidgets('saves only the toggled preference', (tester) async {
     final api = FakeApi(routes());
-    await pumpScreen(tester, api, FakeReminderScheduler(permitted: true));
+    await pumpScreen(tester, api, granted());
     final label = 'Push: Resumen semanal (lunes 09:00)';
     await tester.scrollUntilVisible(labelled(label), 200);
 
@@ -112,7 +119,7 @@ void main() {
   });
 
   testWidgets('reverts the switch and warns when saving fails', (tester) async {
-    await pumpScreen(tester, FakeApi(routes(failSave: true)), FakeReminderScheduler(permitted: true));
+    await pumpScreen(tester, FakeApi(routes(failSave: true)), granted());
     final label = 'En la app: Pendientes por revisar (diario 20:00)';
     await tester.scrollUntilVisible(labelled(label), 200);
 
@@ -124,66 +131,69 @@ void main() {
     await tester.pump(defaultToastDuration);
   });
 
-  testWidgets('turning the reminder off hides the time and cancels it', (tester) async {
-    final scheduler = FakeReminderScheduler(permitted: true);
-    await pumpScreen(tester, FakeApi(routes()), scheduler);
+  testWidgets('asks for permission and registers this iPhone with the server', (tester) async {
+    final api = FakeApi(routes());
+    final platform = FakePushPlatform();
+    await pumpScreen(tester, api, platform);
 
-    await tester.tap(find.descendant(of: labelled('Recordatorio diario'), matching: find.byType(CupertinoSwitch)));
-    await settle(tester);
+    expect(find.text('Aún no las has permitido'), findsOneWidget);
+    await activatePush(tester);
 
-    expect(find.text('20:00'), findsNothing);
-    expect(scheduler.cancellations, 1);
-    expect((await ReminderStore().read()).enabled, isFalse);
+    expect(platform.permissionRequests, 1);
+    final post = api.requests.singleWhere((request) => request.path == '/v1/push-devices');
+    expect(post.data, {'token': FakePushPlatform.token, 'environment': 'sandbox'});
+    expect(find.text('Activadas en este iPhone'), findsOneWidget);
   });
 
-  testWidgets('turning the reminder on asks for permission and shows a hint when denied', (tester) async {
-    SharedPreferences.setMockInitialValues({'daily_reminder.enabled': false});
-    final scheduler = FakeReminderScheduler(grantOnRequest: false);
-    await pumpScreen(tester, FakeApi(routes()), scheduler);
+  testWidgets('shows a hint when iOS notifications are denied', (tester) async {
+    final platform = FakePushPlatform(grantOnRequest: false);
+    await pumpScreen(tester, FakeApi(routes()), platform);
 
-    await tester.tap(find.descendant(of: labelled('Recordatorio diario'), matching: find.byType(CupertinoSwitch)));
-    await settle(tester);
+    await activatePush(tester);
 
-    expect(scheduler.permissionRequests, 1);
-    expect(scheduler.scheduled, isEmpty);
+    expect(platform.registrations, 0);
+    expect(find.text('Desactivadas en iOS'), findsOneWidget);
     expect(find.textContaining('Actívalas en Ajustes de iOS'), findsOneWidget);
   });
 
-  testWidgets('picks a new time from the sheet and reschedules', (tester) async {
-    final scheduler = FakeReminderScheduler(permitted: true);
-    await pumpScreen(tester, FakeApi(routes()), scheduler);
+  testWidgets('offers a retry when APNs registration fails', (tester) async {
+    await pumpScreen(tester, FakeApi(routes()), FakePushPlatform(failRegistration: true));
 
-    await tester.tap(find.text('20:00'));
-    await tester.pumpAndSettle();
-    expect(find.text('Hora del recordatorio'), findsOneWidget);
-    await tester.drag(find.text('20').last, const Offset(0, -64));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Guardar'));
-    await tester.pumpAndSettle();
+    await activatePush(tester);
 
-    final saved = (await ReminderStore().read()).time;
-    expect(saved, isNot(ReminderTime.evening));
-    expect(find.text(saved.label), findsOneWidget);
-    expect(scheduler.lastScheduled?.$1, saved.nextAfter(DateTime(2026, 10, 26, 10)));
-    expect(scheduler.lastScheduled?.$2.body, 'Tienes 2 elementos por revisar');
+    expect(find.text('No se ha podido registrar este iPhone'), findsOneWidget);
+    expect(find.text('Reintentar'), findsOneWidget);
   });
 
-  testWidgets('sends a test reminder', (tester) async {
-    final scheduler = FakeReminderScheduler(permitted: true);
-    await pumpScreen(tester, FakeApi(routes()), scheduler);
+  testWidgets('sends a test push through the server', (tester) async {
+    final api = FakeApi(routes());
+    await pumpScreen(tester, api, FakePushPlatform());
+    await activatePush(tester);
 
     await tester.tap(find.text('Probar aviso'));
     await settle(tester);
 
-    expect(scheduler.shown.single.body, 'Tienes 2 elementos por revisar');
+    expect(api.requests.where((request) => request.path == '/v1/notifications/test'), hasLength(1));
     expect(find.text('Aviso de prueba enviado'), findsOneWidget);
     await tester.pump(defaultToastDuration);
   });
 
+  testWidgets('explains when the server cannot send push yet', (tester) async {
+    await pumpScreen(tester, FakeApi(routes(serverPush: false)), FakePushPlatform());
+    await activatePush(tester);
+
+    expect(find.text('El servidor aún no tiene el envío push configurado'), findsOneWidget);
+    await tester.tap(find.text('Probar aviso'));
+    await settle(tester);
+
+    expect(find.text('El aviso de prueba solo ha llegado a la bandeja'), findsOneWidget);
+    await tester.pump(defaultToastDuration);
+  });
+
   testWidgets('shows an error card when the preferences cannot be loaded', (tester) async {
-    await pumpScreen(tester, FakeApi({}), FakeReminderScheduler(permitted: true));
+    await pumpScreen(tester, FakeApi({}), granted());
 
     expect(find.text('No se han podido cargar los avisos'), findsOneWidget);
-    expect(find.text('Recordatorio diario'), findsOneWidget);
+    expect(find.text('Notificaciones push'), findsOneWidget);
   });
 }

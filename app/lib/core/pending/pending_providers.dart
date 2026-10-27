@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 
 import '../../modules/finance/data/finance_changes.dart';
 import '../api/api_client.dart';
@@ -99,11 +98,6 @@ class PendingSummaryController extends AsyncNotifier<PendingSummary> {
     });
   }
 }
-
-typedef PendingReader = T Function<T>(ProviderListenable<T> provider);
-
-Future<int?> currentPendingCount(PendingReader read) async =>
-    (await read(pendingSummaryProvider.notifier).refresh())?.total;
 
 @immutable
 class PendingListState {

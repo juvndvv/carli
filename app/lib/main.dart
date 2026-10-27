@@ -6,8 +6,6 @@ import 'package:intl/intl.dart';
 import 'app.dart';
 import 'core/api/api_client.dart';
 import 'core/auth/auth_controller.dart';
-import 'core/pending/pending_providers.dart';
-import 'core/reminders/pending_count_reader.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +18,6 @@ Future<void> main() async {
       unauthorizedHandlerProvider.overrideWith(
         (ref) =>
             () => ref.read(authControllerProvider.notifier).handleUnauthorized(),
-      ),
-      pendingCountReaderProvider.overrideWith(
-        (ref) =>
-            () => currentPendingCount(ref.read),
       ),
     ],
   );

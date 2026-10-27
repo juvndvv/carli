@@ -3,14 +3,15 @@
 namespace App\Core\Notifications;
 
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Push\ApnsChannel;
+use App\Core\Push\ApnsConfiguration;
 use App\Models\User;
-use NotificationChannels\WebPush\WebPushChannel;
 
 final class NotificationChannels
 {
     public const string DATABASE = 'database';
 
-    public const string PUSH = WebPushChannel::class;
+    public const string PUSH = ApnsChannel::class;
 
     /**
      * @return list<string>
@@ -30,10 +31,15 @@ final class NotificationChannels
             $channels[] = self::DATABASE;
         }
 
-        if ($preference['push'] && WebPushConfiguration::isConfigured()) {
+        if ($preference['push'] && self::canPush($user)) {
             $channels[] = self::PUSH;
         }
 
         return $channels;
+    }
+
+    public static function canPush(User $user): bool
+    {
+        return ApnsConfiguration::isConfigured() && $user->pushDevices()->exists();
     }
 }

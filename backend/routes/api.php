@@ -8,7 +8,7 @@ use App\Core\Http\Controllers\NotificationPreferenceController;
 use App\Core\Http\Controllers\PasswordController;
 use App\Core\Http\Controllers\PendingController;
 use App\Core\Http\Controllers\PersonalAccessTokenController;
-use App\Core\Http\Controllers\PushSubscriptionController;
+use App\Core\Http\Controllers\PushDeviceController;
 use App\Core\Http\Controllers\SearchController;
 use App\Core\Http\Controllers\SessionController;
 use App\Core\Http\Controllers\TwoFactorController;
@@ -58,9 +58,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
     Route::get('notification-preferences', [NotificationPreferenceController::class, 'index'])->name('notification-preferences.index');
     Route::put('notification-preferences', [NotificationPreferenceController::class, 'update'])->name('notification-preferences.update');
 
-    Route::get('push/public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.public-key');
-    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
-    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+    Route::post('push-devices', [PushDeviceController::class, 'store'])->name('push-devices.store');
+    Route::delete('push-devices', [PushDeviceController::class, 'destroy'])->name('push-devices.destroy');
 
     Route::get('pending/summary', [PendingController::class, 'summary'])->name('pending.summary');
     Route::get('pending', [PendingController::class, 'index'])->name('pending.index');

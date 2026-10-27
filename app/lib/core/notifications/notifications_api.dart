@@ -23,6 +23,11 @@ class NotificationsApi {
     return (response.data!['unread_count'] as num).toInt();
   }
 
+  Future<List<String>> sendTest() async {
+    final response = await _dio.post<NotificationJson>('$_base/test');
+    return [for (final channel in response.data!['channels'] as List? ?? const []) channel as String];
+  }
+
   Future<int> markRead({List<String>? ids}) async {
     final response = await _dio.post<NotificationJson>('$_base/read', data: ids == null ? {'all': true} : {'ids': ids});
     return (response.data!['unread_count'] as num).toInt();
