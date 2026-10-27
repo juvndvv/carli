@@ -82,27 +82,6 @@ struct ShoppingListView: View {
         let suggestions = Self.suggestions(note, products, query: query, limit: query.isEmpty ? 6 : 4)
         return List {
             Section {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(note.openCount == 0 ? "NADA POR COMPRAR" : "\(note.openCount) POR COMPRAR")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(CarliColor.text2)
-                    if switchable {
-                        Button { switching = true } label: {
-                            HStack(spacing: 6) {
-                                Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
-                                Image(systemName: "chevron.down").font(.headline.weight(.bold)).foregroundStyle(CarliColor.text2)
-                            }
-                            .foregroundStyle(CarliColor.text)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Cambiar de lista")
-                    } else {
-                        Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: CarliSpace.s4, bottom: CarliSpace.s8, trailing: CarliSpace.s4))
                 HStack(spacing: CarliSpace.s12) {
                     Image(systemName: "plus").foregroundStyle(CarliColor.text2)
                     TextField("Añadir producto", text: $add)
@@ -126,6 +105,28 @@ struct ShoppingListView: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: CarliSpace.s4, bottom: 0, trailing: 0))
                 }
+            } header: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(note.openCount == 0 ? "NADA POR COMPRAR" : "\(note.openCount) POR COMPRAR")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(CarliColor.text2)
+                    if switchable {
+                        Button { switching = true } label: {
+                            HStack(spacing: 6) {
+                                Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+                                Image(systemName: "chevron.down").font(.headline.weight(.bold)).foregroundStyle(CarliColor.text2)
+                            }
+                            .foregroundStyle(CarliColor.text)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Cambiar de lista")
+                    } else {
+                        Text(note.displayTitle).font(.largeTitle.weight(.bold)).lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textCase(nil)
+                .padding(.bottom, CarliSpace.s8)
             }
             if groups.isEmpty && cart.isEmpty {
                 Text("La lista está vacía. Añade lo que te falta: se ordena solo por secciones del súper.")

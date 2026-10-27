@@ -111,8 +111,21 @@ struct UpcomingCharge: Decodable, Equatable, Identifiable {
 }
 
 struct FinanceTransaction: Decodable, Equatable, Identifiable {
-    struct Split: Decodable, Equatable {}
-    struct Share: Decodable, Equatable {}
+    struct Split: Decodable, Equatable {
+        var categoryId: String?
+        var amountCents: Int?
+    }
+
+    struct Share: Decodable, Equatable {
+        var contactId: String?
+        var name: String?
+        var amountCents: Int?
+        var settled: Bool?
+    }
+
+    struct Bank: Decodable, Equatable {
+        var aspspName: String?
+    }
 
     var id: String
     var account: AccountRef
@@ -130,8 +143,15 @@ struct FinanceTransaction: Decodable, Equatable, Identifiable {
     var uncategorized: Bool?
     var splits: [Split]?
     var shares: [Share]?
+    var tags: [String]?
+    var bank: Bank?
+    var transferSource: String?
+    var transferUndoable: Bool?
 
     var isTransfer: Bool { kind == "transfer" }
+    var sharesLocked: Bool { (shares ?? []).contains { $0.settled == true } }
+    /// A bank expense or income can be relinked as a transfer with a manual account.
+    var canBecomeTransfer: Bool { fromBank && (kind == "expense" || kind == "income") && !isSplit && (shares ?? []).isEmpty }
     var isSplit: Bool { !(splits ?? []).isEmpty }
     var fromBank: Bool { source == "bank" }
     var needsCategory: Bool { isTransfer || kind == "adjustment" || (category == nil && !isSplit) }

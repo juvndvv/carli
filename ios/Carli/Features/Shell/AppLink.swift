@@ -178,9 +178,13 @@ struct AppLink: Equatable, Identifiable {
 @Observable
 final class AppRouter {
     private(set) var pending: AppLink?
+    /// The tab the last link asked for. Kept apart from `pending` because an already loaded tab may
+    /// take its link before ShellView gets to switch.
+    private(set) var request: (id: UUID, tab: String)?
 
     func open(_ link: AppLink) {
         pending = link
+        request = (link.id, link.tab)
     }
 
     /// Opens a server route; anything unknown falls back to the notifications inbox when asked.
@@ -203,5 +207,10 @@ final class AppRouter {
 
     func drop() {
         pending = nil
+    }
+
+    /// ShellView has switched to (or refused) the requested tab.
+    func settle() {
+        request = nil
     }
 }

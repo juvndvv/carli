@@ -8,11 +8,17 @@ struct TransactionsView: View {
     @State private var toast: String?
     @State private var editing: FinanceTransaction?
     @State private var similar: UndoOffer?
+    @State private var selecting = false
+    @State private var selected: Set<String> = []
+    @State private var bulkEditing = false
+    @State private var moreFilters = false
+    @State private var exported: SharedFile?
+    @State private var exporting = false
 
     var body: some View {
         List {
             Section {
-                FilterChips(model: model)
+                FilterChips(model: model, showMore: $moreFilters)
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
@@ -51,6 +57,31 @@ struct TransactionsView: View {
             guard !Task.isCancelled else { return }
             await model.reload()
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(selecting ? "Terminar selección" : "Seleccionar", systemImage: "checkmark.circle") {
+                        selecting.toggle()
+                        selected = []
+                    }
+                    Button("Exportar CSV", systemImage: "square.and.arrow.up") { Task { await export() } }
+                        .disabled(exporting)
+                } label: {
+                    Image(systemName: exporting ? "hourglass" : "ellipsis")
+                }
+                .accessibilityLabel("Más acciones")
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if selecting { selectionBar }
+        }
+        .sheet(isPresented: $moreFilters) { MoreFiltersSheet(filters: $model.filters) }
+        .sheet(isPresented: $bulkEditing) {
+            BulkEditSheet(count: selected.count, categories: model.categories, accounts: model.accounts) { changes in
+                Task { await bulkEdit(changes) }
+            }
+        }
+        .sheet(item: $exported) { ShareSheet(items: [$0.url]).presentationDetents([.medium, .large]) }
         .overlay(alignment: .bottom) { undoBar }
         .carliToast($toast)
         .animation(.smooth, value: deleted?.id)
@@ -108,24 +139,85 @@ struct TransactionsView: View {
         }
     }
 
+    private var selectionBar: some View {
+        HStack(spacing: CarliSpace.s12) {
+            Text(selected.count == 1 ? "1 seleccionado" : "\(selected.count) seleccionados")
+                .font(.subheadline.weight(.medium))
+                .monospacedDigit()
+            Spacer()
+            Button(selected.count == model.items.count && !model.items.isEmpty ? "Ninguno" : "Todos") {
+                selected = selected.count == model.items.count ? [] : Set(model.items.map(\.id))
+            }
+            Button("Editar") { bulkEditing = true }
+                .buttonStyle(.glassProminent)
+                .tint(CarliColor.primary)
+                .foregroundStyle(CarliColor.onPrimary)
+                .disabled(selected.isEmpty)
+        }
+        .padding(.horizontal, CarliSpace.s20)
+        .padding(.vertical, CarliSpace.s12)
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, CarliSpace.s16)
+        .padding(.bottom, 72)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Selección")
+    }
+
+    private func bulkEdit(_ changes: [String: JSONValue]) async {
+        do {
+            let updated = try await model.bulkUpdate(Array(selected), changes)
+            toast = updated == 1 ? "1 movimiento actualizado" : "\(updated) movimientos actualizados"
+            selecting = false
+            selected = []
+        } catch {
+            toast = error.apiMessage(fallback: "No se han podido actualizar los movimientos.")
+        }
+    }
+
+    private func export() async {
+        exporting = true
+        defer { exporting = false }
+        do {
+            exported = SharedFile(url: try await model.exportCSV())
+        } catch {
+            toast = error.apiMessage(fallback: "No se ha podido exportar el CSV.")
+        }
+    }
+
     private func row(_ transaction: FinanceTransaction) -> some View {
         Button {
-            editing = transaction
+            if selecting {
+                if selected.contains(transaction.id) { selected.remove(transaction.id) } else { selected.insert(transaction.id) }
+            } else {
+                editing = transaction
+            }
         } label: {
-            TransactionLine(transaction: transaction, accounts: model.accounts)
-                .contentShape(.rect)
+            HStack(spacing: 0) {
+                if selecting {
+                    Image(systemName: selected.contains(transaction.id) ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(selected.contains(transaction.id) ? CarliColor.text : CarliColor.text3)
+                        .padding(.leading, CarliSpace.s16)
+                        .accessibilityHidden(true)
+                }
+                TransactionLine(transaction: transaction, accounts: model.accounts)
+            }
+            .contentShape(.rect)
         }
+        .accessibilityAddTraits(selecting && selected.contains(transaction.id) ? .isSelected : [])
         .buttonStyle(.plain)
         .listRowInsets(EdgeInsets())
         .listRowBackground(CarliColor.surface)
         .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .swipeActions(edge: .trailing, allowsFullSwipe: !selecting) {
+            if !selecting {
             Button(role: .destructive) {
                 delete(transaction)
             } label: {
                 Label("Eliminar", systemImage: "trash")
             }
             .tint(CarliColor.dangerFill)
+            }
         }
     }
 
@@ -206,6 +298,7 @@ struct TransactionsView: View {
 /// Horizontal row of glass chips. Multi-choice menus stay open while ticking.
 private struct FilterChips: View {
     @Bindable var model: TransactionsModel
+    @Binding var showMore: Bool
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -214,6 +307,7 @@ private struct FilterChips: View {
                     periodMenu
                     accountMenu
                     categoryMenu
+                    tagMenu
                     kindMenu
                     Button {
                         model.filters.pendingOnly.toggle()
@@ -225,6 +319,11 @@ private struct FilterChips: View {
                         model.filters.uncategorized.toggle()
                     } label: {
                         FilterChip(symbol: "circle.dashed", text: "Sin categoría", selected: model.filters.uncategorized)
+                    }
+                    Button {
+                        showMore = true
+                    } label: {
+                        FilterChip(symbol: "slider.horizontal.3", text: "Más filtros", selected: moreActive)
                     }
                     if model.filters.isFiltering {
                         Button {
@@ -338,6 +437,37 @@ private struct FilterChips: View {
             if ids.first == TransactionFilters.noCategory { return "Sin categoría" }
             return model.categoryOptions.first { $0.category.id == ids.first }?.category.name ?? "1 categoría"
         default: return "\(ids.count) categorías"
+        }
+    }
+
+    private var moreActive: Bool {
+        let f = model.filters
+        return f.clearedOnly || f.minCents != nil || f.maxCents != nil || f.from != nil || f.to != nil
+    }
+
+    private var tagMenu: some View {
+        Menu {
+            if model.tags.isEmpty {
+                Text("Aún no tienes etiquetas")
+            }
+            ForEach(model.tags) { tag in
+                Toggle("#\(tag.name)", isOn: member(tag.name.lowercased(), of: \.tags))
+            }
+            if !model.filters.tags.isEmpty {
+                Divider()
+                Button("Quitar filtro") { model.filters.tags = [] }
+            }
+        } label: {
+            FilterChip(symbol: "number", text: tagLabel, selected: !model.filters.tags.isEmpty)
+        }
+        .menuActionDismissBehavior(.disabled)
+    }
+
+    private var tagLabel: String {
+        switch model.filters.tags.count {
+        case 0: "Etiquetas"
+        case 1: "#\(model.filters.tags.first!)"
+        default: "\(model.filters.tags.count) etiquetas"
         }
     }
 

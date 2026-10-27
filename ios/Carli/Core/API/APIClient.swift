@@ -90,5 +90,27 @@ final class APIClient {
     }
 }
 
+extension APIClient {
+    /// A GET that returns the raw body, such as the CSV export.
+    func download(_ path: String, query: [String: String] = [:], accept: String) async throws -> Data {
+        var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
+        if !query.isEmpty {
+            components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+        var request = URLRequest(url: components.url!, timeoutInterval: 60)
+        request.setValue(accept, forHTTPHeaderField: "Accept")
+        if let token = tokens.read() { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw APIError.offline
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else { throw APIError.from(status: status, body: data) }
+        return data
+    }
+}
+
 /// Placeholder for requests and responses without a body.
 struct Empty: Codable {}

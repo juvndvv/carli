@@ -92,3 +92,16 @@ struct ShellTests {
         #expect(!ProfileSettingsView.isValid(name: " ", email: "j@x.es"))
     }
 }
+
+struct TransactionToolsTests {
+    @Test func tagsAreNormalized() {
+        #expect(TransactionFormModel.parseTags("#Viaje, casa  ##Trabajo") == ["viaje", "casa", "trabajo"])
+        #expect(BulkEditSheet.parseTags(" , ") == [])
+    }
+
+    @Test func transferNoticeMatchesSource() {
+        #expect(TransactionSheet.transferNotice("confirmed") == "Confirmaste que es una transferencia entre tus cuentas.")
+        #expect(TransactionSheet.transferNotice("linked") == "Transferencia con una cuenta sin conexión al banco.")
+        #expect(TransactionSheet.transferNotice("auto").hasPrefix("Detectada"))
+    }
+}

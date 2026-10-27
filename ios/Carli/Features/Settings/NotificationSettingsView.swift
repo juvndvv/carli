@@ -21,17 +21,12 @@ struct NotificationSettingsView: View {
                         Section {
                             ForEach(group.types) { preference in row(group, preference) }
                         } header: {
-                            HStack {
-                                Text(group.name ?? group.module)
-                                Spacer()
-                                Text("Push").frame(width: 60)
-                                Text("En la app").frame(width: 60)
-                            }
+                            Text(group.name ?? group.module)
                         }
                     }
                     Section {
                     } footer: {
-                        Text("Push llega a este iPhone. El resumen de pendientes sale a las 20:00 si tienes algo por revisar.")
+                        Text("Marca dónde quieres cada aviso. Push llega a este iPhone. El resumen de pendientes sale a las 20:00 si tienes algo por revisar.")
                     }
                 }
             } else if failed {
@@ -111,21 +106,25 @@ struct NotificationSettingsView: View {
     }
 
     private func row(_ group: NotificationPreferenceGroup, _ preference: NotificationPreference) -> some View {
-        HStack {
+        VStack(alignment: .leading, spacing: CarliSpace.s8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(preference.title).font(.body.weight(.medium))
                 if let detail = preference.detail {
                     Text(detail).font(.footnote).foregroundStyle(CarliColor.text2)
                 }
             }
-            Spacer()
-            Toggle("Push: \(preference.title)", isOn: binding(group, preference, push: true))
-                .labelsHidden()
-                .frame(width: 60)
-            Toggle("En la app: \(preference.title)", isOn: binding(group, preference, push: false))
-                .labelsHidden()
-                .frame(width: 60)
+            HStack(spacing: CarliSpace.s8) {
+                Toggle("Push", systemImage: "iphone", isOn: binding(group, preference, push: true))
+                    .accessibilityLabel("Push: \(preference.title)")
+                Toggle("En la app", systemImage: "bell.fill", isOn: binding(group, preference, push: false))
+                    .accessibilityLabel("En la app: \(preference.title)")
+            }
+            .toggleStyle(.button)
+            .buttonBorderShape(.capsule)
+            .controlSize(.small)
+            .font(.footnote.weight(.medium))
         }
+        .padding(.vertical, 2)
     }
 
     private func binding(_ group: NotificationPreferenceGroup, _ preference: NotificationPreference, push isPush: Bool) -> Binding<Bool> {

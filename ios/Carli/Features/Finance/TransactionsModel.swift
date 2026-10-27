@@ -19,6 +19,7 @@ final class TransactionsModel {
     var periods: [FinancePeriod] = []
     var accounts: [AccountRef] = []
     var categories: [FinanceCategory] = []
+    var tags: [FinanceTag] = []
 
     private var cursor: String?
     private var generation = 0
@@ -49,6 +50,26 @@ final class TransactionsModel {
         async let categories: Void = loadCategories()
         async let list: Void = reload()
         _ = await (accounts, categories, list)
+        if let envelope: DataEnvelope<[FinanceTag]> = try? await api.get("v1/finance/tags") { tags = envelope.data }
+    }
+
+    /// Applies `changes` (category, account, tags or status) to the selected movements; returns how many changed.
+    func bulkUpdate(_ ids: [String], _ changes: [String: JSONValue]) async throws -> Int {
+        struct Result: Decodable { var updated: Int }
+        var body = changes
+        body["ids"] = .array(ids.map(JSONValue.string))
+        let result: DataEnvelope<Result> = try await api.patch("v1/finance/transactions/bulk", body: Patch(body))
+        NotificationCenter.default.post(name: .financeChanged, object: nil)
+        return result.data.updated
+    }
+
+    /// The CSV of what the list shows, written to a temporary file for the share sheet.
+    func exportCSV() async throws -> URL {
+        let data = try await api.download("v1/finance/transactions/export.csv",
+                                          query: filters.apiQuery(currentPeriodId: currentPeriod?.id), accept: "text/csv")
+        let url = FileManager.default.temporaryDirectory.appending(path: "movimientos-\(CarliDate.isoDay(.now)).csv")
+        try data.write(to: url, options: .atomic)
+        return url
     }
 
     /// Fetches the first page for the current filters. Older responses are dropped if the

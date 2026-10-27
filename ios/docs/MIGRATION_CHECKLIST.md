@@ -19,9 +19,9 @@ Status as of 2026-10-28: ✅ native · 🟡 partial · ⬜ pending.
 ## Finanzas
 - ✅ Resumen
 - ✅ Movimientos (list, search, filters, swipe delete, link filters: dates, amounts, tags, debt, recurring, contact)
-- 🟡 Movimientos tools: more-filters sheet, multi-select bulk edit, CSV export
+- ✅ Movimientos tools: more-filters sheet (status, amounts, dates), tag filter, multi-select bulk edit, CSV export
 - ✅ Presupuestos
-- 🟡 Transaction sheet (create / edit; tags, splits and shares still read-only)
+- ✅ Transaction sheet: create / edit, tags, category splits, shared expenses, bank and transfer notices, transfer edit, undo / convert to transfer, duplicate, delete
 - ✅ Similar categorization offer after categorizing an import
 - ✅ Accounts, bank connections and link flow, categories and tags, debts, goals, recurring, shared, finance settings
 

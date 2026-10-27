@@ -27,6 +27,8 @@ struct TransactionSheet: View {
 
                 Section {
                     amountField
+                } footer: {
+                    notices
                 }
 
                 if model.isReadOnly {
@@ -35,11 +37,14 @@ struct TransactionSheet: View {
                     transferFields
                 } else {
                     movementFields
+                    if model.splitting { splitFields }
+                    if model.kind == .expense { shareFields }
                 }
 
                 if !model.isReadOnly {
                     Section {
                         DatePicker("Fecha", selection: $model.date, displayedComponents: .date)
+                            .disabled(model.bankLocked)
                         Toggle("Pendiente", isOn: $model.pending)
                     } footer: {
                         Text("Los pendientes aún no han pasado por el banco y no cuentan en el saldo confirmado.")
@@ -50,17 +55,16 @@ struct TransactionSheet: View {
                         TextField("Notas", text: $model.notes, axis: .vertical)
                             .lineLimit(1...4)
                     }
+
+                    tagFields
                 }
 
                 if let error = model.error {
                     Section { Text(error).foregroundStyle(CarliColor.negative) }
                 }
 
-                if model.isEditing {
-                    Section {
-                        Button("Eliminar movimiento", role: .destructive) { confirmingDelete = true }
-                            .frame(maxWidth: .infinity)
-                    }
+                if let editing = model.editing {
+                    actions(editing)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
@@ -81,18 +85,21 @@ struct TransactionSheet: View {
                     }
                 }
             }
-            .confirmationDialog("¿Eliminar este movimiento?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            .confirmationDialog(model.isTransferEdit ? "¿Eliminar esta transferencia?" : "¿Eliminar este movimiento?",
+                                isPresented: $confirmingDelete, titleVisibility: .visible) {
                 Button("Eliminar", role: .destructive) {
                     Task {
                         if await model.delete() {
-                            onSaved(model.editing?.isTransfer == true ? "Transferencia eliminada" : "Movimiento eliminado")
+                            onSaved(model.isTransferEdit ? "Transferencia eliminada" : "Movimiento eliminado")
                             dismiss()
                         }
                     }
                 }
+            } message: {
+                if model.fromBank { Text("No volverá en la siguiente sincronización.") }
             }
         }
-        .task { await model.load() }
+        .task(id: ObjectIdentifier(model)) { await model.load() }
         .task(id: model.payee) {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
@@ -117,7 +124,7 @@ struct TransactionSheet: View {
                 .focused($amountFocused)
                 .multilineTextAlignment(.center)
                 .fixedSize()
-                .disabled(model.isReadOnly)
+                .disabled(model.isReadOnly || model.bankLocked)
             Text("€").foregroundStyle(CarliColor.text3)
         }
         .font(.system(size: 44, weight: .bold))
@@ -126,9 +133,42 @@ struct TransactionSheet: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, CarliSpace.s8)
         .contentShape(.rect)
-        .onTapGesture { amountFocused = true }
+        .onTapGesture { if !model.bankLocked { amountFocused = true } }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Importe")
+    }
+
+    @ViewBuilder
+    private var notices: some View {
+        if let editing = model.editing {
+            VStack(alignment: .leading, spacing: CarliSpace.s8) {
+                if editing.fromBank {
+                    Label {
+                        Text("\(editing.bank?.aspspName.map { "Importado de \($0)" } ?? "Importado del banco"). Importe, fecha y cuenta vienen del banco. Si lo eliminas, no volverá en la siguiente sincronización.")
+                    } icon: {
+                        Image(systemName: "building.columns.fill")
+                    }
+                }
+                if editing.transferUndoable == true, let source = editing.transferSource {
+                    Label {
+                        Text(Self.transferNotice(source))
+                    } icon: {
+                        Image(systemName: "arrow.left.arrow.right")
+                    }
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(CarliColor.text3)
+        }
+    }
+
+    static func transferNotice(_ source: String) -> String {
+        switch source {
+        case "auto":
+            "Detectada como transferencia entre tus cuentas (mismo importe y fecha, y la contraparte, el titular o el concepto apuntan a tu otra cuenta): no cuenta como gasto ni como ingreso."
+        case "confirmed": "Confirmaste que es una transferencia entre tus cuentas."
+        default: "Transferencia con una cuenta sin conexión al banco."
+        }
     }
 
     @ViewBuilder
@@ -159,9 +199,7 @@ struct TransactionSheet: View {
                     }
                 }
             }
-            if model.isSplit {
-                LabeledContent("Categoría", value: "\(model.editing?.splits?.count ?? 0) categorías")
-            } else {
+            if !model.splitting {
                 NavigationLink {
                     CategoryPickerView(categories: model.categories, kind: model.categoryKind, selection: $model.categoryId)
                 } label: {
@@ -171,20 +209,212 @@ struct TransactionSheet: View {
                     }
                 }
             }
+            Toggle("Dividir en varias categorías", isOn: Binding(get: { model.splitEnabled }, set: { model.setSplitEnabled($0) }))
             accountPicker("Cuenta", selection: $model.accountId)
+                .disabled(model.bankLocked)
         }
     }
 
     @ViewBuilder
-    private var transferFields: some View {
+    private var splitFields: some View {
         Section {
-            accountPicker("Desde", selection: $model.accountId)
-            accountPicker("Hacia", selection: $model.toAccountId)
+            ForEach($model.splits) { $split in
+                HStack(spacing: CarliSpace.s12) {
+                    NavigationLink {
+                        CategoryPickerView(categories: model.categories, kind: model.categoryKind, selection: $split.categoryId)
+                    } label: {
+                        Text(model.label(for: split.categoryId) ?? "Categoría")
+                            .foregroundStyle(split.categoryId == nil ? CarliColor.text3 : CarliColor.text)
+                            .lineLimit(1)
+                    }
+                    TextField("0,00", text: $split.amountText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .monospacedDigit()
+                        .frame(width: 90)
+                        .onChange(of: split.amountText) { model.splitsDirty = true }
+                }
+                .swipeActions {
+                    Button("Quitar", systemImage: "trash", role: .destructive) { model.removeSplit(split) }
+                }
+            }
+            Button("Añadir parte", systemImage: "plus") {
+                model.splits.append(.init())
+                model.splitsDirty = true
+            }
+        } header: {
+            Text("Reparto entre categorías")
         } footer: {
-            if model.toAccountId != nil, model.toAccountId == model.accountId {
-                Text("Elige dos cuentas distintas.").foregroundStyle(CarliColor.negative)
+            let remaining = model.splitRemaining
+            Text(remaining == 0 ? "Reparto completo"
+                 : remaining > 0 ? "Quedan \(Money.format(remaining)) por asignar" : "Te pasas en \(Money.format(-remaining))")
+                .foregroundStyle(remaining < 0 ? CarliColor.negative : CarliColor.text3)
+        }
+        .onChange(of: model.splits.map(\.categoryId)) { model.splitsDirty = true }
+    }
+
+    @ViewBuilder
+    private var shareFields: some View {
+        Section {
+            Toggle("Gasto compartido", isOn: Binding(get: { model.shareEnabled }, set: {
+                model.shareEnabled = $0
+                model.sharesDirty = true
+            }))
+            .disabled(model.sharesLocked)
+            if model.shareEnabled && !model.sharesLocked {
+                if model.contacts.isEmpty {
+                    Text("Añade contactos en Finanzas › Compartidos para repartir gastos.")
+                        .font(.footnote)
+                        .foregroundStyle(CarliColor.text3)
+                } else {
+                    Menu {
+                        ForEach(model.contacts) { contact in
+                            Button {
+                                model.toggleShare(contact)
+                            } label: {
+                                if model.shares.contains(where: { $0.contactId == contact.id }) {
+                                    Label(contact.name, systemImage: "checkmark")
+                                } else {
+                                    Text(contact.name)
+                                }
+                            }
+                        }
+                    } label: {
+                        LabeledContent("Con") {
+                            Text(model.shares.isEmpty ? "Elegir contactos" : model.shares.map(\.name).formatted(.list(type: .and)))
+                                .foregroundStyle(model.shares.isEmpty ? CarliColor.text3 : CarliColor.text2)
+                                .lineLimit(1)
+                        }
+                    }
+                    if !model.shares.isEmpty {
+                        Picker("Reparto", selection: Binding(get: { model.shareMode }, set: {
+                            model.shareMode = $0
+                            model.sharesDirty = true
+                        })) {
+                            ForEach(TransactionFormModel.ShareMode.allCases) { Text($0.label).tag($0) }
+                        }
+                        if model.shareMode == .equal {
+                            Toggle("Incluirme en el reparto", isOn: Binding(get: { model.includeSelf }, set: {
+                                model.includeSelf = $0
+                                model.sharesDirty = true
+                            }))
+                        }
+                        ForEach($model.shares) { $share in
+                            shareRow($share)
+                        }
+                    }
+                }
+            }
+        } footer: {
+            if model.sharesLocked {
+                Text("Este gasto ya tiene partes liquidadas y no se puede cambiar el reparto.")
+            } else if model.shareEnabled, let summary = model.shareSummary {
+                Text(summary)
             }
         }
+    }
+
+    private func shareRow(_ share: Binding<TransactionFormModel.ShareDraft>) -> some View {
+        let preview = model.sharePreview.first { $0.name == share.wrappedValue.name }?.cents ?? 0
+        return HStack {
+            Text(share.wrappedValue.name)
+            Spacer()
+            switch model.shareMode {
+            case .equal:
+                Text(Money.format(preview)).monospacedDigit().foregroundStyle(CarliColor.text2)
+            case .percentage:
+                TextField("0", text: share.percentText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 56)
+                    .onChange(of: share.wrappedValue.percentText) { model.sharesDirty = true }
+                Text("%").foregroundStyle(CarliColor.text3)
+            case .amount:
+                TextField("0,00", text: share.amountText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 90)
+                    .onChange(of: share.wrappedValue.amountText) { model.sharesDirty = true }
+                Text("€").foregroundStyle(CarliColor.text3)
+            }
+        }
+        .monospacedDigit()
+    }
+
+    @ViewBuilder
+    private var tagFields: some View {
+        Section {
+            if !model.tags.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: CarliSpace.s8) {
+                        ForEach(model.tags, id: \.self) { tag in
+                            Button {
+                                model.tags.removeAll { $0 == tag }
+                            } label: {
+                                Label("#\(tag)", systemImage: "xmark")
+                                    .labelStyle(TrailingIconLabelStyle())
+                                    .font(.subheadline)
+                                    .padding(.horizontal, CarliSpace.s12)
+                                    .padding(.vertical, 6)
+                                    .background(CarliColor.surface2, in: .capsule)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Quitar etiqueta \(tag)")
+                        }
+                    }
+                }
+            }
+            TextField("Añadir etiqueta", text: $model.tagDraft)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+                .onSubmit { model.commitTagDraft() }
+                .onChange(of: model.tagDraft) { _, value in
+                    if value.hasSuffix(",") || value.hasSuffix(" ") { model.commitTagDraft() }
+                }
+            ForEach(tagSuggestions, id: \.self) { name in
+                Button("#\(name)") {
+                    model.tags.append(name)
+                    model.tagDraft = ""
+                }
+            }
+        } header: {
+            Text("Etiquetas")
+        }
+    }
+
+    private var tagSuggestions: [String] {
+        let draft = model.tagDraft.trimmingCharacters(in: .whitespaces).replacing(/^#+/, with: "").lowercased()
+        guard !draft.isEmpty else { return [] }
+        return model.allTags.map(\.name)
+            .filter { $0.lowercased().hasPrefix(draft) && !model.tags.contains($0) }
+            .prefix(4)
+            .map { $0 }
+    }
+
+    @ViewBuilder
+    private var transferFields: some View {
+        if model.isTransferEdit {
+            Section {
+                LabeledContent("Desde", value: accountName(model.accountId))
+                LabeledContent("Hacia", value: accountName(model.toAccountId))
+            } footer: {
+                Text("Para cambiar las cuentas, elimina la transferencia y vuelve a crearla.")
+            }
+        } else {
+            Section {
+                accountPicker("Desde", selection: $model.accountId)
+                accountPicker("Hacia", selection: $model.toAccountId)
+            } footer: {
+                if model.toAccountId != nil, model.toAccountId == model.accountId {
+                    Text("Elige dos cuentas distintas.").foregroundStyle(CarliColor.negative)
+                }
+            }
+        }
+    }
+
+    private func accountName(_ id: String?) -> String {
+        model.accounts.first { $0.id == id }?.name ?? "—"
     }
 
     @ViewBuilder
@@ -196,9 +426,49 @@ struct TransactionSheet: View {
                 LabeledContent("Fecha", value: CarliDate.day(editing.date).map(CarliDate.long) ?? editing.date)
                 if let notes = editing.notes, !notes.isEmpty { LabeledContent("Notas", value: notes) }
             } footer: {
-                Text(editing.isTransfer
-                     ? "Las transferencias se editan desde la app web por ahora. Puedes eliminarla y volver a crearla."
-                     : "Los ajustes de saldo no se editan; puedes eliminarlo.")
+                Text("Los ajustes de saldo no se editan; puedes eliminarlo.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actions(_ editing: FinanceTransaction) -> some View {
+        Section {
+            if editing.transferUndoable == true {
+                Button("Deshacer transferencia", systemImage: "arrow.uturn.backward") {
+                    Task {
+                        if let message = await model.undoTransfer() {
+                            onSaved(message)
+                            dismiss()
+                        }
+                    }
+                }
+                .disabled(model.working)
+            } else if editing.canBecomeTransfer && !model.manualAccounts.isEmpty {
+                Menu {
+                    ForEach(model.manualAccounts) { account in
+                        Button(account.name, systemImage: account.symbol) {
+                            Task {
+                                if let message = await model.convertToTransfer(account) {
+                                    onSaved(message)
+                                    dismiss()
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Label(editing.amountCents < 0 ? "Es una transferencia a…" : "Es una transferencia desde…",
+                          systemImage: "arrow.left.arrow.right")
+                }
+                .disabled(model.working)
+            }
+            if !model.isReadOnly {
+                Button("Duplicar", systemImage: "doc.on.doc") {
+                    model = TransactionFormModel(api: model.api, duplicating: editing)
+                }
+            }
+            Button(model.isTransferEdit ? "Eliminar transferencia" : "Eliminar movimiento", systemImage: "trash", role: .destructive) {
+                confirmingDelete = true
             }
         }
     }
@@ -220,6 +490,16 @@ struct TransactionSheet: View {
                 onSaved(model.isEditing ? "Movimiento guardado" : model.kind == .transfer ? "Transferencia creada" : "Movimiento añadido")
                 dismiss()
             }
+        }
+    }
+}
+
+/// Text first, icon after (tag chips with a trailing ✕).
+struct TrailingIconLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.title
+            configuration.icon.imageScale(.small)
         }
     }
 }

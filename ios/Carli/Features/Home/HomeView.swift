@@ -63,6 +63,10 @@ struct HomeView: View {
                 }
             }
         }
+        .onChange(of: router.request?.id) {
+            // Leaving Inicio for another tab (search, settings shortcuts) closes what was pushed here.
+            if let tab = router.request?.tab, tab != "home" { path = NavigationPath() }
+        }
         .onChange(of: router.pending?.id, initial: true) {
             guard let link = router.take(for: "home") else { return }
             var next = NavigationPath()

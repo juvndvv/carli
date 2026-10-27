@@ -74,7 +74,7 @@ struct ShellView: View {
         .onAppear {
             if home == nil { home = HomeModel(api: auth.api) }
         }
-        .onChange(of: router.pending?.id) { route() }
+        .onChange(of: router.request?.id) { route() }
         .onChange(of: home?.modules) { route() }
         .onChange(of: push.opened?.id, initial: true) { openExternal() }
         .onReceive(NotificationCenter.default.publisher(for: .modulesChanged)) { _ in
@@ -94,11 +94,13 @@ struct ShellView: View {
 
     /// Switches to the tab a link targets; links to modules that are off are dropped.
     private func route() {
-        guard let link = router.pending else { return }
-        if link.tab == "home" || modules.map(\.rawValue).contains(link.tab) {
-            selection = link.tab
+        guard let tab = router.request?.tab else { return }
+        if tab == "home" || modules.map(\.rawValue).contains(tab) {
+            selection = tab
+            router.settle()
         } else if home?.modules != nil {
             router.drop()
+            router.settle()
             selection = "home"
         }
     }
