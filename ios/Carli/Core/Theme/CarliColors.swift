@@ -22,10 +22,10 @@ enum CarliColor {
     static let dangerFill = Color(hex: 0xC8281C)
 
     /// Validated categorical chart palette, slots c1…c8.
-    /// Category slots c1–c8, all in ember tones so charts stay within the brand.
+    /// Category slots c1–c8, all in ember tones so charts stay within the brand; neighbours alternate light and dark so slices stay apart.
     static let chart = [
-        dynamic(0x8F0026, 0xFF2D63), dynamic(0xC4053A, 0xFF5C85), dynamic(0xE5063F, 0xFF8AA6), dynamic(0xF0446C, 0xFFB3C6),
-        dynamic(0xF57A95, 0xD1064A), dynamic(0xF9A9BB, 0x9E0034), dynamic(0xFCD2DC, 0x6B0024), dynamic(0x5C0019, 0xFFD6E0),
+        dynamic(0x8F0026, 0xFF5C85), dynamic(0xF57A95, 0xB8073F), dynamic(0xC4053A, 0xFFB3C6), dynamic(0xF4A1B3, 0xE01E55),
+        dynamic(0xE5063F, 0xFF8AA6), dynamic(0xB85A70, 0xC2405F), dynamic(0xF0446C, 0xFFD6E0), dynamic(0x5C0019, 0x9E1A3E),
     ]
     /// The "Otras categorías" bucket.
     static let chartRest = dynamic(0xB9B9BE, 0x5A5A5E)
