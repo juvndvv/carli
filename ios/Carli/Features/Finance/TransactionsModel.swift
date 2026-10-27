@@ -22,7 +22,7 @@ final class TransactionsModel {
 
     private var cursor: String?
     private var generation = 0
-    private let api: APIClient
+    let api: APIClient
 
     init(api: APIClient, filters: TransactionFilters = TransactionFilters()) {
         self.api = api

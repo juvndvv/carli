@@ -42,10 +42,11 @@ struct FinanceSummaryView: View {
         .background(CarliColor.bg)
         .refreshable { await model.load() }
         .task { if model.state.dashboard == nil { await model.load() } }
+        .onReceive(NotificationCenter.default.publisher(for: .financeChanged)) { _ in
+            Task { await model.loadDashboard() }
+        }
     }
 }
-
-// MARK: Period
 
 // MARK: Body
 

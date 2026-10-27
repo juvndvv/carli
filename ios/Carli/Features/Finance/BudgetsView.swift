@@ -35,6 +35,9 @@ struct BudgetsView: View {
         }
         .background(CarliColor.bg)
         .refreshable { await model.loadOverview() }
+        .onReceive(NotificationCenter.default.publisher(for: .financeChanged)) { _ in
+            Task { await model.loadOverview() }
+        }
         .task { if model.overview == nil { await model.load() } }
         .sheet(isPresented: $editing) {
             if let overview = model.overview {
@@ -222,7 +225,7 @@ struct StatCard: View {
                     .foregroundStyle(noteColor)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .accessibilityElement(children: .combine)
     }

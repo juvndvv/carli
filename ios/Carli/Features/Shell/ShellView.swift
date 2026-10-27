@@ -88,6 +88,7 @@ struct ModuleRootView: View {
     @Environment(AuthModel.self) private var auth
     @State private var section: ModuleSection
     @State private var adding = false
+    @State private var toast: String?
     /// Filters a link asked for; entering Movimientos from the header menu starts clean.
     @State private var transactionFilters = TransactionFilters()
 
@@ -119,11 +120,9 @@ struct ModuleRootView: View {
                     }
                 }
                 .sheet(isPresented: $adding) {
-                    NavigationStack {
-                        PendingMigrationView(title: module.addLabel, symbol: "plus")
-                    }
-                    .presentationDetents([.medium, .large])
+                    addSheet
                 }
+                .carliToast($toast)
         }
     }
 
@@ -148,6 +147,19 @@ struct ModuleRootView: View {
                 .padding(.horizontal, CarliSpace.s16)
             }
             .background(CarliColor.bg)
+        }
+    }
+
+    @ViewBuilder
+    private var addSheet: some View {
+        switch module {
+        case .finance:
+            TransactionSheet(model: TransactionFormModel(api: auth.api)) { toast = $0 }
+        default:
+            NavigationStack {
+                PendingMigrationView(title: module.addLabel, symbol: "plus")
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 

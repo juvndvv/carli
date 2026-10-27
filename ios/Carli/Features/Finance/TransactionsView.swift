@@ -6,6 +6,7 @@ struct TransactionsView: View {
     @State var model: TransactionsModel
     @State private var deleted: FinanceTransaction?
     @State private var toast: String?
+    @State private var editing: FinanceTransaction?
 
     var body: some View {
         List {
@@ -26,6 +27,12 @@ struct TransactionsView: View {
         .searchable(text: $model.filters.query, placement: .navigationBarDrawer(displayMode: .always),
                     prompt: "Buscar por comercio, concepto o nota")
         .refreshable { await model.reload() }
+        .onReceive(NotificationCenter.default.publisher(for: .financeChanged)) { _ in
+            Task { await model.reload() }
+        }
+        .sheet(item: $editing) { transaction in
+            TransactionSheet(model: TransactionFormModel(api: model.api, editing: transaction)) { toast = $0 }
+        }
         .task(id: model.filters) {
             if model.state == .loading, model.periods.isEmpty {
                 await model.load()
@@ -93,18 +100,24 @@ struct TransactionsView: View {
     }
 
     private func row(_ transaction: FinanceTransaction) -> some View {
-        TransactionLine(transaction: transaction, accounts: model.accounts)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(CarliColor.surface)
-            .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                    delete(transaction)
-                } label: {
-                    Label("Eliminar", systemImage: "trash")
-                }
-                .tint(CarliColor.dangerFill)
+        Button {
+            editing = transaction
+        } label: {
+            TransactionLine(transaction: transaction, accounts: model.accounts)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(CarliColor.surface)
+        .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                delete(transaction)
+            } label: {
+                Label("Eliminar", systemImage: "trash")
             }
+            .tint(CarliColor.dangerFill)
+        }
     }
 
     @ViewBuilder

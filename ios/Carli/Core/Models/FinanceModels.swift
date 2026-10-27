@@ -122,6 +122,7 @@ struct FinanceTransaction: Decodable, Equatable, Identifiable {
     var category: CategoryRef?
     var payee: String?
     var description: String?
+    var notes: String?
     var status: String?
     var transferAccountId: String?
     var transferGroupId: String?
