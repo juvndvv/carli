@@ -18,23 +18,41 @@ final class PendingDigestNotification extends Notification implements ShouldQueu
 
     /**
      * @param  list<string>  $phrases
+     * @param  list<string>  $lines
      */
     public function __construct(
         public readonly int $total,
         public readonly array $phrases,
+        public readonly array $lines = [],
     ) {}
+
+    public const string LINES_ONLY_URL = '/habitos/hoy';
 
     public function title(): string
     {
-        return 'Pendientes por revisar';
+        return $this->onlyLines() ? 'Hábitos de hoy' : 'Pendientes por revisar';
+    }
+
+    public function url(): string
+    {
+        return $this->onlyLines() ? self::LINES_ONLY_URL : self::URL;
+    }
+
+    private function onlyLines(): bool
+    {
+        return $this->total <= 0 && $this->phrases === [] && $this->lines !== [];
     }
 
     public function body(): string
     {
+        if ($this->onlyLines()) {
+            return implode('. ', $this->lines);
+        }
+
         $phrases = $this->phrases === [] ? ["{$this->total} pendientes"] : $this->phrases;
         $last = array_pop($phrases);
 
-        return 'Tienes '.($phrases === [] ? $last : implode(', ', $phrases).' y '.$last);
+        return implode('. ', ['Tienes '.($phrases === [] ? $last : implode(', ', $phrases).' y '.$last), ...$this->lines]);
     }
 
     /**
@@ -55,7 +73,7 @@ final class PendingDigestNotification extends Notification implements ShouldQueu
             'type' => CoreNotificationTypes::PENDING_DIGEST,
             'title' => $this->title(),
             'body' => $this->body(),
-            'url' => self::URL,
+            'url' => $this->url(),
             'total' => $this->total,
         ];
     }
@@ -67,6 +85,6 @@ final class PendingDigestNotification extends Notification implements ShouldQueu
             ->body($this->body())
             ->icon('/icons/icon-192x192.png')
             ->tag(CoreNotificationTypes::MODULE.'.'.CoreNotificationTypes::PENDING_DIGEST)
-            ->data(['url' => self::URL, 'onActionClick' => ['default' => ['operation' => 'navigateLastFocusedOrOpen', 'url' => self::URL]]]);
+            ->data(['url' => $this->url(), 'onActionClick' => ['default' => ['operation' => 'navigateLastFocusedOrOpen', 'url' => $this->url()]]]);
     }
 }

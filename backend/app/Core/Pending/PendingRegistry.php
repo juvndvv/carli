@@ -11,6 +11,9 @@ final class PendingRegistry
     /** @var array<string, class-string<PendingItemsProvider>|PendingItemsProvider> */
     private array $registered = [];
 
+    /** @var array<string, class-string<DigestLineProvider>|DigestLineProvider> */
+    private array $lineProviders = [];
+
     public function __construct(private readonly Container $container) {}
 
     /**
@@ -21,6 +24,35 @@ final class PendingRegistry
         $key = is_string($provider) ? $provider : $provider::class;
 
         $this->registered[$key] = $provider;
+    }
+
+    /**
+     * @param  class-string<DigestLineProvider>|DigestLineProvider  $provider
+     */
+    public function registerDigestLines(string|DigestLineProvider $provider): void
+    {
+        $key = is_string($provider) ? $provider : $provider::class;
+
+        $this->lineProviders[$key] = $provider;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function digestLines(User $user): array
+    {
+        $modules = $this->container->make(ModuleRegistry::class);
+        $lines = [];
+
+        foreach ($this->lineProviders as $provider) {
+            $instance = is_string($provider) ? $this->container->make($provider) : $provider;
+
+            if ($modules->isEnabledFor($user, $instance->moduleId())) {
+                array_push($lines, ...$instance->digestLines($user));
+            }
+        }
+
+        return $lines;
     }
 
     /**
@@ -107,7 +139,7 @@ final class PendingRegistry
     }
 
     /**
-     * @return array{total: int, phrases: list<string>}
+     * @return array{total: int, phrases: list<string>, lines: list<string>}
      */
     public function digest(User $user): array
     {
@@ -127,6 +159,6 @@ final class PendingRegistry
             }
         }
 
-        return ['total' => $total, 'phrases' => $phrases];
+        return ['total' => $total, 'phrases' => $phrases, 'lines' => $this->digestLines($user)];
     }
 }

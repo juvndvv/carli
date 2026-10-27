@@ -25,11 +25,11 @@ final class SendPendingDigests implements ShouldQueue
         User::query()->orderBy('id')->each(function (User $user) use ($pending, $date): void {
             $digest = $pending->digest($user);
 
-            if ($digest['total'] <= 0 || ! Cache::add("pending-digest:{$user->id}:{$date}", true, now()->addDays(2))) {
+            if (($digest['total'] <= 0 && $digest['lines'] === []) || ! Cache::add("pending-digest:{$user->id}:{$date}", true, now()->addDays(2))) {
                 return;
             }
 
-            $user->notify(new PendingDigestNotification($digest['total'], $digest['phrases']));
+            $user->notify(new PendingDigestNotification($digest['total'], $digest['phrases'], $digest['lines']));
             $this->sent++;
         });
     }
