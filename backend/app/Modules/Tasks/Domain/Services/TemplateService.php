@@ -98,6 +98,16 @@ final class TemplateService
         return $template;
     }
 
+    public function retire(User $user, string $templateId): void
+    {
+        DB::transaction(function () use ($user, $templateId): void {
+            $template = TaskTemplate::query()->ownedBy($user)->findOrFail($templateId);
+            $this->pause($template);
+            $template->tasks()->where('status', TaskStatus::Open->value)->delete();
+            $this->generator->forget($user);
+        });
+    }
+
     public function resume(TaskTemplate $template): TaskTemplate
     {
         $today = TaskCalendar::today();
