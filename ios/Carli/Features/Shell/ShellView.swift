@@ -105,6 +105,7 @@ struct ModuleRootView: View {
             }
             .background(CarliColor.bg)
             .navigationTitle(section.title)
+            .navigationSubtitle(module.title)
             .toolbarTitleMenu {
                 Picker("Vista", selection: $section) {
                     ForEach(module.sections) { Text($0.title).tag($0) }
