@@ -3,11 +3,12 @@
 namespace Tests\Feature\Core\Fixtures\Journal;
 
 use App\Core\Notifications\NotificationChannels;
+use App\Core\Push\ApnsMessage;
+use App\Core\Push\ApnsNotification;
 use App\Models\User;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
-class JournalNotification extends Notification
+class JournalNotification extends Notification implements ApnsNotification
 {
     public function __construct(private readonly string $type = 'daily_reminder') {}
 
@@ -27,8 +28,8 @@ class JournalNotification extends Notification
         return ['module' => 'journal', 'type' => $this->type, 'title' => 'Escribe hoy', 'body' => 'Tu diario te espera', 'url' => '/diario'];
     }
 
-    public function toWebPush(User $notifiable, Notification $notification): WebPushMessage
+    public function toApns(User $notifiable): ApnsMessage
     {
-        return (new WebPushMessage)->title('Escribe hoy')->body('Tu diario te espera')->data(['url' => '/diario']);
+        return new ApnsMessage(title: 'Escribe hoy', body: 'Tu diario te espera', url: '/diario');
     }
 }

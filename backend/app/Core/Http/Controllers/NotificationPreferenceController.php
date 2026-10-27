@@ -4,7 +4,7 @@ namespace App\Core\Http\Controllers;
 
 use App\Core\Http\Requests\UpdateNotificationPreferencesRequest;
 use App\Core\Notifications\NotificationPreferenceService;
-use App\Core\Notifications\WebPushConfiguration;
+use App\Core\Push\ApnsConfiguration;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,7 +31,7 @@ class NotificationPreferenceController
     {
         return response()->json([
             'data' => $this->preferences->grouped($user),
-            'push_configured' => WebPushConfiguration::isConfigured(),
+            'push_configured' => ApnsConfiguration::isConfigured(),
         ]);
     }
 

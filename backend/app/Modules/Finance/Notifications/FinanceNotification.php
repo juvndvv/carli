@@ -3,14 +3,15 @@
 namespace App\Modules\Finance\Notifications;
 
 use App\Core\Notifications\NotificationChannels;
+use App\Core\Push\ApnsMessage;
+use App\Core\Push\ApnsNotification;
 use App\Models\User;
 use App\Modules\Finance\Domain\Enums\NotificationType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
-abstract class FinanceNotification extends Notification implements ShouldQueue
+abstract class FinanceNotification extends Notification implements ApnsNotification, ShouldQueue
 {
     use Queueable;
 
@@ -55,13 +56,13 @@ abstract class FinanceNotification extends Notification implements ShouldQueue
         ];
     }
 
-    public function toWebPush(User $notifiable, Notification $notification): WebPushMessage
+    public function toApns(User $notifiable): ApnsMessage
     {
-        return (new WebPushMessage)
-            ->title($this->title())
-            ->body($this->body())
-            ->icon('/icons/icon-192x192.png')
-            ->tag(self::MODULE.'.'.$this->type()->value)
-            ->data(['url' => $this->url(), 'onActionClick' => ['default' => ['operation' => 'navigateLastFocusedOrOpen', 'url' => $this->url()]]]);
+        return new ApnsMessage(
+            title: $this->title(),
+            body: $this->body(),
+            url: $this->url(),
+            threadId: self::MODULE.'.'.$this->type()->value,
+        );
     }
 }

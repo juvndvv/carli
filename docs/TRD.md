@@ -18,7 +18,7 @@
 | Backend | Laravel 13, PHP 8.4, arquitectura modular por dominio (`app/Modules/*`) |
 | BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`, `notes.*`, `habits.*`), PK UUIDv7 |
 | Auth | Laravel Sanctum: token personal (Bearer) en la app iOS, guardado en el Keychain. Laravel Fortify headless para 2FA TOTP. Bloqueo local con Face ID |
-| Avisos | Notificación local diaria (20:00) con el número de pendientes y bandeja in-app. Sin push remoto hasta tener APNs |
+| Avisos | Push por APNs (resumen de pendientes a las 20:00 y avisos de cada módulo) y bandeja in-app |
 | Colas y cron | Queue driver `database` + `schedule:work` en contenedor propio (sin Redis en v1) |
 | Contrato API | REST JSON `/api/v1`, OpenAPI generado con Scramble. Modelos Dart escritos a mano en cada módulo (`data/`) |
 | Despliegue | Backend: Docker Compose en VPS propio: Caddy (TLS + proxy de las rutas del backend) · PHP-FPM · worker · scheduler · Postgres. App: build de Xcode instalada en el dispositivo |
@@ -268,7 +268,7 @@ MVP: el saldo se **calcula al vuelo** con `SUM` indexado (para un usuario son mi
 | `sessions` | driver de sesión `database` (resto del cliente web, §6.4) |
 | `personal_access_tokens` | tokens de Sanctum de la app iOS (uno por dispositivo, `name = 'carli iOS'`) |
 | `user_modules` | user_id, module_id, enabled, settings jsonb |
-| `push_subscriptions` | (del paquete webpush) endpoint, public_key, auth_token, user_agent. Resto del cliente web, §6.4 |
+| `push_devices` | user_id, token APNs (único), environment `sandbox`\|`production` |
 | `notifications` | canal `database` de Laravel (bandeja de la app) |
 | `notification_preferences` | user_id, module_id, type, push bool, in_app bool |
 | `jobs`, `failed_jobs`, `cache` | framework |
@@ -586,7 +586,6 @@ El backend todavía conserva piezas del cliente Angular, retirado el 2026-10-26.
 - Sesión de Sanctum por cookie: `statefulApi()` en `bootstrap/app.php`, `SANCTUM_STATEFUL_DOMAINS`, `SESSION_*`, `/sanctum/csrf-cookie` y la tabla `sessions`.
 - Rutas web de Fortify: `POST /login`, `/logout`, `/two-factor-challenge`, `/forgot-password`, `/reset-password` y `/user/*` (Caddy aún las pasa al backend).
 - `GET/DELETE /api/v1/me/sessions[/{id}]` y `POST /me/sessions/logout-others` (sesiones de navegador).
-- Web Push: claves `VAPID_*` (`make setup` aún las genera), `GET /push/public-key`, `POST/DELETE /push-subscriptions`, la tabla `push_subscriptions` y el canal WebPush. Hoy el push de servidor no llega a ningún dispositivo hasta que exista APNs.
 - El callback del banco redirige a la web cuando falta `return_to`.
 - La preferencia `sidebar_collapsed` en `PATCH /me/preferences`.
 - Las URLs de las notificaciones guardadas se generan con el formato de rutas de la web; la app las traduce a sus rutas en `core/notifications/notification_route.dart`.
@@ -699,7 +698,7 @@ Cada módulo aporta sus rutas en `core/router/router.dart`, su tarjeta de Inicio
 - Sesión: `POST /api/v1/auth/token` con `device_name = 'carli iOS'` (y código 2FA o de recuperación si hace falta) devuelve un token de Sanctum que se guarda en el Keychain. Un 401 con token borra la sesión y el router lleva a `/login`. Cerrar sesión llama a `DELETE /auth/token`.
 - Face ID: si está activado, la app se bloquea al pasar a segundo plano y pide Face ID al volver; la animación de arranque espera al desbloqueo.
 - Al volver a primer plano se refrescan el resumen de Pendientes y el contador de no leídas (`core/lifecycle/session_refresh.dart`).
-- Aviso diario: notificación local a las 20:00 (hora local, configurable en Ajustes → Avisos) con el número de pendientes, reprogramada cada vez que la app vuelve a primer plano. Tocarla abre Pendientes. No hay APNs: el push remoto exige una cuenta de desarrollador de pago.
+- Push (APNs): al iniciar sesión la app pide permiso, obtiene el token del dispositivo y lo registra con `POST /api/v1/push-devices {token, environment}` (`sandbox` si el perfil embebido tiene `aps-environment = development`, `production` si no); lo vuelve a enviar al volver a primer plano y lo borra con `DELETE /push-devices` al cerrar sesión. El backend firma un JWT ES256 con la clave `.p8` (`APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, secreto `/run/secrets/apns.p8`) y envía por HTTP/2; si APNs responde 410 o `BadDeviceToken` borra el token. Cada push lleva `url`; tocarla abre la ruta equivalente de la app (`notification_route.dart`) o la bandeja.
 - Enable Banking: `POST /bank/connections` (o `/renew`) con `return_to: app` → `FlutterWebAuth2.authenticate(url, callbackUrlScheme: 'carli')`. El backend cierra el flujo redirigiendo a `carli://bank/callback` y la app abre la pantalla de vinculación.
 - Dinero en céntimos (`int`) en toda la app; `CarliMoneyInput` devuelve céntimos.
 - Formularios y altas en sheets (`showCarliSheet`, `showFullSheet`); confirmaciones con `CupertinoAlertDialog`; borrado con "Deshacer" en toast.
@@ -763,11 +762,11 @@ El botón "+" flotante abre la hoja de nuevo movimiento desde cualquier pestaña
 | `finance:refresh-bank-account-names` (F3) | A mano | Relee `/accounts/{uid}/details` de las cuentas vinculadas, guarda `details`/`product` en el snapshot y renombra a «Banco · details» solo las cuentas que conservan el nombre por defecto antiguo («Banco titular»); `--dry-run`. Al renovar la conexión se aplica el mismo renombrado con los datos nuevos |
 | `finance:detect-transfers` (F3) | A mano | Reprocesa todo lo importado; `--dry-run` lista lo que convertiría y lo que quedaría como sugerencia |
 | `tasks:generate` | Diario 00:05 | Pone al día todas las plantillas activas (§4.1.3). Idempotente; la misma puesta al día corre al abrir Hoy o Próximas |
-| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry::digest()` (Pendientes + tareas abiertas de hoy) suma > 0 o algún módulo aporta líneas (Hábitos, §4.1.5), un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Hoy no llega a ningún dispositivo (sin APNs); lo cubre el aviso local de §7.4 |
+| `core:pending-digest` | Diario 20:00 | Si `PendingRegistry::digest()` (Pendientes + tareas abiertas de hoy) suma > 0 o algún módulo aporta líneas (Hábitos, §4.1.5), un push con el resumen ("Tienes 7 movimientos por categorizar"); respeta las preferencias de notificación. Nunca por elemento ni por sincronización. Llega por APNs a los iPhone registrados |
 | `finance:bank-consent-expiry` (F3) | Diario 09:00 | Push a 7 y 1 día de `valid_until`; marca `expired` al pasar |
 | `backup:database` | Diario 03:00 | `pg_dump` → restic → almacenamiento externo; retención 7 diarios / 4 semanales / 12 mensuales |
 
-Mientras no haya APNs, los avisos de servidor solo se ven en la bandeja de notificaciones de la app.
+Sin APNs configurado (`APNS_KEY_ID` vacío), los avisos de servidor solo se ven en la bandeja de notificaciones de la app.
 
 Zona horaria de la app: `Europe/Madrid`; fechas de movimientos como `date` (sin hora).
 
@@ -821,7 +820,7 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 3. **Design system** (`ui/`): tokens, tema, componentes base; catálogo en `/dev/catalogo` (solo debug).
 4. **Shell de la app**: login, bloqueo, pestañas, Inicio, ajustes, tema.
 5. **Finanzas MVP**: cuentas → categorías (seeder) → movimientos y transferencias → dashboard → presupuestos.
-6. **Avisos**: bandeja de notificaciones, Pendientes y aviso local diario; push remoto (APNs) cuando haya cuenta de desarrollador de pago.
+6. **Avisos**: bandeja de notificaciones, Pendientes y push por APNs.
 7. **Producción**: VPS, Caddy, backups. Empezar a usarla.
 8. **F2**: recurrentes → objetivos → compartidos → deudas → exportación.
 9. **F3**: crear app en Enable Banking y enlazar Revolut, BBVA y MyInvestor en su panel (verificar que Revolut y MyInvestor aparecen, si salen las tarjetas BBVA y el `maximum_consent_validity` de cada banco) → `BankDataProvider` + modelo → conexión y vinculación → job de sync → bandeja "Sin categorizar" → avisos de caducidad.
@@ -838,7 +837,7 @@ Desarrollo local: `make up` levanta el stack en `localhost:8180`; `flutter run -
 - ADR-008 Open Banking vía agregador con licencia (Enable Banking, modo restricted) detrás de `BankDataProvider`. Descartados: acceso directo PSD2 (requiere licencia AISP + eIDAS), GoCardless Bank Account Data (sin altas nuevas en 2026) y Tink/Yapily/Salt Edge (de pago, contratación con ventas).
 - ADR-009 Pendientes como estado calculado y contrato de Core (`PendingItemsProvider`), sin tabla propia ni flag en `transactions`.
 - ADR-010 Cliente nativo iOS en Flutter en lugar de la PWA Angular, con token de Sanctum por dispositivo. El frontend Angular se retiró del repo el 2026-10-26.
-- ADR-011 Aviso diario como notificación local mientras no haya APNs.
+- ADR-011 Aviso diario como notificación local mientras no haya APNs (sustituido el 2026-10-27 por push APNs con la cuenta de desarrollador de pago).
 - ADR-012 Transferencias entre cuentas propias detectadas por emparejamiento (§4.1.2). Contexto: una recarga BBVA → Revolut entraba como gasto + ingreso e inflaba ambos. Decisión: convertir solo parejas claras (importe exacto, ≤ 3 días, candidato único en ambos sentidos, al menos una señal fuerte, sin categoría) y proponer el resto en Pendientes como estado calculado (coherente con ADR-009); las únicas filas nuevas son las exclusiones, para que deshacer y "No es transferencia" sean definitivos. El IBAN se compara enmascarado para no guardar IBAN completos. Descartado: emparejar por importe y fecha sin señales (falsos positivos con Bizums y devoluciones) y guardar sugerencias en tabla (se quedarían obsoletas al borrar o categorizar).
 - ADR-013 Tareas repetitivas con RRULE (RFC 5545) y una fila por ocurrencia. Contexto: cron no expresa "cada 2 semanas desde el 4 de marzo" ni "el último viernes del mes", y hace falta el tipo "tras completarla". Decisión: la plantilla guarda una RRULE limitada al subconjunto del editor (motor en `Core/Recurrence` sobre `rlanvin/php-rrule`, reutilizable por otros módulos) o un intervalo en días desde que se completa; cada ocurrencia procesada se guarda como tarea (abierta, hecha u omitida con motivo) con clave única `plantilla + fecha`, y la generación es idempotente (job a las 00:05 + puesta al día perezosa, para que el Mac dormido no deje huecos). Las ocurrencias futuras de Próximas se calculan al vuelo. Descartado: expresiones cron (no cubren los casos), materializar el futuro (habría que regenerarlo al editar) y guardar solo la abierta (se pierde el historial que necesitará Hábitos).
 - ADR-014 Notas funciona sin conexión: caché local (drift) y cola de operaciones idempotentes con id del cliente (UUID v7), sincronizada por lotes con `POST /notes/sync` y "último en escribir gana" por fila. Contexto: el backend vive en un Mac que se duerme y la lista de la compra se usa en el súper, a menudo sin cobertura. Es la única excepción a "sin offline"; el resto de módulos sigue online. La reposición se calcula igual en PHP y Dart con ids deterministas (UUID v5) para que los dos lados no dupliquen productos. Descartado: offline en toda la app (coste alto y sin necesidad fuera de Notas) y CRDTs (un solo usuario y un dispositivo).

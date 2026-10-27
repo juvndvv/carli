@@ -1,9 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/reminders/daily_reminder_controller.dart';
-import '../../../core/reminders/reminder_settings.dart';
+import '../../../core/push/push_controller.dart';
+import '../../../core/push/push_platform.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../ui/async_view.dart';
@@ -14,7 +13,6 @@ import '../../../ui/icon.dart';
 import '../../../ui/icon_names.dart';
 import '../../../ui/list_item.dart';
 import '../../../ui/page.dart';
-import '../../../ui/sheet.dart';
 import '../../../ui/skeleton.dart';
 import '../../../ui/switch.dart';
 import '../../../ui/toast.dart';
@@ -30,13 +28,13 @@ class NotificationSettingsScreen extends ConsumerWidget {
       title: 'Avisos',
       onRefresh: () async {
         ref.invalidate(notificationPreferencesProvider);
-        await ref.read(dailyReminderProvider.notifier).activate().then((_) {}, onError: (_) {});
+        await ref.read(pushControllerProvider.notifier).activate().then((_) {}, onError: (_) {});
         await ref.read(notificationPreferencesProvider.future).then((_) {}, onError: (_) {});
       },
       slivers: [
         SliverList.list(
           children: [
-            const CarliSection(title: 'En este iPhone', child: DailyReminderCard()),
+            const CarliSection(title: 'En este iPhone', child: PushCard()),
             AsyncView(
               value: preferences,
               errorTitle: 'No se han podido cargar los avisos',
@@ -79,101 +77,74 @@ class NotificationSettingsScreen extends ConsumerWidget {
   }
 }
 
-class DailyReminderCard extends ConsumerWidget {
-  const DailyReminderCard({super.key});
+class PushCard extends ConsumerWidget {
+  const PushCard({super.key});
 
-  Future<void> _run(WidgetRef ref, Future<void> Function() action) async {
+  Future<void> _activate(WidgetRef ref) async {
     try {
-      await action();
+      await ref.read(pushControllerProvider.notifier).activate();
     } on Object {
-      ref.read(toastControllerProvider.notifier).error('No se ha podido actualizar el recordatorio');
-    }
-  }
-
-  Future<void> _pickTime(BuildContext context, WidgetRef ref, ReminderTime current) async {
-    final picked = await showCarliSheet<ReminderTime>(
-      context,
-      title: 'Hora del recordatorio',
-      builder: (context) => _TimePickerSheet(initial: current),
-    );
-    if (picked != null && picked != current) {
-      await _run(ref, () => ref.read(dailyReminderProvider.notifier).setTime(picked));
+      ref.read(toastControllerProvider.notifier).error('No se han podido activar las notificaciones');
     }
   }
 
   Future<void> _sendTest(WidgetRef ref) async {
     final toast = ref.read(toastControllerProvider.notifier);
     try {
-      final sent = await ref.read(dailyReminderProvider.notifier).sendTest();
-      if (sent) {
+      final pushed = await ref.read(pushControllerProvider.notifier).sendTest();
+      if (pushed) {
         toast.show('Aviso de prueba enviado');
       } else {
-        toast.error('Permite las notificaciones para recibir avisos');
+        toast.error('El aviso de prueba solo ha llegado a la bandeja');
       }
     } on Object {
       toast.error('No se ha podido enviar el aviso de prueba');
     }
   }
 
+  String _subtitle(PushState state) => switch (state) {
+    PushState(permission: PushPermission.denied) => 'Desactivadas en iOS',
+    PushState(permission: PushPermission.notDetermined) => 'Aún no las has permitido',
+    PushState(registrationFailed: true) => 'No se ha podido registrar este iPhone',
+    PushState(active: true) => 'Activadas en este iPhone',
+    PushState(registered: true) => 'El servidor aún no tiene el envío push configurado',
+    _ => 'Registrando este iPhone…',
+  };
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reminder = ref.watch(dailyReminderProvider);
-    final colors = context.colors;
-    return switch (reminder) {
-      AsyncValue(hasValue: true, value: final DailyReminderState state) => CarliCard(
+    final push = ref.watch(pushControllerProvider);
+    return switch (push) {
+      AsyncValue(hasValue: true, value: final PushState state) => CarliCard(
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             CarliListItem(
-              icon: carliIconNamed('bell'),
-              title: 'Recordatorio diario',
-              subtitle: 'Te avisa de lo que tengas por revisar',
-              trailing: CarliSwitch(
-                value: state.settings.enabled,
-                semanticLabel: 'Recordatorio diario',
-                onChanged: (value) => _run(ref, () => ref.read(dailyReminderProvider.notifier).setEnabled(value)),
-              ),
+              icon: carliIconNamed(state.permission == PushPermission.denied ? 'bell-off' : 'bell'),
+              title: 'Notificaciones push',
+              subtitle: _subtitle(state),
             ),
-            if (state.settings.enabled) ...[
-              Divider(height: 1, indent: CarliSpace.s16, color: colors.border),
-              CarliListItem(
-                icon: carliIconNamed('clock'),
-                title: 'Hora',
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: CarliSpace.s4,
-                  children: [
-                    Text(
-                      state.settings.time.label,
-                      style: CarliType.money(CarliType.bodyStrong).copyWith(color: colors.text),
-                    ),
-                    CarliIcon(carliIconNamed('chevron-right'), size: 16, color: colors.text3),
-                  ],
-                ),
-                onTap: () => _pickTime(context, ref, state.settings.time),
-              ),
-            ],
-            if (state.blocked) const _PermissionHint(),
+            if (state.permission == PushPermission.denied) const _PermissionHint(),
             Padding(
               padding: const EdgeInsets.fromLTRB(CarliSpace.s16, CarliSpace.s4, CarliSpace.s16, CarliSpace.s16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: CarliSpace.s12,
-                children: [
-                  Text(
-                    'Se programa con lo que tengas pendiente al abrir la app.',
-                    style: CarliType.small.copyWith(color: colors.text2),
-                  ),
-                  CarliButton(
-                    label: 'Probar aviso',
-                    icon: carliIconNamed('send'),
-                    variant: CarliButtonVariant.secondary,
-                    size: CarliButtonSize.md,
-                    onPressed: () => _sendTest(ref),
-                  ),
-                ],
-              ),
+              child: switch (state) {
+                PushState(permission: PushPermission.notDetermined) ||
+                PushState(registrationFailed: true) => CarliButton(
+                  label: state.registrationFailed ? 'Reintentar' : 'Activar notificaciones',
+                  icon: carliIconNamed('bell'),
+                  size: CarliButtonSize.md,
+                  onPressed: () => _activate(ref),
+                ),
+                PushState(registered: true) => CarliButton(
+                  label: 'Probar aviso',
+                  icon: carliIconNamed('send'),
+                  variant: CarliButtonVariant.secondary,
+                  size: CarliButtonSize.md,
+                  onPressed: () => _sendTest(ref),
+                ),
+                _ => const SizedBox.shrink(),
+              },
             ),
           ],
         ),
@@ -181,10 +152,10 @@ class DailyReminderCard extends ConsumerWidget {
       AsyncValue(hasError: true) => CarliCard(
         child: CarliEmptyState(
           icon: carliIconNamed('circle-alert'),
-          title: 'No se ha podido cargar el recordatorio',
+          title: 'No se han podido comprobar las notificaciones',
           message: 'Inténtalo de nuevo en unos segundos.',
           actionLabel: 'Reintentar',
-          onAction: () => ref.invalidate(dailyReminderProvider),
+          onAction: () => ref.invalidate(pushControllerProvider),
         ),
       ),
       _ => const CarliCard(child: CarliSkeleton(height: 44)),
@@ -213,52 +184,6 @@ class _PermissionHint extends StatelessWidget {
               style: CarliType.small.copyWith(color: colors.text),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimePickerSheet extends StatefulWidget {
-  const _TimePickerSheet({required this.initial});
-
-  final ReminderTime initial;
-
-  @override
-  State<_TimePickerSheet> createState() => _TimePickerSheetState();
-}
-
-class _TimePickerSheetState extends State<_TimePickerSheet> {
-  late var _selected = widget.initial;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(CarliSpace.s16, 0, CarliSpace.s16, CarliSpace.s16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: CarliSpace.s16,
-        children: [
-          SizedBox(
-            height: 200,
-            child: CupertinoTheme(
-              data: CupertinoThemeData(
-                brightness: Theme.of(context).brightness,
-                textTheme: CupertinoTextThemeData(
-                  dateTimePickerTextStyle: CarliType.h2.copyWith(fontSize: 22, color: colors.text),
-                ),
-              ),
-              child: CupertinoDatePicker(
-                mode: CupertinoDatePickerMode.time,
-                use24hFormat: true,
-                initialDateTime: DateTime(2000, 1, 1, widget.initial.hour, widget.initial.minute),
-                onDateTimeChanged: (value) => setState(() => _selected = ReminderTime(value.hour, value.minute)),
-              ),
-            ),
-          ),
-          CarliButton(label: 'Guardar', onPressed: () => Navigator.pop(context, _selected)),
         ],
       ),
     );
@@ -366,7 +291,7 @@ class _PushFootnote extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(CarliSpace.s16, CarliSpace.s12, CarliSpace.s16, 0),
       child: Text(
-        'Push llega a los navegadores donde activaste las notificaciones web. En este iPhone te avisa el recordatorio diario.',
+        'Push llega a este iPhone. El resumen de pendientes sale a las 20:00 si tienes algo por revisar.',
         style: CarliType.small.copyWith(color: context.colors.text3),
       ),
     );

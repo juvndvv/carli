@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carli/app.dart';
 import 'package:carli/core/auth/auth_controller.dart';
+import 'package:carli/core/push/push_platform.dart';
 import 'package:carli/core/router/router.dart';
 import 'package:carli/modules/finance/screens/transaction_sheet.dart';
 import 'package:carli/modules/finance/ui/finance_home_card.dart';
@@ -13,12 +14,24 @@ import 'package:carli/shell/more/more_screen.dart';
 import '../core/notifications/notification_fixtures.dart';
 import '../core/pending/pending_fixtures.dart';
 import '../support/fake_api.dart';
+import '../support/fake_push_platform.dart';
 import '../support/finance_fixtures.dart';
 import '../support/test_app.dart';
 import 'settings/settings_fixtures.dart';
 
-Future<FakeApi> pumpApp(WidgetTester tester, FakeApi api, {Map<String, String> storage = const {}}) async {
-  final container = testContainer(api, storage: storage);
+Future<FakeApi> pumpApp(
+  WidgetTester tester,
+  FakeApi api, {
+  Map<String, String> storage = const {},
+  FakePushPlatform? push,
+}) async {
+  final container = testContainer(
+    api,
+    storage: storage,
+    overrides: [
+      pushPlatformProvider.overrideWithValue(push ?? FakePushPlatform(currentPermission: PushPermission.denied)),
+    ],
+  );
   await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const CarliApp()));
   await tester.pumpAndSettle();
   return api;
@@ -98,7 +111,9 @@ void main() {
     expect(find.byType(CarliBottomNav), findsOneWidget);
   });
 
-  testWidgets('returns to the interrupted screen after the session expires and the user signs in again', (tester) async {
+  testWidgets('returns to the interrupted screen after the session expires and the user signs in again', (
+    tester,
+  ) async {
     final container = testContainer(
       FakeApi({
         'GET /v1/me': (_) => (200, {'data': testUser}),
@@ -285,14 +300,23 @@ void main() {
     expect(find.text('Notificaciones'), findsOneWidget);
   });
 
-  testWidgets('logs out from the more tab', (tester) async {
-    await pumpApp(
+  testWidgets('logs out from the more tab and stops push to this iPhone', (tester) async {
+    final api = await pumpApp(
       tester,
       FakeApi({
         'GET /v1/me': (_) => (200, {'data': testUser}),
         'DELETE /v1/auth/token': (_) => (204, null),
+        'POST /v1/push-devices': (_) => (
+          201,
+          {
+            'data': {'id': 'device', 'environment': 'sandbox'},
+            'push_configured': true,
+          },
+        ),
+        'DELETE /v1/push-devices': (_) => (204, null),
       }),
       storage: {'auth_token': 'stored'},
+      push: FakePushPlatform(currentPermission: PushPermission.granted),
     );
 
     await openFinance(tester);
@@ -306,6 +330,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Entrar'), findsOneWidget);
+    expect(
+      api.requests.singleWhere((request) => request.method == 'DELETE' && request.path == '/v1/push-devices').data,
+      {'token': FakePushPlatform.token},
+    );
   });
 
   testWidgets('opens the new movement sheet from the + button beside the tab bar', (tester) async {

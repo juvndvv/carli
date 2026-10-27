@@ -6,8 +6,7 @@ import 'core/auth/auth_controller.dart';
 import 'core/auth/biometric_lock.dart';
 import 'core/lifecycle/home_quick_actions.dart';
 import 'core/lifecycle/session_refresh.dart';
-import 'core/reminders/daily_reminder_bootstrap.dart';
-import 'core/reminders/daily_reminder_controller.dart';
+import 'core/push/push_bootstrap.dart';
 import 'core/router/router.dart';
 import 'core/theme/theme.dart';
 import 'core/theme/theme_preference.dart';
@@ -20,9 +19,8 @@ class CarliApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(dailyReminderBootstrapProvider);
+    ref.watch(pushBootstrapProvider);
     ref.watch(homeQuickActionsProvider);
-    ref.listen(reminderTapsProvider, (_, _) => ref.read(routerProvider).go(Routes.pending));
     return MaterialApp.router(
       title: 'carli',
       debugShowCheckedModeBanner: false,

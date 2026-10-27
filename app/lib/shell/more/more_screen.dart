@@ -7,6 +7,7 @@ import '../../core/auth/auth_controller.dart';
 import '../../core/notifications/notifications_providers.dart';
 import '../../core/pending/pending_models.dart';
 import '../../core/pending/pending_providers.dart';
+import '../../core/push/push_controller.dart';
 import '../../core/router/router.dart';
 import '../../core/theme/tokens.dart';
 import '../../ui/card.dart';
@@ -115,7 +116,10 @@ class MoreScreen extends ConsumerWidget {
               CarliListItem(
                 title: 'Cerrar sesión',
                 icon: carliIconNamed('log-out'),
-                onTap: () => ref.read(authControllerProvider.notifier).logout(),
+                onTap: () async {
+                  await ref.read(pushControllerProvider.notifier).forget();
+                  await ref.read(authControllerProvider.notifier).logout();
+                },
               ),
             ]),
           ],

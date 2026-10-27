@@ -51,14 +51,15 @@ it('registers the scheduled tasks in Madrid time', function () {
         ->and($events['finance:upcoming-charges']->timezone)->toBe('Europe/Madrid');
 });
 
-it('builds web push payloads that the Angular service worker opens on click', function () {
+it('builds apns payloads that open the recurring charges screen on tap', function () {
     $notification = new UpcomingCharge('rule', 'Netflix', -1399, 2, '2026-10-30');
 
-    $message = $notification->toWebPush($this->user, $notification)->toArray();
-
-    expect($message['title'])->toBe('Netflix 13,99 € pasado mañana')
-        ->and($message['data'])->toBe([
-            'url' => '/finanzas/recurrentes',
-            'onActionClick' => ['default' => ['operation' => 'navigateLastFocusedOrOpen', 'url' => '/finanzas/recurrentes']],
-        ]);
+    expect($notification->toApns($this->user)->payload())->toBe([
+        'aps' => [
+            'alert' => ['title' => 'Netflix 13,99 € pasado mañana', 'body' => $notification->body()],
+            'sound' => 'default',
+            'thread-id' => 'finance.'.$notification->type()->value,
+        ],
+        'url' => '/finanzas/recurrentes',
+    ]);
 });

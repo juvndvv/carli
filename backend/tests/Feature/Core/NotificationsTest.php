@@ -2,9 +2,9 @@
 
 use App\Core\Notifications\NotificationChannels;
 use App\Core\Notifications\TestNotification;
+use App\Core\Push\ApnsChannel;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use Tests\Feature\Core\Fixtures\Journal\JournalModule;
 use Tests\Feature\Core\Fixtures\Journal\JournalNotification;
 
@@ -12,10 +12,14 @@ beforeEach(fn () => JournalModule::register($this->app));
 
 function configurePush(bool $configured): void
 {
-    config([
-        'webpush.vapid.public_key' => $configured ? 'BPublicKeyForTests' : null,
-        'webpush.vapid.private_key' => $configured ? 'PrivateKeyForTests' : null,
-    ]);
+    configureApns($configured);
+}
+
+function withDevice(User $user): User
+{
+    $user->pushDevices()->create(['token' => str_repeat('ab', 32), 'environment' => 'sandbox']);
+
+    return $user;
 }
 
 describe('inbox', function () {
@@ -113,15 +117,14 @@ describe('inbox', function () {
         expect($user->notifications()->count())->toBe(1);
     });
 
-    it('includes push in the test notification when the user has a subscription', function () {
+    it('includes push in the test notification when the user has a device', function () {
         Notification::fake();
         configurePush(true);
-        $user = User::factory()->create();
-        $user->updatePushSubscription('https://push.example.com/abc', 'key', 'token', 'aes128gcm');
+        $user = withDevice(User::factory()->create());
 
         $this->actingAs($user)->postJson('/api/v1/notifications/test')
             ->assertAccepted()
-            ->assertExactJson(['channels' => ['database', WebPushChannel::class]]);
+            ->assertExactJson(['channels' => ['database', ApnsChannel::class]]);
 
         Notification::assertSentTo($user, TestNotification::class);
     });
@@ -130,25 +133,32 @@ describe('inbox', function () {
 describe('channels contract', function () {
     it('uses manifest defaults when no preference is stored', function () {
         configurePush(true);
-        $user = User::factory()->create();
+        $user = withDevice(User::factory()->create());
 
-        expect(NotificationChannels::for($user, 'journal', 'daily_reminder'))->toBe(['database', WebPushChannel::class])
+        expect(NotificationChannels::for($user, 'journal', 'daily_reminder'))->toBe(['database', ApnsChannel::class])
             ->and(NotificationChannels::for($user, 'journal', 'weekly_digest'))->toBe([]);
     });
 
     it('honours stored preferences', function () {
         configurePush(true);
-        $user = User::factory()->create();
+        $user = withDevice(User::factory()->create());
 
         $user->notificationPreferences()->create(['module_id' => 'journal', 'type' => 'daily_reminder', 'push' => false, 'in_app' => true]);
         $user->notificationPreferences()->create(['module_id' => 'journal', 'type' => 'weekly_digest', 'push' => true, 'in_app' => false]);
 
         expect(NotificationChannels::for($user, 'journal', 'daily_reminder'))->toBe(['database'])
-            ->and(NotificationChannels::for($user, 'journal', 'weekly_digest'))->toBe([WebPushChannel::class]);
+            ->and(NotificationChannels::for($user, 'journal', 'weekly_digest'))->toBe([ApnsChannel::class]);
     });
 
-    it('omits push while vapid keys are missing', function () {
+    it('omits push while apns is not configured', function () {
         configurePush(false);
+        $user = withDevice(User::factory()->create());
+
+        expect(NotificationChannels::for($user, 'journal', 'daily_reminder'))->toBe(['database']);
+    });
+
+    it('omits push for users without a registered device', function () {
+        configurePush(true);
         $user = User::factory()->create();
 
         expect(NotificationChannels::for($user, 'journal', 'daily_reminder'))->toBe(['database']);

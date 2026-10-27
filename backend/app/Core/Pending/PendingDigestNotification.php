@@ -4,13 +4,14 @@ namespace App\Core\Pending;
 
 use App\Core\Notifications\CoreNotificationTypes;
 use App\Core\Notifications\NotificationChannels;
+use App\Core\Push\ApnsMessage;
+use App\Core\Push\ApnsNotification;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
-final class PendingDigestNotification extends Notification implements ShouldQueue
+final class PendingDigestNotification extends Notification implements ApnsNotification, ShouldQueue
 {
     use Queueable;
 
@@ -78,13 +79,13 @@ final class PendingDigestNotification extends Notification implements ShouldQueu
         ];
     }
 
-    public function toWebPush(User $notifiable, Notification $notification): WebPushMessage
+    public function toApns(User $notifiable): ApnsMessage
     {
-        return (new WebPushMessage)
-            ->title($this->title())
-            ->body($this->body())
-            ->icon('/icons/icon-192x192.png')
-            ->tag(CoreNotificationTypes::MODULE.'.'.CoreNotificationTypes::PENDING_DIGEST)
-            ->data(['url' => $this->url(), 'onActionClick' => ['default' => ['operation' => 'navigateLastFocusedOrOpen', 'url' => $this->url()]]]);
+        return new ApnsMessage(
+            title: $this->title(),
+            body: $this->body(),
+            url: $this->url(),
+            threadId: CoreNotificationTypes::MODULE.'.'.CoreNotificationTypes::PENDING_DIGEST,
+        );
     }
 }

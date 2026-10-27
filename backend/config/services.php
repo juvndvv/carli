@@ -35,6 +35,14 @@ return [
         ],
     ],
 
+    'apns' => [
+        'key_id' => env('APNS_KEY_ID'),
+        'team_id' => env('APNS_TEAM_ID'),
+        'bundle_id' => env('APNS_BUNDLE_ID', 'dev.jotade.personal'),
+        'private_key_path' => env('APNS_PRIVATE_KEY_PATH', '/run/secrets/apns.p8'),
+        'timeout' => (int) env('APNS_TIMEOUT', 10),
+    ],
+
     'enable_banking' => [
         'base_url' => env('ENABLE_BANKING_BASE_URL', 'https://api.enablebanking.com'),
         'app_id' => env('ENABLE_BANKING_APP_ID'),

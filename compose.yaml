@@ -42,9 +42,10 @@ x-laravel-env: &laravel-env
   MAIL_PASSWORD: ${MAIL_PASSWORD:-}
   MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-personal@localhost}
   MAIL_FROM_NAME: ${APP_NAME:-Personal}
-  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-  VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
+  APNS_KEY_ID: ${APNS_KEY_ID:-}
+  APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+  APNS_BUNDLE_ID: ${APNS_BUNDLE_ID:-dev.jotade.personal}
+  APNS_PRIVATE_KEY_PATH: /run/secrets/apns.p8
   SEED_DEMO_USER: ${SEED_DEMO_USER:-false}
   ENABLE_BANKING_APP_ID: ${ENABLE_BANKING_APP_ID:-}
   ENABLE_BANKING_REDIRECT_URL: ${ENABLE_BANKING_REDIRECT_URL:-}
@@ -62,6 +63,8 @@ x-php-service: &php-service
   secrets:
     - source: enable_banking
       target: enable_banking.pem
+    - source: apns
+      target: apns.p8
   depends_on:
     postgres:
       condition: service_healthy
@@ -196,6 +199,8 @@ services:
 secrets:
   enable_banking:
     file: ${ENABLE_BANKING_PRIVATE_KEY_FILE:-/dev/null}
+  apns:
+    file: ${APNS_PRIVATE_KEY_FILE:-/dev/null}
 
 volumes:
   pgdata:

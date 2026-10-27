@@ -3,10 +3,10 @@
 use App\Core\Notifications\CoreNotificationTypes;
 use App\Core\Pending\PendingDigestNotification;
 use App\Core\Pending\PendingRegistry;
+use App\Core\Push\ApnsChannel;
 use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use Tests\Feature\Core\Fixtures\Journal\JournalModule;
 use Tests\Feature\Core\Fixtures\Journal\JournalPendingItems;
 
@@ -99,7 +99,10 @@ describe('list', function () {
 });
 
 describe('daily digest', function () {
-    beforeEach(fn () => config(['webpush.vapid.public_key' => 'BPublicKeyForTests', 'webpush.vapid.private_key' => 'PrivateKeyForTests']));
+    beforeEach(function () {
+        configureApns();
+        $this->user->pushDevices()->create(['token' => str_repeat('cd', 32), 'environment' => 'sandbox']);
+    });
 
     it('sends one summary per user with pending items', function () {
         Notification::fake();
@@ -113,7 +116,7 @@ describe('daily digest', function () {
         Notification::assertSentTo($this->user, PendingDigestNotification::class, function (PendingDigestNotification $notification, array $channels) {
             return $notification->body() === 'Tienes 3 entradas por revisar y 1 borrador sin terminar'
                 && $notification->toArray($this->user)['url'] === '/pendientes'
-                && $channels === ['database', WebPushChannel::class];
+                && $channels === ['database', ApnsChannel::class];
         });
         Notification::assertNotSentTo($idle, PendingDigestNotification::class);
     });
@@ -146,7 +149,7 @@ describe('daily digest', function () {
     });
 
     it('stores the summary in the inbox', function () {
-        config(['webpush.vapid.public_key' => null, 'webpush.vapid.private_key' => null]);
+        configureApns(false);
         $this->journal->counts = ['entry_to_review' => 7];
 
         $this->artisan('core:pending-digest')->assertSuccessful();
