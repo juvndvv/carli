@@ -41,8 +41,8 @@ enum CarliColor {
     static let rings = [dynamic(0xF2A900, 0xFFD60A), dynamic(0xE07800, 0xFF9500), dynamic(0xE0482A, 0xFF6A3D)]
     static let ringInk = [dynamic(0x9A6200, 0xFFD60A), dynamic(0xA84F00, 0xFF9500), dynamic(0xB5361C, 0xFF6A3D)]
 
-    private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
-        Color(uiColor: UIColor { traits in
+    nonisolated private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
+        Color(uiColor: UIColor { @Sendable traits in
             UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
         })
     }
@@ -55,7 +55,7 @@ extension Color {
 }
 
 extension UIColor {
-    convenience init(hex: UInt32) {
+    nonisolated convenience init(hex: UInt32) {
         self.init(
             red: CGFloat((hex >> 16) & 0xFF) / 255,
             green: CGFloat((hex >> 8) & 0xFF) / 255,
