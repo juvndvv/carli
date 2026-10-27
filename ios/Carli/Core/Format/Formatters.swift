@@ -37,7 +37,7 @@ enum CarliDate {
                          "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
     static let monthsShort = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
-    private static var calendar: Calendar { Calendar(identifier: .gregorian) }
+    static var calendar: Calendar { Calendar(identifier: .gregorian) }
 
     /// "Martes, 27 de octubre"
     static func long(_ date: Date) -> String {

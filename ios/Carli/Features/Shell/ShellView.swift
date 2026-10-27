@@ -132,6 +132,8 @@ struct ModuleRootView: View {
             FinanceSummaryView(model: FinanceSummaryModel(api: auth.api)) { id in
                 if let target = module.sections.first(where: { $0.id == id }) { section = target }
             }
+        case (.finance, "transactions"):
+            TransactionsView(model: TransactionsModel(api: auth.api))
         default:
             ScrollView {
                 ContentUnavailableView {

@@ -93,6 +93,7 @@ struct FinanceTransaction: Decodable, Equatable, Identifiable {
     var description: String?
     var status: String?
     var transferAccountId: String?
+    var transferGroupId: String?
     var source: String?
     var uncategorized: Bool?
     var splits: [Split]?
