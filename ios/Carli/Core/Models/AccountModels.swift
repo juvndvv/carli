@@ -84,7 +84,7 @@ enum AccountKind: String, CaseIterable, Identifiable {
     }
 }
 
-struct FinanceSettingsFull: Decodable, Equatable {
+nonisolated struct FinanceSettingsFull: Decodable, Equatable {
     var defaultAccountId: String?
     var lastUsedAccountId: String?
     var budgetWarningThreshold: Int?
