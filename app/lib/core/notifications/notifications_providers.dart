@@ -115,7 +115,9 @@ class NotificationsController extends AsyncNotifier<NotificationsState> {
 
     final counter = _counter;
     final previousCount = counter.current;
-    state = AsyncData(current.withItems([for (final other in current.items) other.id == id ? item.markedUnread() : other]));
+    state = AsyncData(
+      current.withItems([for (final other in current.items) other.id == id ? item.markedUnread() : other]),
+    );
     counter.adopt(previousCount + 1);
 
     try {
@@ -148,7 +150,12 @@ class NotificationsController extends AsyncNotifier<NotificationsState> {
 
     if (previous != null) {
       final removedUnread = previous.items.where((item) => targeted(item) && item.unread).length;
-      state = AsyncData(previous.withItems([for (final item in previous.items) if (!targeted(item)) item]));
+      state = AsyncData(
+        previous.withItems([
+          for (final item in previous.items)
+            if (!targeted(item)) item,
+        ]),
+      );
       counter.adopt(max(0, previousCount - removedUnread));
     }
 

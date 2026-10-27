@@ -249,15 +249,19 @@ void main() {
 
       expect(find.text('Sin leer'), findsOneWidget);
       expect(find.text('Leídas'), findsOneWidget);
-      expect(
-        tester.getTopLeft(find.text('Nuevo aviso')).dy,
-        lessThan(tester.getTopLeft(find.text('Leídas')).dy),
-      );
+      expect(tester.getTopLeft(find.text('Nuevo aviso')).dy, lessThan(tester.getTopLeft(find.text('Leídas')).dy));
       expect(tester.getTopLeft(find.text('Aviso visto')).dy, greaterThan(tester.getTopLeft(find.text('Leídas')).dy));
     });
 
     testWidgets('swiping left deletes a notification', (tester) async {
-      final api = FakeApi(notificationRoutes(items: [notificationJson('n1'), notificationJson('n2', title: 'Otro')]));
+      final api = FakeApi(
+        notificationRoutes(
+          items: [
+            notificationJson('n1'),
+            notificationJson('n2', title: 'Otro'),
+          ],
+        ),
+      );
       await pumpNotificationsRouter(tester, api, initial: '/notificaciones');
 
       await tester.drag(find.text('Netflix 13,99 € pasado mañana'), const Offset(-600, 0));

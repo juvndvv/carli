@@ -248,7 +248,10 @@ class _SwipeAction extends StatelessWidget {
         spacing: CarliSpace.s8,
         children: [
           CarliIcon(carliIconNamed(icon), size: 18, color: foreground),
-          Text(label, style: CarliType.small.copyWith(color: foreground, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: CarliType.small.copyWith(color: foreground, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
