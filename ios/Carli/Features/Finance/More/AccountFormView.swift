@@ -131,20 +131,7 @@ struct AccountFormView: View {
                 }
 
                 Section {
-                    HStack {
-                        Text("Saldo inicial")
-                        Spacer()
-                        Button(model.negativeInitial ? Money.minus : "+") { model.negativeInitial.toggle() }
-                            .buttonStyle(.glass)
-                            .controlSize(.small)
-                            .accessibilityLabel(model.negativeInitial ? "Negativo" : "Positivo")
-                        TextField("0", text: $model.initialBalanceText)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .monospacedDigit()
-                            .frame(maxWidth: 120)
-                        Text("€").foregroundStyle(CarliColor.text3)
-                    }
+                    AmountRow(title: "Saldo inicial", text: $model.initialBalanceText, negative: $model.negativeInitial)
                     Toggle("Fecha del saldo inicial", isOn: $model.hasInitialDate)
                     if model.hasInitialDate {
                         DatePicker("Desde", selection: $model.initialDate, displayedComponents: .date)
