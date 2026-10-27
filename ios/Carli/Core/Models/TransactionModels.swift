@@ -1,13 +1,24 @@
 import Foundation
 
 /// A category from /finance/categories: top level with its children nested.
-struct FinanceCategory: Decodable, Equatable, Identifiable {
+struct FinanceCategory: Decodable, Equatable, Identifiable, Hashable {
     var id: String
     var name: String
     var kind: String
     var icon: String?
     var archived: Bool?
     var children: [FinanceCategory]?
+    var parentId: String? = nil
+    var color: String? = nil
+    var opensPeriod: Bool? = nil
+
+    var isArchived: Bool { archived == true }
+}
+
+struct FinanceTag: Decodable, Equatable, Identifiable {
+    var id: String
+    var name: String
+    var transactionsCount: Int?
 }
 
 struct TransactionTotals: Decodable, Equatable {

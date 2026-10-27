@@ -23,3 +23,25 @@ extension View {
         .animation(.smooth, value: message.wrappedValue)
     }
 }
+
+/// Glass capsule with a message and "Deshacer", shown after a delete.
+struct UndoBar: View {
+    var text: String
+    var undo: () -> Void
+
+    var body: some View {
+        HStack(spacing: CarliSpace.s16) {
+            Text(text)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(CarliColor.text)
+            Button("Deshacer", action: undo)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(CarliColor.brandInk)
+        }
+        .padding(.horizontal, CarliSpace.s20)
+        .padding(.vertical, CarliSpace.s12)
+        .glassEffect(.regular.interactive(), in: .capsule)
+        .padding(.bottom, 96)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}

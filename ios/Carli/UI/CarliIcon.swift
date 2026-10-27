@@ -2,12 +2,22 @@ import SwiftUI
 
 /// Maps the backend's icon names (Lucide-style, shared with the Flutter app) to SF Symbols.
 enum CarliIcon {
+    /// Icons offered when creating or editing a category, in picker order.
+    static let categoryChoices = ["house", "key-round", "zap", "droplet", "flame", "wifi", "wrench", "sofa", "bath", "utensils",
+        "shopping-cart", "utensils-crossed", "coffee", "pizza", "wine", "beer", "croissant", "apple", "car", "fuel", "bus",
+        "train-front", "car-taxi-front", "square-parking", "bike", "plane", "hotel", "map", "party-popper", "clapperboard",
+        "popcorn", "ticket", "music", "gamepad-2", "dices", "dumbbell", "trophy", "mountain", "heart-pulse", "pill",
+        "stethoscope", "hospital", "syringe", "shield-plus", "repeat", "tv", "app-window", "smartphone", "laptop", "headphones",
+        "camera", "shirt", "glasses", "scissors", "gem", "graduation-cap", "book-open", "school", "newspaper", "gift", "cake",
+        "baby", "dog", "cat", "paw-print", "landmark", "receipt", "percent", "briefcase", "sparkles", "rotate-ccw", "coins",
+        "piggy-bank", "hand-coins", "tree-palm", "circle-ellipsis"]
+
     static func symbol(_ name: String) -> String {
         map[name] ?? "circle.dashed"
     }
 
     private static let map: [String: String] = [
-        "alert-circle": "exclamationmark.circle", "alert-triangle": "exclamationmark.triangle", "triangle-alert": "exclamationmark.triangle",
+        "alert-circle": "exclamationmark.circle", "shield": "shield", "handshake": "person.2", "alert-triangle": "exclamationmark.triangle", "triangle-alert": "exclamationmark.triangle",
         "apple": "apple.logo", "archive": "archivebox", "arrow-left-right": "arrow.left.arrow.right", "award": "rosette",
         "baby": "figure.child", "banknote": "banknote", "bar-chart": "chart.bar", "bar-chart-3": "chart.bar", "bath": "bathtub",
         "bed": "bed.double", "beer": "mug", "bell": "bell", "bike": "bicycle", "book": "book.closed", "book-open": "book",
@@ -37,5 +47,8 @@ enum CarliIcon {
         "tv": "tv", "umbrella": "umbrella", "user": "person", "users": "person.2", "utensils": "fork.knife",
         "utensils-crossed": "fork.knife", "wallet": "wallet.bifold", "wifi": "wifi", "wine": "wineglass", "wrench": "wrench",
         "zap": "bolt", "notes": "note.text", "sticky-note": "note.text",
+        "car-taxi-front": "car.side", "square-parking": "parkingsign", "clapperboard": "movieclapper", "popcorn": "popcorn",
+        "shield-plus": "cross.case", "app-window": "macwindow", "rotate-ccw": "arrow.counterclockwise",
+        "circle-ellipsis": "ellipsis.circle", "hand-heart": "hands.and.sparkles", "users-round": "person.2",
     ]
 }

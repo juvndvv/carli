@@ -106,6 +106,17 @@ enum CarliDate {
         return short(date)
     }
 
+    /// "hoy a las 10:30", "ayer a las 09:05" or "12 oct, 18:00".
+    static func dateTime(_ date: Date, now: Date = .now) -> String {
+        let c = calendar.dateComponents([.hour, .minute], from: date)
+        let time = String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+        if calendar.isDate(date, inSameDayAs: now) { return "hoy a las \(time)" }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
+            return "ayer a las \(time)"
+        }
+        return "\(short(date)), \(time)"
+    }
+
     static func isoDay(_ date: Date) -> String {
         let c = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)

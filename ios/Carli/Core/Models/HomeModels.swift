@@ -31,6 +31,23 @@ struct FinancePeriod: Decodable, Equatable, Identifiable, Hashable {
     var daysRemaining: Int?
     var isCurrent: Bool?
     var expectedEndDate: String?
+    var openedBy: String?
+    var label: String?
+
+    var openedByLabel: String {
+        switch openedBy {
+        case "manual": "Manual"
+        case "calendar": "Mes natural"
+        default: "Por nómina"
+        }
+    }
+
+    /// "1 oct – 31 oct · quedan 4 días" for the current period, the range otherwise.
+    var subtitle: String {
+        let range = rangeLabel ?? ""
+        guard isCurrent == true, let days = daysRemaining else { return range }
+        return "\(range) · \(Plural.daysLeft(days))"
+    }
 }
 
 struct BudgetTotals: Decodable, Equatable {

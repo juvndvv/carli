@@ -91,6 +91,7 @@ struct ModuleRootView: View {
     @State private var toast: String?
     /// Filters a link asked for; entering Movimientos from the header menu starts clean.
     @State private var transactionFilters = TransactionFilters()
+    @State private var path = NavigationPath()
 
     init(module: ModuleTab) {
         self.module = module
@@ -98,7 +99,7 @@ struct ModuleRootView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             content
                 .navigationTitle(section.title)
                 .navigationBarTitleDisplayMode(.inline)
@@ -136,6 +137,8 @@ struct ModuleRootView: View {
         case (.finance, "transactions"):
             TransactionsView(model: TransactionsModel(api: auth.api, filters: transactionFilters))
                 .id(transactionFilters)
+        case (.finance, "more"):
+            FinanceMoreView(api: auth.api, go: open)
         default:
             ScrollView {
                 ContentUnavailableView {
@@ -174,6 +177,7 @@ struct ModuleRootView: View {
     }
 
     private func show(_ id: String) {
+        path = NavigationPath()
         if let target = module.sections.first(where: { $0.id == id }) { section = target }
     }
 
