@@ -233,8 +233,7 @@ private struct FinanceCard: View {
                 .foregroundStyle(CarliColor.text)
                 .contentTransition(.numericText())
             HStack(spacing: CarliSpace.s8) {
-                (Text("Gastado en \(data.period.shortName ?? data.period.name): ")
-                    + Text(Money.format(data.spentCents)).fontWeight(.semibold).foregroundColor(CarliColor.text))
+                Text("Gastado en \(data.period.shortName ?? data.period.name): \(Text(Money.format(data.spentCents)).fontWeight(.semibold).foregroundStyle(CarliColor.text))")
                     .font(.footnote)
                     .monospacedDigit()
                     .foregroundStyle(CarliColor.text2)
@@ -427,8 +426,7 @@ private struct NotesCard: View {
                                 Text("Notas · \(shopping.displayTitle)")
                                     .font(.footnote)
                                     .foregroundStyle(CarliColor.text2)
-                                (Text("\(shopping.openCount) ").font(.title.weight(.semibold)).foregroundColor(CarliColor.text)
-                                    + Text("por comprar").font(.body).foregroundColor(CarliColor.text2))
+                                Text("\(Text("\(shopping.openCount)").font(.title.weight(.semibold)).foregroundStyle(CarliColor.text)) \(Text("por comprar").font(.body).foregroundStyle(CarliColor.text2))")
                                     .monospacedDigit()
                             }
                             Spacer()
