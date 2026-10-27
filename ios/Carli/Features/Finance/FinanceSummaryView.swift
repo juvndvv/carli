@@ -115,6 +115,36 @@ private struct SummaryBody: View {
             .foregroundStyle(CarliColor.text2)
             .padding(.top, CarliSpace.s4)
 
+        SummarySection(title: "Próximos cargos", padded: data.upcoming.isEmpty) {
+            if data.upcoming.isEmpty {
+                Muted("No hay cargos recurrentes en los próximos 7 días.")
+            } else {
+                ForEach(Array(data.upcoming.enumerated()), id: \.element.id) { index, charge in
+                    if index > 0 { Divider().padding(.leading, 68) }
+                    RowLayout(symbol: CarliIcon.symbol(charge.category?.icon ?? "repeat"), soft: false,
+                              title: charge.name, subtitle: charge.subtitle) {
+                        Text(Money.format(charge.amountCents, .signed))
+                            .font(.body.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(charge.amountCents > 0 ? CarliColor.positive : CarliColor.text)
+                    }
+                }
+            }
+        }
+
+        SummarySection(title: "Últimos movimientos", action: ("Ver todos", { go("transactions") }),
+                       padded: data.recentTransactions.isEmpty) {
+            if data.recentTransactions.isEmpty {
+                ContentUnavailableView("Aún no hay movimientos", systemImage: "tray",
+                                       description: Text("Apunta tu primer gasto y empezarás a ver tu resumen."))
+            } else {
+                ForEach(Array(data.recentTransactions.enumerated()), id: \.element.id) { index, transaction in
+                    if index > 0 { Divider().padding(.leading, 68) }
+                    TransactionLine(transaction: transaction, accounts: model.accounts ?? [])
+                }
+            }
+        }
+
         RingsCard(rings: RingFigures(data, savingsTargetPercent: model.savingsTargetPercent)) { go("budgets") }
 
         if let summary = data.uncategorized, summary.expenseCents != 0 {
@@ -154,36 +184,6 @@ private struct SummaryBody: View {
             } else {
                 VStack(spacing: CarliSpace.s16) {
                     ForEach(rows) { BudgetLine(row: $0) }
-                }
-            }
-        }
-
-        SummarySection(title: "Próximos cargos", padded: data.upcoming.isEmpty) {
-            if data.upcoming.isEmpty {
-                Muted("No hay cargos recurrentes en los próximos 7 días.")
-            } else {
-                ForEach(Array(data.upcoming.enumerated()), id: \.element.id) { index, charge in
-                    if index > 0 { Divider().padding(.leading, 68) }
-                    RowLayout(symbol: CarliIcon.symbol(charge.category?.icon ?? "repeat"), soft: false,
-                              title: charge.name, subtitle: charge.subtitle) {
-                        Text(Money.format(charge.amountCents, .signed))
-                            .font(.body.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(charge.amountCents > 0 ? CarliColor.positive : CarliColor.text)
-                    }
-                }
-            }
-        }
-
-        SummarySection(title: "Últimos movimientos", action: ("Ver todos", { go("transactions") }),
-                       padded: data.recentTransactions.isEmpty) {
-            if data.recentTransactions.isEmpty {
-                ContentUnavailableView("Aún no hay movimientos", systemImage: "tray",
-                                       description: Text("Apunta tu primer gasto y empezarás a ver tu resumen."))
-            } else {
-                ForEach(Array(data.recentTransactions.enumerated()), id: \.element.id) { index, transaction in
-                    if index > 0 { Divider().padding(.leading, 68) }
-                    TransactionLine(transaction: transaction, accounts: model.accounts ?? [])
                 }
             }
         }
