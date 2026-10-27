@@ -119,10 +119,7 @@ struct NotificationSettingsView: View {
                 Toggle("En la app", systemImage: "bell.fill", isOn: binding(group, preference, push: false))
                     .accessibilityLabel("En la app: \(preference.title)")
             }
-            .toggleStyle(.button)
-            .buttonBorderShape(.capsule)
-            .controlSize(.small)
-            .font(.footnote.weight(.medium))
+            .toggleStyle(CapsuleToggleStyle())
         }
         .padding(.vertical, 2)
     }
@@ -166,5 +163,30 @@ struct NotificationSettingsView: View {
             groups = previous
             toast = "No se han podido guardar los ajustes de avisos"
         }
+    }
+}
+
+/// On: filled ink capsule with a light label and a check. Off: outlined, muted.
+struct CapsuleToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: configuration.isOn ? "checkmark" : "minus")
+                    .font(.caption2.weight(.bold))
+                configuration.label.labelStyle(.titleOnly)
+            }
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, CarliSpace.s12)
+            .padding(.vertical, 6)
+            .foregroundStyle(configuration.isOn ? CarliColor.onPrimary : CarliColor.text2)
+            .background(configuration.isOn ? CarliColor.primary : Color.clear, in: .capsule)
+            .overlay(Capsule().strokeBorder(configuration.isOn ? Color.clear : CarliColor.text3.opacity(0.5)))
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(configuration.isOn ? "Activado" : "Desactivado")
+        .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
     }
 }
