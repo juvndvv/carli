@@ -24,8 +24,9 @@ final class TransactionsModel {
     private var generation = 0
     private let api: APIClient
 
-    init(api: APIClient) {
+    init(api: APIClient, filters: TransactionFilters = TransactionFilters()) {
         self.api = api
+        self.filters = filters
     }
 
     var currentPeriod: FinancePeriod? { periods.first { $0.isCurrent == true } }

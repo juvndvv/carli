@@ -88,6 +88,8 @@ struct ModuleRootView: View {
     @Environment(AuthModel.self) private var auth
     @State private var section: ModuleSection
     @State private var adding = false
+    /// Filters a link asked for; entering Movimientos from the header menu starts clean.
+    @State private var transactionFilters = TransactionFilters()
 
     init(module: ModuleTab) {
         self.module = module
@@ -129,11 +131,18 @@ struct ModuleRootView: View {
     private var content: some View {
         switch (module, section.id) {
         case (.finance, "summary"):
-            FinanceSummaryView(model: FinanceSummaryModel(api: auth.api)) { id in
-                if let target = module.sections.first(where: { $0.id == id }) { section = target }
+            FinanceSummaryView(model: FinanceSummaryModel(api: auth.api)) { route in
+                switch route {
+                case .budgets:
+                    show("budgets")
+                case .transactions(let filters):
+                    transactionFilters = filters
+                    show("transactions")
+                }
             }
         case (.finance, "transactions"):
-            TransactionsView(model: TransactionsModel(api: auth.api))
+            TransactionsView(model: TransactionsModel(api: auth.api, filters: transactionFilters))
+                .id(transactionFilters)
         default:
             ScrollView {
                 ContentUnavailableView {
@@ -148,9 +157,16 @@ struct ModuleRootView: View {
         }
     }
 
+    private func show(_ id: String) {
+        if let target = module.sections.first(where: { $0.id == id }) { section = target }
+    }
+
     private var sectionMenu: some View {
         Menu {
-            Picker("Vista", selection: $section) {
+            Picker("Vista", selection: Binding(get: { section }, set: { picked in
+                transactionFilters = TransactionFilters()
+                section = picked
+            })) {
                 ForEach(module.sections) { Text($0.title).tag($0) }
             }
         } label: {

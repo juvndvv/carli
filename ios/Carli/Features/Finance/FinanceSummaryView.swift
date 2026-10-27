@@ -4,8 +4,8 @@ import SwiftUI
 /// Finanzas › Resumen: period picker, the three rings, key figures and the period's detail.
 struct FinanceSummaryView: View {
     @State var model: FinanceSummaryModel
-    /// Switches the module header to another section ("transactions", "budgets").
-    var go: (String) -> Void
+    /// Switches the module header to another section, carrying the filters the link implies.
+    var go: (FinanceRoute) -> Void
 
     var body: some View {
         ScrollView {
@@ -103,7 +103,7 @@ private struct PeriodBar: View {
 private struct SummaryBody: View {
     var data: Dashboard
     var model: FinanceSummaryModel
-    var go: (String) -> Void
+    var go: (FinanceRoute) -> Void
 
     var body: some View {
         let period = data.period
@@ -134,7 +134,7 @@ private struct SummaryBody: View {
             }
         }
 
-        SummarySection(title: "Últimos movimientos", action: ("Ver todos", { go("transactions") }),
+        SummarySection(title: "Últimos movimientos", action: ("Ver todos", { go(.transactions(TransactionFilters(periodId: data.period.id))) }),
                        padded: data.recentTransactions.isEmpty) {
             if data.recentTransactions.isEmpty {
                 ContentUnavailableView("Aún no hay movimientos", systemImage: "tray",
@@ -147,10 +147,12 @@ private struct SummaryBody: View {
             }
         }
 
-        RingsCard(rings: RingFigures(data, savingsTargetPercent: model.savingsTargetPercent)) { go("budgets") }
+        RingsCard(rings: RingFigures(data, savingsTargetPercent: model.savingsTargetPercent)) { go(.budgets) }
 
         if let summary = data.uncategorized, summary.expenseCents != 0 {
-            UncategorizedNotice(summary: summary) { go("transactions") }
+            UncategorizedNotice(summary: summary) {
+                go(.transactions(TransactionFilters(periodId: data.period.id, uncategorized: true)))
+            }
         }
 
         SummarySection(title: "Ingresos y gastos") {
@@ -171,7 +173,7 @@ private struct SummaryBody: View {
             }
         }
 
-        SummarySection(title: "Presupuestos", action: ("Ver todos", { go("budgets") })) {
+        SummarySection(title: "Presupuestos", action: ("Ver todos", { go(.budgets) })) {
             let rows = data.budgets?.top ?? []
             if rows.isEmpty {
                 ContentUnavailableView {
@@ -179,7 +181,7 @@ private struct SummaryBody: View {
                 } description: {
                     Text("Pon un límite a las categorías en las que más gastas.")
                 } actions: {
-                    Button("Crear presupuestos") { go("budgets") }.buttonStyle(.glass)
+                    Button("Crear presupuestos") { go(.budgets) }.buttonStyle(.glass)
                 }
             } else {
                 VStack(spacing: CarliSpace.s16) {
@@ -290,7 +292,7 @@ private struct UncategorizedNotice: View {
 
 private struct MetricsGrid: View {
     var data: Dashboard
-    var go: (String) -> Void
+    var go: (FinanceRoute) -> Void
 
     var body: some View {
         let previous = data.previousPeriod?.shortName
@@ -310,7 +312,9 @@ private struct MetricsGrid: View {
                 MetricCard(label: "Gastos", value: Money.format(data.expenseCents),
                            note: delta(data.deltasBp?.expense, previous),
                            trend: Trend(bp: data.deltasBp?.expense, higherIsBetter: false),
-                           series: history.map(\.expenseCents)) { go("transactions") }
+                           series: history.map(\.expenseCents)) {
+                    go(.transactions(TransactionFilters(periodId: data.period.id, kinds: [.expense])))
+                }
                 MetricCard(label: "Ahorro", value: Money.format(data.savingsCents),
                            valueColor: data.savingsCents < 0 ? CarliColor.negative : CarliColor.text,
                            note: data.savingsRateBp.map { "Tasa \(Percent.format($0))" } ?? "Sin ingresos este periodo",

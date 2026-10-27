@@ -42,8 +42,14 @@ enum TransactionKind: String, CaseIterable, Identifiable {
     }
 }
 
+/// Where a link inside Finanzas leads.
+enum FinanceRoute {
+    case budgets
+    case transactions(TransactionFilters)
+}
+
 /// What Movimientos is showing. `periodId` nil with `allPeriods` false means the current period.
-struct TransactionFilters: Equatable {
+struct TransactionFilters: Hashable {
     static let noCategory = "none"
 
     var periodId: String?
