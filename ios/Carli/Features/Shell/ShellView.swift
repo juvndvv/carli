@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// A module's own sections, shown as a segmented control inside its tab.
 struct ModuleSection: Identifiable, Hashable {
@@ -52,7 +53,8 @@ enum ModuleTab: String, CaseIterable {
 }
 
 /// Signed-in root: a fixed system tab bar (Liquid Glass) with Inicio and one tab per
-/// enabled module, plus Buscar in the trailing search slot.
+/// enabled module. Five tabs is the iPhone limit before "Más" overflow, so Buscar lives
+/// in Inicio's toolbar instead of the search slot.
 struct ShellView: View {
     @Environment(AuthModel.self) private var auth
     @State private var home: HomeModel?
@@ -60,25 +62,22 @@ struct ShellView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            Tab("Inicio", systemImage: "house", value: "home") {
+            Tab(value: "home") {
                 if let home {
                     HomeView(model: home) { selection = $0 }
                 }
+            } label: {
+                Label { Text("Inicio") } icon: { Image.outline("house") }
             }
 
             ForEach(modules, id: \.self) { module in
-                Tab(module.title, systemImage: module.symbol, value: module.rawValue) {
+                Tab(value: module.rawValue) {
                     ModuleRootView(module: module)
-                }
-            }
-
-            Tab("Buscar", systemImage: "magnifyingglass", value: "search", role: .search) {
-                NavigationStack {
-                    PendingMigrationView(title: "Buscar", symbol: "magnifyingglass")
+                } label: {
+                    Label { Text(module.title) } icon: { Image.outline(module.symbol) }
                 }
             }
         }
-        .environment(\.symbolVariants, .none)
         .tabBarMinimizeBehavior(.onScrollDown)
         .onAppear {
             if home == nil { home = HomeModel(api: auth.api) }
@@ -139,5 +138,22 @@ struct ModuleRootView: View {
                 .presentationDetents([.medium, .large])
             }
         }
+    }
+}
+
+extension Image {
+    /// An SF Symbol flattened to a template bitmap. The system tab bar forces the
+    /// `.fill` variant on symbol images; a plain image keeps the line version.
+    static func outline(_ symbol: String, pointSize: CGFloat = 19) -> Image {
+        let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
+        guard let source = UIImage(systemName: symbol, withConfiguration: config) else {
+            return Image(systemName: symbol)
+        }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 3
+        let bitmap = UIGraphicsImageRenderer(size: source.size, format: format).image { _ in
+            source.withTintColor(.black, renderingMode: .alwaysOriginal).draw(at: .zero)
+        }
+        return Image(uiImage: bitmap.withRenderingMode(.alwaysTemplate))
     }
 }

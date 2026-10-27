@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum HomeRoute: Hashable {
-    case notifications, pending, settings
+    case notifications, pending, settings, search
 }
 
 /// Inicio: greeting, then a card per module plus pending items and recent notifications.
@@ -42,6 +42,7 @@ struct HomeView: View {
                 case .notifications: PendingMigrationView(title: "Notificaciones")
                 case .pending: PendingMigrationView(title: "Pendientes")
                 case .settings: SettingsStubView()
+                case .search: PendingMigrationView(title: "Buscar", symbol: "magnifyingglass")
                 }
             }
             .refreshable { await model.load() }
@@ -58,6 +59,12 @@ struct HomeView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink(value: HomeRoute.search) {
+                Image(systemName: "magnifyingglass")
+            }
+            .accessibilityLabel("Buscar")
+        }
         ToolbarItem(placement: .topBarTrailing) {
             NavigationLink(value: HomeRoute.notifications) {
                 Image(systemName: "bell")
