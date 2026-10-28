@@ -51,6 +51,15 @@ describe('scale sync', function () {
         expect($this->getJson('/api/v1/health/measurements')->json('data.0.measured_at'))->toBe('2026-10-28T06:51:58+01:00');
     });
 
+    it('keeps the moment of readings sent in UTC', function () {
+        $this->postJson('/api/v1/health/measurements/sync', ['readings' => [healthLiveReading(['measured_at' => '2026-10-28T06:42:41Z'])]]);
+        $this->postJson('/api/v1/health/measurements', ['weight_kg' => 80, 'measured_at' => '2026-10-28T05:00:00Z']);
+
+        $times = collect($this->getJson('/api/v1/health/measurements')->json('data'))->pluck('measured_at')->all();
+
+        expect($times)->toBe(['2026-10-28T07:42:41+01:00', '2026-10-28T06:00:00+01:00']);
+    });
+
     it('ignores readings it already has', function () {
         $this->postJson('/api/v1/health/measurements/sync', ['readings' => [healthStoredReading()]])->assertJsonPath('data.created', 1);
         $this->postJson('/api/v1/health/measurements/sync', ['readings' => [healthStoredReading(), healthLiveReading()]])

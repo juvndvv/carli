@@ -59,7 +59,7 @@ final readonly class MeasurementService
     {
         $measurement = new Measurement([
             'source' => 'manual',
-            'measured_at' => isset($data['measured_at']) ? CarbonImmutable::parse((string) $data['measured_at']) : CarbonImmutable::now(),
+            'measured_at' => isset($data['measured_at']) ? self::moment((string) $data['measured_at']) : CarbonImmutable::now(),
             'weight_kg' => $data['weight_kg'],
             'fat_percent' => $data['fat_percent'] ?? null,
             'muscle_percent' => $data['muscle_percent'] ?? null,
@@ -114,6 +114,15 @@ final readonly class MeasurementService
     }
 
     /**
+     * The phone sends UTC; Eloquent writes the wall time without an offset and the database
+     * session reads it in the app's zone, so convert before assigning.
+     */
+    private static function moment(string $value): CarbonImmutable
+    {
+        return CarbonImmutable::parse($value)->setTimezone((string) config('app.timezone'));
+    }
+
+    /**
      * @param  array<string, mixed>  $reading
      */
     private function fill(Measurement $measurement, array $reading, bool $merging = false): void
@@ -122,7 +131,7 @@ final readonly class MeasurementService
 
         // The scale's own clock dates a stored reading; a live one is dated by the phone.
         if (! $merging || $stored) {
-            $measurement->measured_at = CarbonImmutable::parse((string) $reading['measured_at']);
+            $measurement->measured_at = self::moment((string) $reading['measured_at']);
         }
 
         $measurement->weight_kg = number_format((float) $reading['weight_kg'], 2, '.', '');
