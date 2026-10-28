@@ -37,6 +37,7 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_DATABASE" value="personal_test" force="false"/>
+        <env name="DB_CACHE_LOCK_CONNECTION" value="pgsql_locks"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
