@@ -107,7 +107,8 @@ nonisolated struct QNStoredReading: Equatable {
     var r2: UInt16
 }
 
-/// The 8-electrode firmware (V48.0) sends its final result as several 20-byte 0x10 frames.
+/// The 8-electrode firmware (V48.0) sends each result as several 20-byte frames: 0x10 for the
+/// weigh-in that just ended and 0x23 for those kept on the scale (answer to the history query).
 /// Byte 4 is `total << 4 | index` (0x31, 0x32, 0x33 = parts 1–3 of 3).
 nonisolated struct QNResultPart: Equatable {
     var index: Int
@@ -115,27 +116,75 @@ nonisolated struct QNResultPart: Equatable {
     var bytes: [UInt8]
 }
 
-/// All parts of one final result. Part 1 starts with the weight (bytes 5–6, big-endian,
-/// hundredths of a kg, confirmed against the display: 0x35D4 = 137.80 kg). The rest are
-/// big-endian impedances in tenths of an ohm, in pairs per segment at two frequencies (arms
-/// ~250–290 Ω, legs ~200–245 Ω, trunk ~20 Ω); which segment is which is still to be mapped.
+/// All parts of one result, checked against the display (137.80 kg, 137.60 kg).
+///
+/// - 0x10 part 1: header in bytes 2–3, weight in 5–6, values from 7.
+/// - 0x23 part 1: header in 1–2, record number in 3, time in 5–8 (little-endian scale seconds),
+///   weight in 9–10, values from 11.
+/// - Later parts continue the values in bytes 2–3 (0x10) or 1–2 (0x23), then 5–18.
+///
+/// Weight is big-endian hundredths of a kg. The values are big-endian impedances in tenths of an
+/// ohm, in pairs per segment at two frequencies (arms ~250–300 Ω, legs ~200–250 Ω, trunk ~20 Ω);
+/// which segment is which is still to be mapped.
 nonisolated struct QNResult: Equatable {
     var parts: [[UInt8]]
+    /// The 0x24 frame that follows a stored result.
+    var metrics: QNMetrics?
 
-    var kg: Double {
-        guard let first = parts.first, first.count > 6 else { return 0 }
-        return Double(UInt16(first[5]) << 8 | UInt16(first[6])) / 100
+    init(parts: [[UInt8]], metrics: QNMetrics? = nil) {
+        self.parts = parts
+        self.metrics = metrics
     }
 
-    /// Part 1 carries values from byte 7 (after the weight); later parts from byte 2, skipping the
-    /// part number in byte 4. The checksum is left out.
+    var isStored: Bool { parts.first?.first == 0x23 }
+
+    var date: Date? {
+        guard isStored, let first = parts.first, first.count == 20 else { return nil }
+        let seconds = UInt32(first[5]) | UInt32(first[6]) << 8 | UInt32(first[7]) << 16 | UInt32(first[8]) << 24
+        return QN.date(scaleSeconds: seconds)
+    }
+
+    var kg: Double {
+        guard let first = parts.first, first.count == 20 else { return 0 }
+        let at = isStored ? 9 : 5
+        return Double(UInt16(first[at]) << 8 | UInt16(first[at + 1])) / 100
+    }
+
     var impedances: [UInt16] {
         parts.enumerated().flatMap { offset, part -> [UInt16] in
             guard part.count == 20 else { return [] }
-            let data = offset == 0 ? Array(part[7...18]) : Array(part[2...3] + part[5...18])
+            let data: [UInt8]
+            switch (offset, isStored) {
+            case (0, false): data = Array(part[7...18])
+            case (0, true): data = Array(part[11...18])
+            case (_, false): data = Array(part[2...3] + part[5...18])
+            case (_, true): data = Array(part[1...2] + part[5...18])
+            }
             return stride(from: 0, to: data.count - 1, by: 2).map { UInt16(data[$0]) << 8 | UInt16(data[$0 + 1]) }
         }
     }
+}
+
+/// 0x24: the body composition the scale worked out for the stored result before it. Positions
+/// checked against the display on 2026-10-28 (IMC 45.0, agua 37.4 %, músculo 49.1 %, grasa 48.2 %).
+/// Basal metabolism (1910 kcal) is likely; byte 9 is 26, which matched both visceral fat (26) and
+/// bone mass (2.6 kg) that day, so it needs a weigh-in where they differ.
+nonisolated struct QNMetrics: Equatable {
+    var bytes: [UInt8]
+
+    init?(_ bytes: [UInt8]) {
+        guard bytes.count >= 19, bytes[0] == 0x24 else { return nil }
+        self.bytes = bytes
+    }
+
+    private func tenths(_ at: Int) -> Double { Double(UInt16(bytes[at]) << 8 | UInt16(bytes[at + 1])) / 10 }
+
+    var bmi: Double { tenths(3) }
+    var waterPercent: Double { tenths(5) }
+    var musclePercent: Double { tenths(7) }
+    var visceralOrBone: Int { Int(bytes[9]) }
+    var basalKcal: Int { Int(UInt16(bytes[11]) << 8 | UInt16(bytes[12])) }
+    var fatPercent: Double { tenths(15) }
 }
 
 /// Collects result parts until the set is complete.
@@ -157,6 +206,7 @@ nonisolated enum QNEvent: Equatable {
     case info(protocolType: UInt8, weightDivisor: Double)
     case weight(QNWeight)
     case resultPart(QNResultPart)
+    case metrics(QNMetrics)
     case stored(QNStoredReading)
     /// 0x14: config accepted, wants the time.
     case configAck
@@ -177,12 +227,14 @@ nonisolated enum QNParser {
             if let part = resultPart(bytes) { return .resultPart(part) }
             return weight(bytes, weightDivisor: weightDivisor).map(QNEvent.weight)
         case 0x23:
+            if let part = resultPart(bytes) { return .resultPart(part) }
             guard bytes.count >= 17 else { return nil }
             let seconds = UInt32(bytes[6]) | UInt32(bytes[7]) << 8 | UInt32(bytes[8]) << 16 | UInt32(bytes[9]) << 24
             return .stored(QNStoredReading(date: QN.date(scaleSeconds: seconds),
                                            kg: Double(be16(bytes[10], bytes[11])) / 100,
                                            r1: le16(bytes[13], bytes[14]),
                                            r2: le16(bytes[15], bytes[16])))
+        case 0x24: return QNMetrics(bytes).map(QNEvent.metrics)
         case 0x14: return .configAck
         case 0x21: return .handshake
         default: return .other(opcode: bytes[0])
@@ -190,7 +242,7 @@ nonisolated enum QNParser {
     }
 
     private static func resultPart(_ b: [UInt8]) -> QNResultPart? {
-        guard b.count == 20, b[1] == 0x14 else { return nil }
+        guard b.count == 20, b[0] == 0x23 || b[1] == 0x14 else { return nil }
         let total = Int(b[4] >> 4), index = Int(b[4] & 0x0F)
         guard total > 1, (1...total).contains(index) else { return nil }
         return QNResultPart(index: index, total: total, bytes: b)

@@ -63,6 +63,7 @@ final class ScaleClient: NSObject {
     @ObservationIgnored private var configured = false
     @ObservationIgnored private var tookLiveReading = false
     @ObservationIgnored private var assembler = QNResultAssembler()
+    @ObservationIgnored private var storedAssembler = QNResultAssembler()
 
     init(profile: QNProfile) {
         self.profile = profile
@@ -119,6 +120,7 @@ final class ScaleClient: NSObject {
         configured = false
         tookLiveReading = false
         assembler = QNResultAssembler()
+        storedAssembler = QNResultAssembler()
     }
 
     private func note(_ text: String) {
@@ -153,13 +155,25 @@ final class ScaleClient: NSObject {
             QNCommand.handshakeReplies.forEach(send)
             requestHistory()
         case .resultPart(let part):
-            guard let result = assembler.add(part) else { return }
+            let stored = part.bytes.first == 0x23
+            let complete = stored ? storedAssembler.add(part) : assembler.add(part)
+            guard let result = complete else { return }
+            // Every history query returns all stored results again.
+            if stored, results.contains(where: { $0.isStored && $0.date == result.date }) { return }
             results.insert(result, at: 0)
             let imp = result.impedances
-            readings.insert(ScaleReading(date: .now, kg: result.kg, r1: imp.first ?? 0, r2: imp.dropFirst().first ?? 0,
-                                         source: .live, frame: result.parts.map(QN.hex).joined(separator: " | ")), at: 0)
-            note(String(format: "Peso: %.2f kg", result.kg))
-            note("Resultado completo (\(result.parts.count) tramas): \(result.impedances.map(String.init).joined(separator: " "))")
+            readings.insert(ScaleReading(date: result.date ?? .now, kg: result.kg, r1: imp.first ?? 0,
+                                         r2: imp.dropFirst().first ?? 0, source: stored ? .stored : .live,
+                                         frame: result.parts.map(QN.hex).joined(separator: " | ")), at: 0)
+            note(String(format: "%@: %.2f kg", stored ? "Guardada" : "Peso", result.kg))
+            // The composition only comes with stored results, so ask again for the one just taken.
+            if !stored { requestHistory() }
+        case .metrics(let metrics):
+            guard let index = results.firstIndex(where: \.isStored) else { return }
+            results[index].metrics = metrics
+            note(String(format: "Métricas: IMC %.1f, grasa %.1f %%, músculo %.1f %%, agua %.1f %%, %d, %d kcal",
+                        metrics.bmi, metrics.fatPercent, metrics.musclePercent, metrics.waterPercent,
+                        metrics.visceralOrBone, metrics.basalKcal))
         case .weight(let weight):
             // Readings outside a person's range mean we misread the frame; keep them only in the log.
             guard (2...250).contains(weight.kg) else { return }

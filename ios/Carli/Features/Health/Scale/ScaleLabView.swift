@@ -54,6 +54,14 @@ struct ScaleLabView: View {
                 Section("Resultados completos") {
                     ForEach(Array(scale.results.enumerated()), id: \.offset) { _, result in
                         VStack(alignment: .leading, spacing: CarliSpace.s4) {
+                            Text(String(format: "%.2f kg · %@", result.kg,
+                                        result.date?.formatted(date: .abbreviated, time: .standard) ?? "en vivo"))
+                                .font(.headline).monospacedDigit()
+                            if let m = result.metrics {
+                                Text(String(format: "IMC %.1f · grasa %.1f %% · músculo %.1f %% · agua %.1f %% · %d · %d kcal",
+                                            m.bmi, m.fatPercent, m.musclePercent, m.waterPercent, m.visceralOrBone, m.basalKcal))
+                                    .font(.footnote)
+                            }
                             Text(result.impedances.map { String(format: "%.1f", Double($0) / 10) }.joined(separator: " · "))
                                 .font(.footnote.monospaced())
                             ForEach(result.parts, id: \.self) { part in
