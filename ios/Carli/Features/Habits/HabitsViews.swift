@@ -256,7 +256,7 @@ struct HabitsTodayView: View {
             } label: {
                 Image(systemName: "checkmark")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(CarliColor.onBrand)
+                    .foregroundStyle(CarliColor.onSun)
                     .frame(width: 32, height: 32)
                     .background(habitRingColor, in: .circle)
             }

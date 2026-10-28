@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// Neutral palette: the accent is ink (black in light, white in dark); sun amber is kept
-/// for the brand face, charts and rings. Each colour resolves
+/// Neutral palette: the accent is ink (black in light, white in dark); lime is kept
+/// for the brand mark, and sun amber for charts and rings. Each colour resolves
 /// light/dark at render time, so views never branch on the colour scheme.
 enum CarliColor {
     static let bg = dynamic(0xF2F2F7, 0x000000)
@@ -17,9 +17,12 @@ enum CarliColor {
     static let primaryStrong = dynamic(0x1F1F1F, 0xFFFFFF)
     static let onPrimary = dynamic(0xFFFFFF, 0x000000)
     static let brandInk = dynamic(0x1F1F1F, 0xFFFFFF)
-    /// The carli face: sun amber with dark eyes.
-    static let brand = dynamic(0xF2A900, 0xFFC300)
-    static let onBrand = Color(hex: 0x1F1600)
+    /// The carli mark: a lime gradient (brandLight on top, brand below) with a dark ink "c".
+    static let brandLight = Color(hex: 0xD4FA45)
+    static let brand = Color(hex: 0x9EE000)
+    static let onBrand = Color(hex: 0x172300)
+    /// Dark ink on sun-toned fills (rings, done habits).
+    static let onSun = Color(hex: 0x1F1600)
     static let positive = dynamic(0x0F7B4A, 0x10B981)
     static let warning = dynamic(0xB45309, 0xF59E0B)
     static let negative = dynamic(0xC8281C, 0xED5A46)
