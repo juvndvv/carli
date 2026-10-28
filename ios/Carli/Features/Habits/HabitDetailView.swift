@@ -248,7 +248,7 @@ private struct HabitCalendarCard: View {
         return Button { open(day) } label: {
             Text("\(number)")
                 .font(.footnote.weight(strong ? .bold : .regular))
-                .foregroundStyle(day.state == .done ? CarliColor.onSun
+                .foregroundStyle(day.state == .done ? CarliColor.onBrand
                                  : day.state == .rest ? CarliColor.text2
                                  : tappable ? CarliColor.text : CarliColor.text3)
                 .frame(width: 36, height: 36)
