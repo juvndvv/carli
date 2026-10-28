@@ -55,7 +55,7 @@ test-backend:
 	$(COMPOSE) --profile test run --rm --build backend-test php artisan test $(ARGS)
 
 test-app:
-	cd app && flutter analyze && flutter test $(ARGS)
+	cd ios && xcodegen && xcodebuild test -project Carli.xcodeproj -scheme Carli -destination 'platform=iOS Simulator,name=iPhone 17 Pro' $(ARGS)
 
 shell:
 	$(COMPOSE) exec app sh
