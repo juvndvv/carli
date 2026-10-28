@@ -26,10 +26,11 @@ enum CarliColor {
     static let negative = dynamic(0xC8281C, 0xED5A46)
     static let dangerFill = Color(hex: 0xC8281C)
 
-    /// Category slots c1–c8, all in lime tones so charts stay within the brand; neighbours alternate light and dark so slices stay apart.
+    /// Category slots c1–c8 in the lime family (lime, green, teal, olive) so charts stay within the brand;
+    /// hues and lightness both alternate between neighbours so slices stay apart.
     static let chart = [
-        dynamic(0x4A6B00, 0xC6F432), dynamic(0xC9F04A, 0x6E9A00), dynamic(0x7AAE00, 0xE3FA9A), dynamic(0xDCF58C, 0x8BC400),
-        dynamic(0x9ACD10, 0xD4FA45), dynamic(0x8C9C5A, 0x8C9C5A), dynamic(0xB2E600, 0xF0FDCB), dynamic(0x2C3F00, 0x4A6B00),
+        dynamic(0x4A6B00, 0xC6F432), dynamic(0xC9F04A, 0x4A6B00), dynamic(0x00A39A, 0x2EE6C5), dynamic(0xDCF58C, 0x8BC400),
+        dynamic(0x22A447, 0x4ADE6B), dynamic(0x8C9C5A, 0x8C9C5A), dynamic(0x7FE3D0, 0x0E7C6E), dynamic(0x1E4A2A, 0xF0FDCB),
     ]
     /// The "Otras categorías" bucket.
     static let chartRest = dynamic(0xB9B9BE, 0x5A5A5E)

@@ -31,7 +31,7 @@ if [[ "${1:-}" == "shot" ]]; then
     xcrun simctl ui "$UDID" appearance "$mode"
     xcrun simctl terminate "$UDID" "$BUNDLE" 2>/dev/null || true
     xcrun simctl launch "$UDID" "$BUNDLE" -skipLaunch "${@:3}" >/dev/null
-    sleep 3
+    sleep 6
     xcrun simctl io "$UDID" screenshot "screenshots/$name-$mode.png" >/dev/null
   done
   echo "screenshots/$name-light.png screenshots/$name-dark.png"
