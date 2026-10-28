@@ -150,7 +150,12 @@ nonisolated struct QNResult: Equatable {
         return Double(UInt16(first[at]) << 8 | UInt16(first[at + 1])) / 100
     }
 
+    /// The 20 impedances; the live result pads its last part with 4 extra bytes (a counter).
     var impedances: [UInt16] {
+        Array(rawValues.prefix(20))
+    }
+
+    private var rawValues: [UInt16] {
         parts.enumerated().flatMap { offset, part -> [UInt16] in
             guard part.count == 20 else { return [] }
             let data: [UInt8]
