@@ -18,16 +18,17 @@ final class SpendingQuery
     {
         $rows = DB::select(<<<'SQL'
             WITH expenses AS (
-                SELECT t.id, t.category_id, -t.amount_cents AS gross,
+                SELECT t.id, t.category_id, -t.amount_cents AS gross, a.ownership_percent,
                     COALESCE((SELECT SUM(s.amount_cents) FROM finance.shared_expense_shares s WHERE s.transaction_id = t.id), 0) AS shared
                 FROM finance.transactions t
+                JOIN finance.accounts a ON a.id = t.account_id
                 WHERE t.user_id = ? AND t.deleted_at IS NULL AND t.kind = 'expense' AND t.date BETWEEN ? AND ?
             ),
             lines AS (
                 SELECT COALESCE(sp.category_id, e.category_id) AS category_id,
-                    CASE WHEN sp.id IS NULL THEN e.gross - e.shared
+                    ROUND(CASE WHEN sp.id IS NULL THEN (e.gross - e.shared)::numeric
                         ELSE ROUND((-sp.amount_cents)::numeric * (e.gross - e.shared) / NULLIF(e.gross, 0))
-                    END AS own
+                    END * e.ownership_percent / 100) AS own
                 FROM expenses e
                 LEFT JOIN finance.transaction_splits sp ON sp.transaction_id = e.id
             )
@@ -55,6 +56,8 @@ final class SpendingQuery
             ->where('t.user_id', $userId)
             ->whereNull('t.deleted_at')
             ->where('t.kind', 'income')
+            // Income landing in a shared account is mostly the co-owner's contribution, not ours.
+            ->whereNotExists(fn ($query) => $query->from('finance.accounts as a')->whereColumn('a.id', 't.account_id')->where('a.ownership_percent', '<', 100))
             ->whereBetween('t.date', [$from->toDateString(), $to->toDateString()])
             ->whereNotExists(fn ($query) => $query->from('finance.shared_expense_shares as s')->whereColumn('s.settlement_transaction_id', 't.id'))
             ->sum('t.amount_cents');
@@ -72,7 +75,8 @@ final class SpendingQuery
             ->toBase()
             ->selectRaw(<<<'SQL'
                 count(*) AS count,
-                coalesce(sum(-amount_cents - coalesce((SELECT sum(s.amount_cents) FROM finance.shared_expense_shares s WHERE s.transaction_id = finance.transactions.id), 0)), 0)::bigint AS expense_cents
+                coalesce(sum(round((-amount_cents - coalesce((SELECT sum(s.amount_cents) FROM finance.shared_expense_shares s WHERE s.transaction_id = finance.transactions.id), 0))::numeric
+                    * (SELECT a.ownership_percent FROM finance.accounts a WHERE a.id = finance.transactions.account_id) / 100)), 0)::bigint AS expense_cents
             SQL)
             ->first();
 

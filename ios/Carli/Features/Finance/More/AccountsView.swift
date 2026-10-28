@@ -22,7 +22,7 @@ final class AccountsModel {
         do {
             let page: AccountsPage = try await api.get("v1/finance/accounts", query: ["include_archived": "1"])
             accounts = page.data
-            netWorthCents = page.meta?.netWorthCents ?? page.data.filter { !$0.isArchived && $0.includeInNetWorth != false }.reduce(0) { $0 + $1.balanceCents }
+            netWorthCents = page.meta?.netWorthCents ?? page.data.filter { !$0.isArchived && $0.includeInNetWorth != false }.reduce(0) { $0 + ($1.ownBalanceCents ?? $1.balanceCents) }
             state = .loaded
         } catch {
             if accounts.isEmpty { state = .failed(error.apiMessage(fallback: "Comprueba tu conexión e inténtalo de nuevo.")) }

@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\DB;
  * @property string|null $color
  * @property string|null $icon
  * @property bool $include_in_net_worth
+ * @property int $ownership_percent
  * @property int $sort_order
  * @property CarbonImmutable|null $archived_at
  * @property string|null $bank_connection_id
@@ -50,6 +51,7 @@ class Account extends Model
     protected $attributes = [
         'initial_balance_cents' => 0,
         'include_in_net_worth' => true,
+        'ownership_percent' => 100,
         'sort_order' => 0,
     ];
 
@@ -63,6 +65,7 @@ class Account extends Model
             'statement_day' => 'integer',
             'payment_day' => 'integer',
             'include_in_net_worth' => 'boolean',
+            'ownership_percent' => 'integer',
             'sort_order' => 'integer',
             'archived_at' => 'immutable_datetime',
             'sync_from_date' => 'immutable_date',
@@ -158,6 +161,16 @@ class Account extends Model
         }
 
         return (int) $this->pending_sum_cents;
+    }
+
+    public function isShared(): bool
+    {
+        return $this->ownership_percent < 100;
+    }
+
+    public function ownShareOf(int $cents): int
+    {
+        return (int) round($cents * $this->ownership_percent / 100);
     }
 
     public function isArchived(): bool

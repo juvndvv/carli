@@ -10,8 +10,8 @@ final class NetWorthQuery
     public function current(string $userId): int
     {
         $row = DB::selectOne(<<<'SQL'
-            SELECT COALESCE(SUM(a.initial_balance_cents), 0)::bigint
-                + COALESCE((SELECT SUM(t.amount_cents) FROM finance.transactions t
+            SELECT COALESCE(ROUND(SUM(a.initial_balance_cents::numeric * a.ownership_percent / 100)), 0)::bigint
+                + COALESCE((SELECT ROUND(SUM(t.amount_cents::numeric * ta.ownership_percent / 100)) FROM finance.transactions t
                     JOIN finance.accounts ta ON ta.id = t.account_id
                     WHERE t.user_id = ? AND t.deleted_at IS NULL AND ta.include_in_net_worth AND ta.archived_at IS NULL), 0)::bigint AS total
             FROM finance.accounts a
@@ -24,8 +24,8 @@ final class NetWorthQuery
     public function at(string $userId, CarbonImmutable $date): int
     {
         $row = DB::selectOne(<<<'SQL'
-            SELECT COALESCE(SUM(a.initial_balance_cents), 0)::bigint
-                + COALESCE((SELECT SUM(t.amount_cents) FROM finance.transactions t
+            SELECT COALESCE(ROUND(SUM(a.initial_balance_cents::numeric * a.ownership_percent / 100)), 0)::bigint
+                + COALESCE((SELECT ROUND(SUM(t.amount_cents::numeric * ta.ownership_percent / 100)) FROM finance.transactions t
                     JOIN finance.accounts ta ON ta.id = t.account_id
                     WHERE t.user_id = ? AND t.deleted_at IS NULL AND t.date <= ? AND ta.include_in_net_worth AND ta.archived_at IS NULL), 0)::bigint AS total
             FROM finance.accounts a

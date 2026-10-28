@@ -27,11 +27,14 @@ struct FinanceAccount: Decodable, Equatable, Identifiable, Hashable {
     var availableCreditCents: Int?
     var icon: String?
     var includeInNetWorth: Bool?
+    var ownershipPercent: Int?
+    var ownBalanceCents: Int?
     var bank: Bank?
     var archived: Bool?
 
     var isCreditCard: Bool { type == "credit_card" }
     var isArchived: Bool { archived == true }
+    var isShared: Bool { (ownershipPercent ?? 100) < 100 }
     var ref: AccountRef { AccountRef(id: id, name: name) }
 
     var typeLabel: String { AccountKind(rawValue: type)?.label ?? type }
@@ -41,9 +44,12 @@ struct FinanceAccount: Decodable, Equatable, Identifiable, Hashable {
         return AccountKind(rawValue: type)?.symbol ?? "building.columns"
     }
 
-    /// "Tarjeta · fuera del patrimonio"
+    /// "Tarjeta · fuera del patrimonio", "Cuenta corriente · tuya al 50 %"
     var subtitle: String {
-        includeInNetWorth == false ? "\(typeLabel) · fuera del patrimonio" : typeLabel
+        var parts = [typeLabel]
+        if isShared, let ownershipPercent { parts.append("tuya al \(ownershipPercent) %") }
+        if includeInNetWorth == false { parts.append("fuera del patrimonio") }
+        return parts.joined(separator: " · ")
     }
 
     /// "Corte el día 5 · pago el día 10" for cards with a schedule.
