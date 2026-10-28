@@ -153,6 +153,11 @@ nonisolated struct QNResult: Equatable {
         return Double(UInt16(first[at]) << 8 | UInt16(first[at + 1])) / 100
     }
 
+    /// Whether this stored result is the scale's copy of a weigh-in that first arrived live.
+    func isStoredCopy(of live: QNResult) -> Bool {
+        isStored && !live.isStored && kg == live.kg && impedances == live.impedances
+    }
+
     /// The 20 impedances; the live result pads its last part with 4 extra bytes (a counter).
     var impedances: [UInt16] {
         Array(rawValues.prefix(20))
