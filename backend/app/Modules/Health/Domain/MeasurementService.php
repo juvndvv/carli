@@ -126,7 +126,7 @@ final readonly class MeasurementService
         }
 
         $measurement->weight_kg = number_format((float) $reading['weight_kg'], 2, '.', '');
-        $measurement->impedances ??= isset($reading['impedances']) ? array_map('intval', $reading['impedances']) : null;
+        $measurement->impedances ??= isset($reading['impedances']) ? array_values(array_map('intval', $reading['impedances'])) : null;
         $measurement->frames ??= $reading['frames'] ?? null;
         $measurement->device ??= $reading['device'] ?? null;
         $measurement->firmware ??= $reading['firmware'] ?? null;

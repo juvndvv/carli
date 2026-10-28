@@ -48,7 +48,7 @@ describe('scale sync', function () {
             ->assertJsonPath('data.0.impedances', HEALTH_IMPEDANCES)
             ->assertJsonPath('data.0.firmware', 'V48.0');
 
-        expect($this->getJson('/api/v1/health/measurements')->json('data.0.measured_at'))->toStartWith('2026-10-28T05:51:58');
+        expect($this->getJson('/api/v1/health/measurements')->json('data.0.measured_at'))->toBe('2026-10-28T06:51:58+01:00');
     });
 
     it('ignores readings it already has', function () {
@@ -77,7 +77,7 @@ describe('measurements', function () {
         $this->postJson('/api/v1/health/measurements', ['weight_kg' => 137.8])
             ->assertCreated()
             ->assertJsonPath('data.source', 'manual')
-            ->assertJsonPath('data.bmi', 45.0)
+            ->assertJsonPath('data.bmi', 45)
             ->assertJsonPath('data.fat_percent', null);
     });
 
@@ -86,7 +86,7 @@ describe('measurements', function () {
         $id = $this->postJson('/api/v1/health/measurements', ['weight_kg' => 137.8])->json('data.id');
 
         $this->getJson('/api/v1/health/measurements?from=2026-10-20')->assertJsonCount(1, 'data');
-        $this->getJson('/api/v1/health/measurements?to=2026-10-20')->assertJsonCount(1, 'data')->assertJsonPath('data.0.weight_kg', 139.0);
+        $this->getJson('/api/v1/health/measurements?to=2026-10-20')->assertJsonCount(1, 'data')->assertJsonPath('data.0.weight_kg', 139);
         $this->getJson("/api/v1/health/measurements/{$id}")->assertOk();
         $this->deleteJson("/api/v1/health/measurements/{$id}")->assertNoContent();
         $this->getJson('/api/v1/health/measurements')->assertJsonCount(1, 'data');
@@ -120,7 +120,7 @@ describe('summary', function () {
             ->assertJsonPath('data.latest_with_metrics.fat_percent', 48.2)
             ->assertJsonPath('data.week_change', -1.2)
             ->assertJsonPath('data.month_change', -2.7)
-            ->assertJsonPath('data.goal_kg', 120.0)
+            ->assertJsonPath('data.goal_kg', 120)
             ->assertJsonPath('data.to_goal_kg', 17.8)
             ->assertJsonPath('data.weighed_today', true)
             ->assertJsonPath('data.profile_complete', true);
@@ -154,7 +154,7 @@ describe('settings', function () {
 
         $this->putJson('/api/v1/health/settings', ['goal_kg' => 110])
             ->assertJsonPath('data.height_cm', 175)
-            ->assertJsonPath('data.goal_kg', 110.0);
+            ->assertJsonPath('data.goal_kg', 110);
     });
 
     it('validates the settings', function () {
@@ -171,6 +171,8 @@ describe('weigh-in reminder', function () {
     });
 
     it('reminds on the chosen day and time', function () {
+        configureApns(true);
+        $this->user->pushDevices()->create(['token' => str_repeat('ab', 32), 'environment' => 'sandbox']);
         // 2026-10-28 is a Wednesday.
         $this->travelTo(HabitCalendar::date('2026-10-28')->setTime(7, 30));
         $this->artisan('health:weigh-reminders')->expectsOutputToContain('Recordatorios enviados: 1');
