@@ -23,6 +23,7 @@ final class UpdateAccountRequest extends FinanceRequest
             'color' => ['sometimes', 'nullable', 'string', 'max:32'],
             'icon' => ['sometimes', 'nullable', 'string', 'max:64'],
             'include_in_net_worth' => ['sometimes', 'boolean'],
+            'ownership_percent' => ['sometimes', 'integer', 'between:1,100'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
             'archived' => ['sometimes', 'boolean'],
         ];

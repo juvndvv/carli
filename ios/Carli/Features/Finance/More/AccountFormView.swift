@@ -15,6 +15,8 @@ final class AccountFormModel {
     var paymentDay: Int?
     var icon: String?
     var includeInNetWorth = true
+    var shared = false
+    var ownershipPercent = 50
     var saving = false
     var error: String?
 
@@ -37,6 +39,8 @@ final class AccountFormModel {
             paymentDay = account.paymentDay
             icon = account.icon
             includeInNetWorth = account.includeInNetWorth != false
+            shared = account.isShared
+            if let percent = account.ownershipPercent, account.isShared { ownershipPercent = percent }
         }
     }
 
@@ -65,7 +69,8 @@ final class AccountFormModel {
                                 initialBalanceDate: hasInitialDate ? CarliDate.isoDay(initialDate) : nil,
                                 creditLimitCents: card ? Money.parse(creditLimitText) : nil,
                                 statementDay: card ? statementDay : nil, paymentDay: card ? paymentDay : nil,
-                                icon: icon, includeInNetWorth: includeInNetWorth)
+                                icon: icon, includeInNetWorth: includeInNetWorth,
+                                ownershipPercent: shared ? ownershipPercent : 100)
         do {
             if let account {
                 let _: Empty = try await api.patch("v1/finance/accounts/\(account.id)", body: body)
@@ -92,9 +97,10 @@ struct AccountInput: Encodable {
     var paymentDay: Int?
     var icon: String?
     var includeInNetWorth: Bool
+    var ownershipPercent: Int
 
     private enum CodingKeys: String, CodingKey {
-        case name, type, initialBalanceCents, initialBalanceDate, creditLimitCents, statementDay, paymentDay, icon, includeInNetWorth
+        case name, type, initialBalanceCents, initialBalanceDate, creditLimitCents, statementDay, paymentDay, icon, includeInNetWorth, ownershipPercent
     }
 
     func encode(to encoder: Encoder) throws {
@@ -108,6 +114,7 @@ struct AccountInput: Encodable {
         try container.encode(paymentDay, forKey: .paymentDay)
         try container.encode(icon, forKey: .icon)
         try container.encode(includeInNetWorth, forKey: .includeInNetWorth)
+        try container.encode(ownershipPercent, forKey: .ownershipPercent)
     }
 }
 
@@ -175,6 +182,20 @@ struct AccountFormView: View {
                         }
                     }
                     .padding(.vertical, CarliSpace.s4)
+                }
+
+                Section {
+                    Toggle("Cuenta compartida", isOn: $model.shared)
+                    if model.shared {
+                        Stepper(value: $model.ownershipPercent, in: 5...95, step: 5) {
+                            LabeledContent("Tu parte", value: "\(model.ownershipPercent) %")
+                                .monospacedDigit()
+                        }
+                    }
+                } footer: {
+                    if model.shared {
+                        Text("Gastos, presupuestos y patrimonio cuentan solo tu parte. Los ingresos que entran en esta cuenta no cuentan como tuyos.")
+                    }
                 }
 
                 Section {

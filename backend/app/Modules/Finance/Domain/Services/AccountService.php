@@ -106,7 +106,7 @@ final class AccountService
     {
         return array_intersect_key($data, array_flip([
             'name', 'type', 'initial_balance_cents', 'initial_balance_date', 'credit_limit_cents',
-            'statement_day', 'payment_day', 'color', 'icon', 'include_in_net_worth', 'sort_order',
+            'statement_day', 'payment_day', 'color', 'icon', 'include_in_net_worth', 'ownership_percent', 'sort_order',
         ]));
     }
 }

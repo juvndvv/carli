@@ -41,6 +41,8 @@ final class AccountResource extends JsonResource
             'color' => $account->color,
             'icon' => $account->icon,
             'include_in_net_worth' => $account->include_in_net_worth,
+            'ownership_percent' => $account->ownership_percent,
+            'own_balance_cents' => $account->ownShareOf($balance),
             'sort_order' => $account->sort_order,
             'bank' => $connection === null ? null : [
                 'connection_id' => $connection->id,
