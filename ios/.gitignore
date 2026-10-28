@@ -3,3 +3,5 @@ Carli/Info.plist
 build/
 screenshots/
 Carli/Carli.entitlements
+CarliWidgets/Info.plist
+CarliWidgets/CarliWidgets.entitlements

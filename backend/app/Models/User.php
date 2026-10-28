@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Core\Models\NotificationPreference;
 use App\Core\Models\PushDevice;
 use App\Core\Models\UserModule;
+use App\Core\Push\PushDeviceKind;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -75,11 +76,23 @@ class User extends Authenticatable
     }
 
     /**
+     * The app's own tokens, which receive alerts.
+     *
      * @return HasMany<PushDevice, $this>
      */
     public function pushDevices(): HasMany
     {
-        return $this->hasMany(PushDevice::class);
+        return $this->hasMany(PushDevice::class)->where('kind', PushDeviceKind::App->value);
+    }
+
+    /**
+     * Widget tokens, which only receive silent reloads.
+     *
+     * @return HasMany<PushDevice, $this>
+     */
+    public function widgetPushDevices(): HasMany
+    {
+        return $this->hasMany(PushDevice::class)->where('kind', PushDeviceKind::Widgets->value);
     }
 
     /**

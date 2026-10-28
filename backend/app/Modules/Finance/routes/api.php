@@ -20,6 +20,7 @@ use App\Modules\Finance\Http\Controllers\TagController;
 use App\Modules\Finance\Http\Controllers\TransactionController;
 use App\Modules\Finance\Http\Controllers\TransferController;
 use App\Modules\Finance\Http\Controllers\TransferDetectionController;
+use App\Modules\Finance\Http\Controllers\WidgetController;
 use Illuminate\Support\Facades\Route;
 
 $uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
@@ -40,6 +41,7 @@ Route::where([
 ])->name('finance.')->group(function (): void {
     Route::get('summary', SummaryController::class)->name('summary');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('widget', WidgetController::class)->name('widget');
     Route::get('export.json', BackupController::class)->name('backup');
 
     Route::get('periods', [PeriodController::class, 'index'])->name('periods.index');

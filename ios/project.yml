@@ -20,6 +20,9 @@ targets:
     platform: iOS
     sources:
       - path: Carli
+      - path: Shared
+    dependencies:
+      - target: CarliWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jotade.personal
@@ -30,6 +33,8 @@ targets:
       path: Carli/Carli.entitlements
       properties:
         aps-environment: development
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)dev.jotade.personal.shared
     info:
       path: Carli/Info.plist
       properties:
@@ -44,6 +49,34 @@ targets:
         NSFaceIDUsageDescription: carli usa Face ID para desbloquear la app y proteger tus datos.
         NSBluetoothAlwaysUsageDescription: carli usa Bluetooth para leer tu peso y composición corporal de la báscula.
         ITSAppUsesNonExemptEncryption: false
+  CarliWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: CarliWidgets
+      - path: Shared
+      - path: Carli/Core/Auth/TokenStore.swift
+      - path: Carli/Core/Format/Formatters.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jotade.personal.widgets
+        PRODUCT_NAME: CarliWidgets
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+    entitlements:
+      path: CarliWidgets/CarliWidgets.entitlements
+      properties:
+        aps-environment: development
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)dev.jotade.personal.shared
+    info:
+      path: CarliWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: carli
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
   CarliTests:
     type: bundle.unit-test
     platform: iOS
