@@ -68,6 +68,14 @@ final class ScaleClient: NSObject {
     @ObservationIgnored private var storedAssembler = QNResultAssembler()
     /// The stored result the next 0x24 belongs to.
     @ObservationIgnored private var lastStoredDate: Date?
+    /// The live weigh-in whose stored copy (and composition) the history poll is waiting for.
+    @ObservationIgnored private var awaitingStored: QNResult?
+    @ObservationIgnored private var historyPoll: Task<Void, Never>?
+
+    /// The scale files a weigh-in some seconds after sending it live, so the history is asked again
+    /// until its copy shows up.
+    private static let historyPollInterval: Duration = .seconds(3)
+    private static let historyPollAttempts = 15
 
     init(profile: QNProfile) {
         self.profile = profile
@@ -126,6 +134,28 @@ final class ScaleClient: NSObject {
         assembler = QNResultAssembler()
         storedAssembler = QNResultAssembler()
         lastStoredDate = nil
+        stopHistoryPoll()
+    }
+
+    private func pollHistory(until live: QNResult) {
+        awaitingStored = live
+        historyPoll?.cancel()
+        historyPoll = Task { [weak self] in
+            for _ in 0..<Self.historyPollAttempts {
+                guard let self, !Task.isCancelled, self.writer != nil else { return }
+                self.requestHistory()
+                try? await Task.sleep(for: Self.historyPollInterval)
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.awaitingStored = nil
+            self.note("La báscula aún no ha guardado la pesada: la composición llegará en la próxima conexión")
+        }
+    }
+
+    private func stopHistoryPoll() {
+        historyPoll?.cancel()
+        historyPoll = nil
+        awaitingStored = nil
     }
 
     private func note(_ text: String) {
@@ -164,6 +194,10 @@ final class ScaleClient: NSObject {
             let complete = stored ? storedAssembler.add(part) : assembler.add(part)
             guard let result = complete else { return }
             if stored { lastStoredDate = result.date }
+            if stored, let awaiting = awaitingStored, result.isStoredCopy(of: awaiting) {
+                stopHistoryPoll()
+                note("La báscula ya ha guardado la pesada")
+            }
             // Every history query returns all stored results again.
             if stored, results.contains(where: { $0.isStored && $0.date == result.date }) { return }
             results.insert(result, at: 0)
@@ -173,8 +207,8 @@ final class ScaleClient: NSObject {
                                          r2: imp.dropFirst().first ?? 0, source: stored ? .stored : .live,
                                          frame: result.parts.map(QN.hex).joined(separator: " | ")), at: 0)
             note(String(format: "%@: %.2f kg", stored ? "Guardada" : "Peso", result.kg))
-            // The composition only comes with stored results, so ask again for the one just taken.
-            if !stored { requestHistory() }
+            // The composition only comes with stored results, so keep asking until this one is filed.
+            if !stored { pollHistory(until: result) }
         case .metrics(let metrics):
             guard let date = lastStoredDate, let index = results.firstIndex(where: { $0.isStored && $0.date == date }) else { return }
             let changed = results[index].metrics != metrics
