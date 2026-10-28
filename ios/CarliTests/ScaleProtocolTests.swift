@@ -76,3 +76,36 @@ struct ScaleProtocolTests {
         #expect(QNParser.parse([0x14, 0x05, 0xFF], weightDivisor: 10) == .configAck)
     }
 }
+
+struct ScaleResultTests {
+    /// The three frames Juanda's CS10G (firmware V48.0) sent at the end of a weigh-in on 2026-10-28.
+    private let frames: [[UInt8]] = [
+        [0x10, 0x14, 0x01, 0x02, 0x31, 0x35, 0xD4, 0x0B, 0x68, 0x09, 0xEB, 0x0B, 0x3F, 0x09, 0xC6, 0x09, 0x92, 0x08, 0x0D, 0x91],
+        [0x10, 0x14, 0x09, 0x20, 0x32, 0x07, 0xBA, 0x00, 0xD4, 0x00, 0xCA, 0x0B, 0x51, 0x09, 0xF8, 0x0A, 0xEA, 0x09, 0xAE, 0xE6],
+        [0x10, 0x14, 0x09, 0xB7, 0x33, 0x08, 0x4E, 0x09, 0xAC, 0x08, 0x43, 0x01, 0x10, 0x01, 0x00, 0x00, 0x00, 0x57, 0x00, 0xD6],
+    ]
+
+    @Test func realFramesHaveValidChecksums() {
+        for frame in frames { #expect(QN.checksum(frame.dropLast()) == frame.last) }
+    }
+
+    @Test func resultFramesAreNotReadAsWeights() {
+        let event = QNParser.parse(frames[2], weightDivisor: 10)
+        #expect(event == .resultPart(QNResultPart(index: 3, total: 3, bytes: frames[2])))
+    }
+
+    @Test func assemblerWaitsForEveryPart() throws {
+        var assembler = QNResultAssembler()
+        var result: QNResult?
+        for frame in frames {
+            guard case .resultPart(let part) = QNParser.parse(frame, weightDivisor: 10) else {
+                Issue.record("not a result part"); return
+            }
+            #expect(result == nil)
+            result = assembler.add(part)
+        }
+        let full = try #require(result)
+        #expect(full.parts == frames)
+        #expect(Array(full.impedances.prefix(6)) == [3028, 2408, 3051, 2367, 2502, 2194])
+    }
+}

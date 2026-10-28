@@ -51,6 +51,7 @@ final class ScaleClient: NSObject {
     private(set) var firmware: String?
     private(set) var live: QNWeight?
     private(set) var readings: [ScaleReading] = []
+    private(set) var results: [QNResult] = []
     var profile: QNProfile
 
     @ObservationIgnored private var central: CBCentralManager?
@@ -61,6 +62,7 @@ final class ScaleClient: NSObject {
     @ObservationIgnored private var weightDivisor: Double = 100
     @ObservationIgnored private var configured = false
     @ObservationIgnored private var tookLiveReading = false
+    @ObservationIgnored private var assembler = QNResultAssembler()
 
     init(profile: QNProfile) {
         self.profile = profile
@@ -89,6 +91,7 @@ final class ScaleClient: NSObject {
     func clearLog() {
         log.removeAll()
         readings.removeAll()
+        results.removeAll()
         live = nil
     }
 
@@ -115,6 +118,7 @@ final class ScaleClient: NSObject {
         weightDivisor = 100
         configured = false
         tookLiveReading = false
+        assembler = QNResultAssembler()
     }
 
     private func note(_ text: String) {
@@ -148,7 +152,13 @@ final class ScaleClient: NSObject {
         case .handshake:
             QNCommand.handshakeReplies.forEach(send)
             requestHistory()
+        case .resultPart(let part):
+            guard let result = assembler.add(part) else { return }
+            results.insert(result, at: 0)
+            note("Resultado completo (\(result.parts.count) tramas): \(result.impedances.map(String.init).joined(separator: " "))")
         case .weight(let weight):
+            // Readings outside a person's range mean we misread the frame; keep them only in the log.
+            guard (2...250).contains(weight.kg) else { return }
             live = weight
             guard weight.isStable else { return }
             if protocolType == 0xFF { send(QNCommand.stableAck(protocolType: protocolType)) }
@@ -158,6 +168,10 @@ final class ScaleClient: NSObject {
                                          source: .live, frame: QN.hex(bytes)), at: 0)
             note(String(format: "Pesada estable: %.2f kg, r1 %d, r2 %d", weight.kg, weight.r1, weight.r2))
         case .stored(let stored):
+            guard stored.kg > 2 else {
+                note("La báscula no tiene pesadas guardadas")
+                return
+            }
             readings.insert(ScaleReading(date: stored.date, kg: stored.kg, r1: stored.r1, r2: stored.r2,
                                          source: .stored, frame: QN.hex(bytes)), at: 0)
             note(String(format: "Histórico: %.2f kg del %@", stored.kg, stored.date.formatted()))
@@ -208,7 +222,7 @@ extension ScaleClient: @MainActor CBCentralManagerDelegate {
         resetSession()
         phase = .connected
         note("Conectada")
-        peripheral.discoverServices([CBUUID(string: QN.service), CBUUID(string: "180A")])
+        peripheral.discoverServices(nil)
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
@@ -235,10 +249,13 @@ extension ScaleClient: @MainActor CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         for characteristic in service.characteristics ?? [] {
             switch characteristic.uuid.uuidString {
-            case QN.notifyCharacteristic: peripheral.setNotifyValue(true, for: characteristic)
             case QN.writeCharacteristic: writer = characteristic
-            case "2A29", "2A26": peripheral.readValue(for: characteristic)
+            case "2A29", "2A26", "2A19": peripheral.readValue(for: characteristic)
             default: break
+            }
+            // Listen to every notifying characteristic (FFF1 and the vendor AE02) to find the live weight.
+            if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
+                peripheral.setNotifyValue(true, for: characteristic)
             }
         }
     }
@@ -256,9 +273,11 @@ extension ScaleClient: @MainActor CBPeripheralDelegate {
         guard let data = characteristic.value else { return }
         switch characteristic.uuid.uuidString {
         case QN.notifyCharacteristic: handle([UInt8](data))
+        case "2A19": note("Batería: \(data.first.map(String.init) ?? "?") %")
         case "2A29": manufacturer = String(decoding: data, as: UTF8.self)
         case "2A26": firmware = String(decoding: data, as: UTF8.self)
-        default: break
+        default:
+            log.append(LogLine(date: .now, kind: .received, text: "[\(characteristic.uuid.uuidString)] \(QN.hex(data))"))
         }
     }
 

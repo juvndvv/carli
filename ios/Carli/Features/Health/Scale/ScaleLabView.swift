@@ -50,6 +50,21 @@ struct ScaleLabView: View {
                 }
             }
 
+            if !scale.results.isEmpty {
+                Section("Resultados completos") {
+                    ForEach(Array(scale.results.enumerated()), id: \.offset) { _, result in
+                        VStack(alignment: .leading, spacing: CarliSpace.s4) {
+                            Text(result.impedances.map { String(format: "%.1f", Double($0) / 10) }.joined(separator: " · "))
+                                .font(.footnote.monospaced())
+                            ForEach(result.parts, id: \.self) { part in
+                                Text(QN.hex(part)).font(.caption2.monospaced()).foregroundStyle(CarliColor.text2)
+                            }
+                        }
+                        .textSelection(.enabled)
+                    }
+                }
+            }
+
             if !scale.readings.isEmpty {
                 Section("Pesadas") {
                     ForEach(scale.readings) { reading in

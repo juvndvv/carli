@@ -107,9 +107,45 @@ nonisolated struct QNStoredReading: Equatable {
     var r2: UInt16
 }
 
+/// The 8-electrode firmware (V48.0) sends its final result as several 20-byte 0x10 frames.
+/// Byte 4 is `total << 4 | index` (0x31, 0x32, 0x33 = parts 1–3 of 3).
+nonisolated struct QNResultPart: Equatable {
+    var index: Int
+    var total: Int
+    var bytes: [UInt8]
+}
+
+/// All parts of one final result. The weight's position is still unknown; the impedances read
+/// as little-endian pairs from byte 6 of each part, in tenths of an ohm.
+nonisolated struct QNResult: Equatable {
+    var parts: [[UInt8]]
+
+    var impedances: [UInt16] {
+        parts.flatMap { part in
+            stride(from: 6, to: part.count - 2, by: 2).map { UInt16(part[$0 + 1]) << 8 | UInt16(part[$0]) }
+        }
+    }
+}
+
+/// Collects result parts until the set is complete.
+nonisolated struct QNResultAssembler {
+    private var parts: [Int: [UInt8]] = [:]
+    private var total = 0
+
+    mutating func add(_ part: QNResultPart) -> QNResult? {
+        if part.index == 1 || part.total != total { parts = [:]; total = part.total }
+        parts[part.index] = part.bytes
+        guard parts.count == total else { return nil }
+        let result = QNResult(parts: (1...total).compactMap { parts[$0] })
+        parts = [:]
+        return result.parts.count == total ? result : nil
+    }
+}
+
 nonisolated enum QNEvent: Equatable {
     case info(protocolType: UInt8, weightDivisor: Double)
     case weight(QNWeight)
+    case resultPart(QNResultPart)
     case stored(QNStoredReading)
     /// 0x14: config accepted, wants the time.
     case configAck
@@ -127,6 +163,7 @@ nonisolated enum QNParser {
             guard bytes.count > 10 else { return nil }
             return .info(protocolType: bytes[2], weightDivisor: bytes[10] == 1 ? 100 : 10)
         case 0x10:
+            if let part = resultPart(bytes) { return .resultPart(part) }
             return weight(bytes, weightDivisor: weightDivisor).map(QNEvent.weight)
         case 0x23:
             guard bytes.count >= 17 else { return nil }
@@ -139,6 +176,13 @@ nonisolated enum QNParser {
         case 0x21: return .handshake
         default: return .other(opcode: bytes[0])
         }
+    }
+
+    private static func resultPart(_ b: [UInt8]) -> QNResultPart? {
+        guard b.count == 20, b[1] == 0x14 else { return nil }
+        let total = Int(b[4] >> 4), index = Int(b[4] & 0x0F)
+        guard total > 1, (1...total).contains(index) else { return nil }
+        return QNResultPart(index: index, total: total, bytes: b)
     }
 
     /// Two layouts exist. The newer one (this scale) has the state in byte 4 and the weight in
