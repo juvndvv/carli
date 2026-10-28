@@ -118,8 +118,8 @@ describe('summary', function () {
             ->assertOk()
             ->assertJsonPath('data.latest.weight_kg', 137.8)
             ->assertJsonPath('data.latest_with_metrics.fat_percent', 48.2)
-            ->assertJsonPath('data.change_7d', -1.2)
-            ->assertJsonPath('data.change_30d', -2.7)
+            ->assertJsonPath('data.week_change', -1.2)
+            ->assertJsonPath('data.month_change', -2.7)
             ->assertJsonPath('data.goal_kg', 120.0)
             ->assertJsonPath('data.to_goal_kg', 17.8)
             ->assertJsonPath('data.weighed_today', true)
@@ -130,7 +130,7 @@ describe('summary', function () {
         $this->getJson('/api/v1/health/summary')
             ->assertOk()
             ->assertJsonPath('data.latest', null)
-            ->assertJsonPath('data.change_7d', null)
+            ->assertJsonPath('data.week_change', null)
             ->assertJsonPath('data.weighed_today', false)
             ->assertJsonPath('data.profile_complete', false);
     });

@@ -130,10 +130,13 @@ nonisolated struct QNResult: Equatable {
     var parts: [[UInt8]]
     /// The 0x24 frame that follows a stored result.
     var metrics: QNMetrics?
+    /// When the phone put the result together; dates a live result, which carries no time.
+    var receivedAt: Date
 
-    init(parts: [[UInt8]], metrics: QNMetrics? = nil) {
+    init(parts: [[UInt8]], metrics: QNMetrics? = nil, receivedAt: Date = .now) {
         self.parts = parts
         self.metrics = metrics
+        self.receivedAt = receivedAt
     }
 
     var isStored: Bool { parts.first?.first == 0x23 }

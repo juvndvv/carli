@@ -25,8 +25,11 @@ struct HomeView: View {
                     if model.isEnabled(AppModule.tasks) {
                         TasksCard(model: model) { openModule(AppModule.tasks) }
                     }
+                    if model.isEnabled(AppModule.health), let health = model.health {
+                        WeightCard(summary: health) { _ = router.open(url: "/salud") } weigh: { _ = router.open(url: "/salud/pesarse") }
+                    }
                     if model.isEnabled(AppModule.habits), let habits = model.habits, !habits.habits.isEmpty {
-                        HabitsCard(model: model, habits: habits) { openModule(AppModule.habits) }
+                        HabitsCard(model: model, habits: habits) { _ = router.open(url: "/habitos/hoy") }
                     }
                     if model.isEnabled(AppModule.notes), let notes = model.notes {
                         NotesCard(model: model, snapshot: notes) { openModule(AppModule.notes) }
@@ -52,6 +55,7 @@ struct HomeView: View {
             .refreshable { await model.load() }
             .task { await model.load() }
             .onHabitsChanged { await model.loadHabits() }
+            .onHealthChanged { await model.loadHealth() }
             .onTasksChanged { await model.loadTasks() }
             .onReceive(NotificationCenter.default.publisher(for: .notesChanged)) { _ in Task { await model.loadNotes() } }
             .onReceive(NotificationCenter.default.publisher(for: .notificationsChanged)) { _ in Task { await model.loadNotifications() } }
@@ -399,6 +403,48 @@ private struct HabitsCard: View {
         let s = habits.summary
         if s.total == 0 { return "Nada que hacer hoy" }
         return habits.pending.isEmpty ? "Todo hecho · \(s.done) de \(s.total)" : "\(s.done) de \(s.total)"
+    }
+}
+
+private struct WeightCard: View {
+    var summary: HealthSummary
+    var open: () -> Void
+    var weigh: () -> Void
+
+    var body: some View {
+        CarliCard {
+            Button(action: open) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Peso")
+                            .font(.footnote)
+                            .foregroundStyle(CarliColor.text2)
+                        Text(summary.latest.map { WeightFormat.kg($0.weightKg) } ?? "Sin pesadas")
+                            .font(.title.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(CarliColor.text)
+                        if let change = summary.weekChange {
+                            Text("\(WeightFormat.change(change)) en 7 días")
+                                .font(.footnote)
+                                .foregroundStyle(CarliColor.text2)
+                        }
+                    }
+                    Spacer()
+                    Chevron()
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Abrir Salud")
+
+            if !summary.weighedToday {
+                Button(action: weigh) {
+                    Label("Pesarse", systemImage: "scalemass")
+                }
+                .buttonStyle(.glass)
+                .padding(.top, CarliSpace.s12)
+            }
+        }
     }
 }
 

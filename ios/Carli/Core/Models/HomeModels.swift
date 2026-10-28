@@ -17,7 +17,7 @@ struct AppModule: Decodable, Identifiable, Equatable {
     var comingSoon: Bool { available == false }
     var isOn: Bool { enabled == true && !comingSoon }
 
-    static let finance = "finance", tasks = "tasks", notes = "notes", habits = "habits"
+    static let finance = "finance", tasks = "tasks", notes = "notes", habits = "habits", health = "health"
 }
 
 // MARK: Finance

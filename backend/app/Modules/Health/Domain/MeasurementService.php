@@ -84,8 +84,8 @@ final readonly class MeasurementService
         return [
             'latest' => $latest,
             'latest_with_metrics' => Measurement::query()->ownedBy($user)->whereNotNull('fat_percent')->latest('measured_at')->first(),
-            'change_7d' => $latest === null ? null : $this->changeSince($user, $latest, 7),
-            'change_30d' => $latest === null ? null : $this->changeSince($user, $latest, 30),
+            'week_change' => $latest === null ? null : $this->changeSince($user, $latest, 7),
+            'month_change' => $latest === null ? null : $this->changeSince($user, $latest, 30),
             'goal_kg' => $goal,
             'to_goal_kg' => $latest === null || $goal === null ? null : round($latest->weight() - $goal, 2),
             'weighed_today' => $latest !== null && HabitCalendar::localDay($latest->measured_at)->equalTo(HabitCalendar::today()),

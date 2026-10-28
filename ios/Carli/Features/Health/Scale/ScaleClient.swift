@@ -53,6 +53,8 @@ final class ScaleClient: NSObject {
     private(set) var readings: [ScaleReading] = []
     private(set) var results: [QNResult] = []
     var profile: QNProfile
+    /// Called when a result is complete and again when a stored one gets its composition.
+    @ObservationIgnored var onResult: ((QNResult) -> Void)?
 
     @ObservationIgnored private var central: CBCentralManager?
     @ObservationIgnored private var peripheral: CBPeripheral?
@@ -64,6 +66,8 @@ final class ScaleClient: NSObject {
     @ObservationIgnored private var tookLiveReading = false
     @ObservationIgnored private var assembler = QNResultAssembler()
     @ObservationIgnored private var storedAssembler = QNResultAssembler()
+    /// The stored result the next 0x24 belongs to.
+    @ObservationIgnored private var lastStoredDate: Date?
 
     init(profile: QNProfile) {
         self.profile = profile
@@ -121,6 +125,7 @@ final class ScaleClient: NSObject {
         tookLiveReading = false
         assembler = QNResultAssembler()
         storedAssembler = QNResultAssembler()
+        lastStoredDate = nil
     }
 
     private func note(_ text: String) {
@@ -158,9 +163,11 @@ final class ScaleClient: NSObject {
             let stored = part.bytes.first == 0x23
             let complete = stored ? storedAssembler.add(part) : assembler.add(part)
             guard let result = complete else { return }
+            if stored { lastStoredDate = result.date }
             // Every history query returns all stored results again.
             if stored, results.contains(where: { $0.isStored && $0.date == result.date }) { return }
             results.insert(result, at: 0)
+            onResult?(result)
             let imp = result.impedances
             readings.insert(ScaleReading(date: result.date ?? .now, kg: result.kg, r1: imp.first ?? 0,
                                          r2: imp.dropFirst().first ?? 0, source: stored ? .stored : .live,
@@ -169,8 +176,10 @@ final class ScaleClient: NSObject {
             // The composition only comes with stored results, so ask again for the one just taken.
             if !stored { requestHistory() }
         case .metrics(let metrics):
-            guard let index = results.firstIndex(where: \.isStored) else { return }
+            guard let date = lastStoredDate, let index = results.firstIndex(where: { $0.isStored && $0.date == date }) else { return }
+            let changed = results[index].metrics != metrics
             results[index].metrics = metrics
+            if changed { onResult?(results[index]) }
             note(String(format: "Métricas: IMC %.1f, grasa %.1f %%, músculo %.1f %%, agua %.1f %%, %d, %d kcal",
                         metrics.bmi, metrics.fatPercent, metrics.musclePercent, metrics.waterPercent,
                         metrics.visceralOrBone, metrics.basalKcal))

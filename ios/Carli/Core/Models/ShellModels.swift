@@ -74,6 +74,7 @@ struct PendingDescriptor {
         case "tasks": "Tareas"
         case "notes": "Notas"
         case "habits": "Hábitos"
+        case "health": "Salud"
         default: module
         }
     }

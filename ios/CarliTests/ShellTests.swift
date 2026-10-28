@@ -38,6 +38,30 @@ struct ShellTests {
         #expect(AppLink.parse("/finanzas/movimientos/nuevo?tipo=ingreso")?.newTransaction == .income)
     }
 
+    @Test func habitLinksOpenInsideSalud() throws {
+        let today = try #require(AppLink.parse("/habitos/hoy"))
+        #expect(today.tab == "health")
+        #expect(today.section == "habits-today")
+        #expect(AppLink.parse("/habitos/habito/9")?.section == "habits")
+        #expect(AppLink.moduleSettings(AppModule.habits)?.steps == [.habitsSettings])
+    }
+
+    @Test func saludLinks() throws {
+        let weigh = try #require(AppLink.parse("/salud/pesarse"))
+        #expect(weigh.tab == "health")
+        #expect(weigh.weighIn)
+        #expect(AppLink.parse("/salud")?.section == "summary")
+        #expect(AppLink.parse("/salud/mediciones/m1")?.steps == [.measurement("m1")])
+        #expect(AppLink.moduleSettings(AppModule.health)?.steps == [.healthSettings])
+    }
+
+    @Test func saludShowsOnlyTheSectionsOfModulesThatAreOn() {
+        #expect(ModuleTab.health.sections(enabled: [AppModule.health]).map(\.id) == ["summary", "measurements", "trends"])
+        #expect(ModuleTab.health.sections(enabled: [AppModule.habits]).map(\.id) == ["habits-today", "habits", "habits-progress"])
+        #expect(ModuleTab.health.sections(enabled: [AppModule.health, AppModule.habits]).count == 6)
+        #expect(ModuleTab.finance.sections(enabled: []).count == 4)
+    }
+
     @Test func externalAndUnknownLinksAreIgnored() {
         #expect(AppLink.parse("https://example.com/finanzas") == nil)
         #expect(AppLink.parse("/desconocido") == nil)

@@ -14,6 +14,7 @@ enum AppLinkStep: Hashable {
     case account(String), goal(String), contact(String), banks, bankLink(String, renewed: Bool)
     case task(String), taskList(String), template(String), tasksSettings
     case habit(String), habitsSettings
+    case measurement(String), healthSettings
     case note(String), folder(String), notesCollection(trash: Bool), notesSettings
 }
 
@@ -30,6 +31,8 @@ struct AppLink: Equatable, Identifiable {
     var newTransaction: TransactionFormModel.Kind?
     /// Opens a movement's sheet (a search hit).
     var transactionId: String?
+    /// Opens "Pesarse" in Salud (the weigh-in reminder).
+    var weighIn = false
 
     static func == (lhs: AppLink, rhs: AppLink) -> Bool { lhs.id == rhs.id }
 
@@ -134,13 +137,25 @@ struct AppLink: Equatable, Identifiable {
             default: return nil
             }
         case "habitos":
-            let habits = ModuleTab.habits.rawValue
+            // Hábitos lives inside Salud; the old paths keep working.
+            let health = ModuleTab.health.rawValue
             switch (rest.count, at(0)) {
-            case (0, _), (1, "hoy"), (1, "nuevo"): return AppLink(tab: habits, section: "today")
-            case (1, "lista"): return AppLink(tab: habits, section: "list")
-            case (1, "progreso"): return AppLink(tab: habits, section: "progress")
-            case (1, "ajustes"): return AppLink(tab: habits, section: "list", steps: [.habitsSettings])
-            case (_, "habito") where rest.count >= 2: return AppLink(tab: habits, section: "list", steps: [.habit(rest[1])])
+            case (0, _), (1, "hoy"), (1, "nuevo"): return AppLink(tab: health, section: "habits-today")
+            case (1, "lista"): return AppLink(tab: health, section: "habits")
+            case (1, "progreso"): return AppLink(tab: health, section: "habits-progress")
+            case (1, "ajustes"): return AppLink(tab: health, section: "habits", steps: [.habitsSettings])
+            case (_, "habito") where rest.count >= 2: return AppLink(tab: health, section: "habits", steps: [.habit(rest[1])])
+            default: return nil
+            }
+        case "salud":
+            let health = ModuleTab.health.rawValue
+            switch (rest.count, at(0)) {
+            case (0, _), (1, "resumen"): return AppLink(tab: health, section: "summary")
+            case (1, "pesarse"): return AppLink(tab: health, section: "summary", weighIn: true)
+            case (1, "mediciones"): return AppLink(tab: health, section: "measurements")
+            case (2, "mediciones"): return AppLink(tab: health, section: "measurements", steps: [.measurement(rest[1])])
+            case (1, "tendencias"): return AppLink(tab: health, section: "trends")
+            case (1, "ajustes"): return AppLink(tab: health, section: "summary", steps: [.healthSettings])
             default: return nil
             }
         case "notas":
@@ -167,7 +182,8 @@ struct AppLink: Equatable, Identifiable {
         case AppModule.finance: AppLink(tab: ModuleTab.finance.rawValue, section: "more", steps: [.financePage(.settings)])
         case AppModule.tasks: AppLink(tab: ModuleTab.tasks.rawValue, section: "today", steps: [.tasksSettings])
         case AppModule.notes: AppLink(tab: ModuleTab.notes.rawValue, section: "all", steps: [.notesSettings])
-        case AppModule.habits: AppLink(tab: ModuleTab.habits.rawValue, section: "list", steps: [.habitsSettings])
+        case AppModule.habits: AppLink(tab: ModuleTab.health.rawValue, section: "habits", steps: [.habitsSettings])
+        case AppModule.health: AppLink(tab: ModuleTab.health.rawValue, section: "summary", steps: [.healthSettings])
         default: nil
         }
     }
