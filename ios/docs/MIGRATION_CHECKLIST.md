@@ -1,6 +1,6 @@
 # SwiftUI migration checklist
 
-Inventory of the Flutter app (`app/lib`) to track parity in the native iOS app (`ios/`).
+Inventory of the former Flutter app (removed 2026-10-28) used to track parity in the native iOS app (`ios/`).
 Status as of 2026-10-28: ✅ native · 🟡 partial · ⬜ pending.
 
 ## Shell

@@ -1,7 +1,6 @@
 # carli iOS (SwiftUI)
 
-Native rewrite of the Flutter app in `../app`, built for iOS 26+ with Liquid Glass.
-The Flutter app stays until every screen is migrated.
+Native iOS app, built for iOS 26+ with Liquid Glass. It replaced the Flutter app, removed on 2026-10-28.
 
 - Project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen) from `project.yml`
   (`Carli.xcodeproj` is not committed).

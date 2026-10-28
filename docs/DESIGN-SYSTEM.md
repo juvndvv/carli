@@ -1,5 +1,7 @@
 # Design System · "Ember"
 
+> Escrito para la app Flutter, retirada el 2026-10-28. La app SwiftUI (`ios/`) usa SF Pro, Liquid Glass y no tiene color de acento (tinta); el sol queda para el logo, las gráficas y los anillos.
+
 Design system propio de **carli**, el asistente personal. Desde el 26/10/2026 sigue el prototipo "Health Tracker" que Juanda dejó en `docs/Health Tracker.zip` (tokens en `ds/colors_and_type.css`, derivados del Yurest Design System): estética tipo Apple Fitness, fondo negro puro en oscuro y gris claro en claro, tarjetas grandes y redondeadas, títulos muy gruesos, etiquetas de sección en mayúsculas y un único acento rosa-rojo ("ember"). Sustituye a la dirección "Sol". Desde el 26/10/2026 (tarde) se acerca más a la app Fitness de iPhone: SF Pro, tarjetas sin borde en oscuro, títulos de sección grandes, anillos en el Resumen, tab bar flotante y selector de módulo arriba.
 
 Se implementa en la app Flutter: tokens en `app/lib/core/theme/tokens.dart` (`CarliColors` como `ThemeExtension`, `CarliSpace`, `CarliRadius`, `CarliMotion`), tipografía en `typography.dart` (`CarliType`), `ThemeData` claro y oscuro en `theme.dart`, y los componentes en `app/lib/ui/` como widgets `Carli*`. Los colores se leen con `context.colors`. En debug, `/dev/catalogo` muestra todos los componentes. El [mockup](../mockup/index.html) todavía usa los tokens monocromos antiguos.

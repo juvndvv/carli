@@ -12,8 +12,8 @@
 
 | Área | Decisión |
 |---|---|
-| Repositorio | Monorepo: `app/` (Flutter) + `backend/` (Laravel) + `infra/` + `docs/` |
-| Cliente | App nativa iOS en Flutter 3.47 / Dart 3.13 (bundle `dev.jotade.personal`, solo iOS). Riverpod 3, go_router 18, dio |
+| Repositorio | Monorepo: `ios/` (SwiftUI) + `backend/` (Laravel) + `infra/` + `docs/` |
+| Cliente | App nativa iOS en SwiftUI con Liquid Glass (iOS 26+, Swift 6, XcodeGen; bundle `dev.jotade.personal`) |
 | UI | Librería propia "Ember" en `app/lib/ui` (widgets `Carli*`) sobre `ThemeExtension` de tokens. Iconos Hugeicons, gráficos fl_chart |
 | Backend | Laravel 13, PHP 8.4, arquitectura modular por dominio (`app/Modules/*`) |
 | BD | PostgreSQL 18, un esquema por módulo (`finance.*`, `tasks.*`, `notes.*`, `habits.*`), PK UUIDv7 |
@@ -22,7 +22,7 @@
 | Colas y cron | Queue driver `database` + `schedule:work` en contenedor propio (sin Redis en v1) |
 | Contrato API | REST JSON `/api/v1`, OpenAPI generado con Scramble. Modelos Dart escritos a mano en cada módulo (`data/`) |
 | Despliegue | Backend: Docker Compose en VPS propio: Caddy (TLS + proxy de las rutas del backend) · PHP-FPM · worker · scheduler · Postgres. App: build de Xcode instalada en el dispositivo |
-| Calidad | Pest + Larastan + Pint · `flutter analyze` + `flutter test` + `integration_test` · GitHub Actions |
+| Calidad | Pest + Larastan + Pint · Swift Testing (`xcodebuild test`) · GitHub Actions |
 | Open Banking (F3) | Enable Banking (AIS, modo restricted, gratis para cuentas propias) detrás de la interfaz `BankDataProvider`. Solo lectura |
 
 > Versiones a fecha de octubre 2026. Fijarlas en `composer.json` / `pubspec.yaml` y actualizar con Renovate o Dependabot.
@@ -51,7 +51,7 @@ La app habla con `/api/v1` con un token personal de Sanctum (`Authorization: Bea
 
 ```
 personal-app/
-├── app/                     # Flutter (iOS)
+├── ios/                     # SwiftUI (iOS)
 ├── backend/                 # Laravel 13
 ├── infra/
 │   ├── docker/              # Dockerfiles (php, caddy, backup); la imagen de caddy se construye desde infra/
@@ -206,7 +206,7 @@ Notas es el único módulo que funciona sin conexión (ADR-014). La app escribe 
 - **Operaciones**: `{id (UUID v7 del cliente), type, at, payload}`. Tipos: `folder.upsert|delete`, `note.upsert|purge`, `item.upsert|delete`, `product.upsert|delete`, `section.upsert|delete` y `shopping.finish`. Los upserts son parciales (solo se escriben las claves presentes) y crean la fila si no existe. `POST /notes/sync` las aplica en orden, cada una en su transacción, y devuelve el resultado de cada una más el snapshot completo.
 - **Idempotencia**: cada id de operación se guarda en `notes.sync_operations` con su resultado; reenviarla devuelve `duplicate`.
 - **Conflictos**: último en escribir gana por fila con `updated_at = at` de la operación; una operación más antigua que la fila vuelve como `stale`. Borrados, purgas y `shopping.finish` siempre se aplican. Los efectos laterales (mover el contenido de una carpeta borrada, quitar `is_primary` a otra lista, la fecha de compra) no tocan `updated_at`, para no invalidar ediciones offline anteriores.
-- **Reposición** (sin jobs ni RRULE): un producto con `restock_mode = every_trip` toca justo después de cada compra; uno `interval`, cuando `fecha local (Europe/Madrid) de last_bought_at + restock_interval_days <= hoy`. Si toca, no está en la lista y `restocked_for` no es su ciclo (`{product_id}:{epoch de last_bought_at}`), se añade un elemento con id **UUID v5** del ciclo (namespace `6f0b5c3e-2d4a-5b8e-9c1f-7a3d2e1b0c9d`) y se apunta el ciclo en `restocked_for`. El servidor lo evalúa al construir el snapshot y tras `shopping.finish`; la app, al abrir la lista, al terminar compra y al recibir un snapshot. El id determinista evita duplicados entre los dos lados y `restocked_for` hace que un elemento repuesto y borrado no vuelva en el mismo ciclo. Los casos compartidos viven en `backend/app/Modules/Notes/tests/Fixtures/restock_cases.json` y los comprueban Pest y `flutter test`.
+- **Reposición** (sin jobs ni RRULE): un producto con `restock_mode = every_trip` toca justo después de cada compra; uno `interval`, cuando `fecha local (Europe/Madrid) de last_bought_at + restock_interval_days <= hoy`. Si toca, no está en la lista y `restocked_for` no es su ciclo (`{product_id}:{epoch de last_bought_at}`), se añade un elemento con id **UUID v5** del ciclo (namespace `6f0b5c3e-2d4a-5b8e-9c1f-7a3d2e1b0c9d`) y se apunta el ciclo en `restocked_for`. El servidor lo evalúa al construir el snapshot y tras `shopping.finish`; la app, al abrir la lista, al terminar compra y al recibir un snapshot. El id determinista evita duplicados entre los dos lados y `restocked_for` hace que un elemento repuesto y borrado no vuelva en el mismo ciclo. Los casos compartidos viven en `backend/app/Modules/Notes/tests/Fixtures/restock_cases.json` y los comprueba Pest.
 - **Terminar compra**: `shopping.finish {note_id, item_ids, finished_at}` borra los elementos del carro, pone `last_bought_at = finished_at` (a segundos) y suma `times_bought` a sus productos, y repone. Deshacer en la app manda operaciones compensatorias (restaura los elementos y `last_bought_at`, `times_bought` y `restocked_for` vía `product.upsert`, y borra lo repuesto).
 - **Búsqueda**: `notes.immutable_unaccent()` (envoltorio `IMMUTABLE` de `unaccent`) alimenta columnas `tsvector` generadas en español sobre título + cuerpo y sobre cada elemento, con índices GIN. La consulta convierte cada palabra en prefijo (`palabra:*`) y añade un `ILIKE` sin acentos de respaldo. `NotesSearcher` reutiliza la consulta para la búsqueda global.
 - Notas no aporta nada a Pendientes ni al aviso de las 20:00.
@@ -621,7 +621,9 @@ Middleware `module:habits`. Las fechas van en `Y-m-d` y los días se interpretan
 | GET | `/conversions/{template}` | Vista previa: objetivo deducido, `done/skipped/missed`, constancia y racha de partida y `cells` de 8 semanas. 404 si la plantilla no es tuya o Tareas está desactivado; 422 si no es diaria o semanal |
 | POST | `/conversions` | `{template_id, name?, icon?, show_in_tasks?}` → detalle del hábito creado (201) |
 
-## 7. App iOS (Flutter)
+## 7. App iOS (Flutter, histórico)
+
+> **Retirada el 2026-10-28.** La app actual es SwiftUI en `ios/` (ver `ios/README.md` y `ios/docs/MIGRATION_CHECKLIST.md`), con la misma API y paridad funcional salvo la caché offline de Notas (la app nativa es solo online). Esta sección describe la implementación Flutter anterior.
 
 Cliente principal: app nativa en `app/` (Flutter 3.47, Dart 3.13), solo iOS (bundle `dev.jotade.personal`, iOS 15+). Sustituye a la PWA Angular, retirada del repo el 2026-10-26.
 

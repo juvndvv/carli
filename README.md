@@ -1,36 +1,27 @@
 # carli
 
 Asistente personal modular (Finanzas, y más adelante Tareas, Salud, Hábitos y Notas).
-Stack: app nativa iOS en Flutter (`app/`) · Laravel 13 (`backend/`) · PostgreSQL 18. Backend autoalojado en VPS propio.
+Stack: app nativa iOS en SwiftUI (`ios/`) · Laravel 13 (`backend/`) · PostgreSQL 18. Backend autoalojado en VPS propio.
 
 ## Documentación
 
 - [docs/PRD.md](docs/PRD.md): requisitos de producto (shell + módulo Finanzas, fases F0–F3).
 - [docs/TRD.md](docs/TRD.md): arquitectura, modelo de datos, API, app iOS, despliegue y plan de implementación.
-- [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md): tokens (claro/oscuro), tipografía, componentes y patrones de la librería Ember en Flutter.
-- [app/README.md](app/README.md): arranque y pruebas de la app iOS.
+- [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md): tokens (claro/oscuro), tipografía, componentes y patrones (escrito para la app Flutter, ya retirada).
+- [ios/README.md](ios/README.md): arranque y pruebas de la app iOS.
 - [mockup/index.html](mockup/index.html): mockup navegable antiguo (tokens monocromos previos a Ember). Ábrelo en el navegador (funciona sin servidor).
 
-## App iOS (Flutter)
+## App iOS (SwiftUI)
 
-Requisitos: Flutter 3.47 (Dart 3.13), Xcode y un simulador de iOS. Bundle id `dev.jotade.personal`, iOS 15+.
+Requisitos: Xcode con el SDK de iOS 26 y [XcodeGen](https://github.com/yonaskolb/XcodeGen). Bundle id `dev.jotade.personal`, iOS 26+. La app Flutter anterior (`app/`) se retiró el 2026-10-28.
 
 ```sh
-cd app
-flutter pub get
-flutter run -d <simulador> --dart-define=API_URL=http://<host>:8180/api
+cd ios
+xcodegen            # genera Carli.xcodeproj desde project.yml
+scripts/sim.sh      # compila, instala y abre en el simulador
 ```
 
-`API_URL` apunta al backend (por defecto producción, `https://carli.jotade.io/api`, ver `lib/core/api/api_config.dart`; para un backend local pasa `--dart-define=API_URL=http://<host>:8180/api`). En builds de depuración hay un catálogo de componentes en `/dev/catalogo`.
-
-| Comando (en `app/`) | Qué hace |
-|---|---|
-| `flutter analyze` | Análisis estático y lints |
-| `flutter test` | Tests unitarios y de widgets (API simulada con el adaptador `FakeApi` de `test/support`) |
-| `flutter test integration_test/<fichero> -d <simulador> --dart-define=API_URL=http://127.0.0.1:8181/api` | Tests de integración contra un backend local |
-| `SCREENSHOT_DIR=<dir> flutter drive --driver=test_driver/integration_test.dart --target=integration_test/screenshots<_x>_test.dart -d <simulador> --dart-define=API_URL=...` | Capturas de pantalla (`SHOT_THEME=light\|dark`, `SHOT_PREFIX` por `--dart-define`) |
-
-Los tests de integración y las capturas usan el usuario demo: un backend local en el puerto 8181 contra la base de pruebas, preparada con `SEED_DEMO_USER=true php artisan migrate:fresh --seed`.
+La app apunta a producción (`https://carli.jotade.io/api`). Tests: `make test-app` (o `xcodebuild test` en `ios/`, ver [ios/README.md](ios/README.md)).
 
 ## Puesta en marcha (Docker)
 
@@ -52,7 +43,7 @@ La API queda en <http://localhost:8180/api>; la app iOS la usa con `API_URL`. Ot
 | `make seed-demo` | Carga datos de demostración (`SEED_DEMO_USER=true`) |
 | `make shell` | Shell dentro de `app` |
 | `make test-backend` | Pest en una imagen `dev` contra la base `TEST_DB_DATABASE` (por defecto `personal_test`) |
-| `make test-app` | `flutter analyze` y `flutter test` en `app/` (necesita Flutter en el host) |
+| `make test-app` | Tests de la app iOS en el simulador (necesita Xcode y XcodeGen en el Mac) |
 | `make backup` | Ejecuta un backup ahora |
 
 La configuración de Laravel llega a los contenedores por variables de entorno desde el `.env` raíz; `backend/.env` no se copia a las imágenes. Postgres solo escucha en `127.0.0.1:55440` del host.
