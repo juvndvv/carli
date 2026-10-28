@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Push\RefreshWidgets;
 use App\Models\User;
 use App\Modules\Finance\BankSync\Services\BankSyncService;
 use App\Modules\Finance\Domain\Services\BudgetService;
@@ -19,6 +20,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -188,6 +190,37 @@ describe('import', function () {
 
         expect($this->connection->refresh()->status->value)->toBe('expired');
         Http::assertNothingSent();
+    });
+});
+
+describe('widget refresh', function () {
+    it('imports several transactions when unique job locks live in the database cache', function () {
+        config(['cache.default' => 'database']);
+        app()->forgetInstance('cache.store');
+        Queue::fake([RefreshWidgets::class]);
+        EB::fakeAccountData([
+            EB::transaction('12.34', 'DBIT', '2026-10-21', 'ref-1'),
+            EB::transaction('8.50', 'DBIT', '2026-10-22', 'ref-2'),
+            EB::transaction('3.20', 'DBIT', '2026-10-23', 'ref-3'),
+        ], '3487.66');
+
+        $result = runSync($this->connection);
+
+        expect($result['imported'])->toBe(3)
+            ->and(bankRows($this->account->id))->toHaveCount(3);
+        Queue::assertPushed(RefreshWidgets::class, 1);
+    });
+
+    it('skips the widget refresh when the saving transaction rolls back', function () {
+        Queue::fake([RefreshWidgets::class]);
+
+        expect(fn () => DB::transaction(function () {
+            F::expense($this->user, $this->account, 1000, '2026-10-21');
+
+            throw new RuntimeException('import aborted');
+        }))->toThrow(RuntimeException::class);
+
+        Queue::assertNotPushed(RefreshWidgets::class);
     });
 });
 

@@ -33,6 +33,7 @@ x-laravel-env: &laravel-env
   SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8180,localhost,127.0.0.1:8180}
   QUEUE_CONNECTION: database
   CACHE_STORE: database
+  DB_CACHE_LOCK_CONNECTION: pgsql_locks
   BROADCAST_CONNECTION: log
   FILESYSTEM_DISK: local
   MAIL_MAILER: ${MAIL_MAILER:-log}

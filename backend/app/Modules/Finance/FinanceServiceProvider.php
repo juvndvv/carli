@@ -57,6 +57,7 @@ use App\Modules\Finance\Pending\FinancePendingItems;
 use App\Modules\Finance\Policies\OwnedByUserPolicy;
 use App\Modules\Finance\Search\FinanceSearcher;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -135,7 +136,7 @@ class FinanceServiceProvider extends ServiceProvider
         Event::listen(TransactionSaved::class, SyncDebtClosure::class);
 
         // Bank imports save rows directly, so watch the model rather than TransactionSaved.
-        $refreshWidgets = fn (Transaction $transaction) => RefreshWidgets::dispatch($transaction->user_id);
+        $refreshWidgets = fn (Transaction $transaction) => DB::afterCommit(fn () => RefreshWidgets::dispatch($transaction->user_id));
         Transaction::saved($refreshWidgets);
         Transaction::deleted($refreshWidgets);
         Transaction::restored($refreshWidgets);
