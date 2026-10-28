@@ -3,7 +3,7 @@ import Observation
 
 /// Settings screens pushed from Inicio › Ajustes.
 enum SettingsPage: String, Hashable {
-    case profile, security, notifications, modules, appearance
+    case profile, security, notifications, modules, appearance, scaleLab
 }
 
 /// One screen pushed on top of a tab's root, in order.

@@ -42,6 +42,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIAppFonts: [Geist-Variable.ttf]
         NSFaceIDUsageDescription: carli usa Face ID para desbloquear la app y proteger tus datos.
+        NSBluetoothAlwaysUsageDescription: carli usa Bluetooth para leer tu peso y composición corporal de la báscula.
         ITSAppUsesNonExemptEncryption: false
   CarliTests:
     type: bundle.unit-test

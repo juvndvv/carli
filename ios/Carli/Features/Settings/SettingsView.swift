@@ -14,6 +14,7 @@ extension View {
             case .notifications: NotificationSettingsView(api: api)
             case .modules: ModuleSettingsView(api: api)
             case .appearance: AppearanceSettingsView()
+            case .scaleLab: ScaleLabView()
             }
         }
     }
@@ -74,6 +75,11 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
+            #if DEBUG
+            Section("Pruebas") {
+                NavigationLink(value: SettingsPage.scaleLab) { Label("Báscula", systemImage: "scalemass") }
+            }
+            #endif
             Section {
                 Button("Cerrar sesión", role: .destructive) { confirmingLogout = true }
             } footer: {
