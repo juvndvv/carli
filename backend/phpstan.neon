@@ -15,4 +15,5 @@ parameters:
         - app/Modules/Tasks/tests
         - app/Modules/Notes/tests
         - app/Modules/Habits/tests
+        - app/Modules/Health/tests
     tmpDir: storage/framework/phpstan

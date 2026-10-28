@@ -20,6 +20,7 @@ final class HomeModel {
     var unreadCount = 0
     var tasks: Slot<TasksToday> = .loading
     var habits: HabitsToday?
+    var health: HealthSummary?
     var notes: NotesSnapshot?
     var toast: String?
 
@@ -44,7 +45,8 @@ final class HomeModel {
         async let tasks: Void = isEnabled(AppModule.tasks) ? loadTasks() : ()
         async let habits: Void = isEnabled(AppModule.habits) ? loadHabits() : ()
         async let notes: Void = isEnabled(AppModule.notes) ? loadNotes() : ()
-        _ = await (finance, pending, notifications, tasks, habits, notes)
+        async let health: Void = isEnabled(AppModule.health) ? loadHealth() : ()
+        _ = await (finance, pending, notifications, tasks, habits, notes, health)
     }
 
     func loadModules() async {
@@ -91,6 +93,10 @@ final class HomeModel {
         if let envelope: DataEnvelope<HabitsToday> = try? await api.get("v1/habits/today") {
             habits = envelope.data
         }
+    }
+
+    func loadHealth() async {
+        if let summary = try? await HealthAPI.summary(api) { health = summary }
     }
 
     func loadNotes() async {

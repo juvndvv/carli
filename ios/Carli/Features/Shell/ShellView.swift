@@ -8,14 +8,14 @@ struct ModuleSection: Identifiable, Hashable {
 
 /// The modules that get a tab, in bar order, with their sections and "+" action.
 enum ModuleTab: String, CaseIterable {
-    case finance, tasks, notes, habits
+    case finance, tasks, notes, health
 
     var title: String {
         switch self {
         case .finance: "Finanzas"
         case .tasks: "Tareas"
         case .notes: "Notas"
-        case .habits: "Hábitos"
+        case .health: "Salud"
         }
     }
 
@@ -29,9 +29,26 @@ enum ModuleTab: String, CaseIterable {
         case .tasks: [.init(id: "today", title: "Hoy"), .init(id: "upcoming", title: "Próximas"),
                       .init(id: "lists", title: "Listas"), .init(id: "templates", title: "Plantillas")]
         case .notes: [.init(id: "all", title: "Notas"), .init(id: "shopping", title: "Compra")]
-        case .habits: [.init(id: "today", title: "Hoy"), .init(id: "list", title: "Hábitos"),
-                       .init(id: "progress", title: "Progreso")]
+        case .health: Self.weightSections + Self.habitSections
         }
+    }
+
+    /// Salud holds the weight and the Hábitos module; each half shows only while its module is on.
+    static let weightSections: [ModuleSection] = [.init(id: "summary", title: "Resumen"), .init(id: "measurements", title: "Mediciones"),
+                                                  .init(id: "trends", title: "Tendencias")]
+    static let habitSections: [ModuleSection] = [.init(id: "habits-today", title: "Hábitos hoy"), .init(id: "habits", title: "Hábitos"),
+                                                 .init(id: "habits-progress", title: "Progreso")]
+
+    func sections(enabled: Set<String>) -> [ModuleSection] {
+        guard self == .health else { return sections }
+        let weight = enabled.contains(AppModule.health) ? Self.weightSections : []
+        let habits = enabled.contains(AppModule.habits) ? Self.habitSections : []
+        return weight + habits
+    }
+
+    /// The modules that make this tab show up.
+    var moduleIds: [String] {
+        self == .health ? [AppModule.health, AppModule.habits] : [rawValue]
     }
 
     var addLabel: String {
@@ -39,7 +56,7 @@ enum ModuleTab: String, CaseIterable {
         case .finance: "Nuevo movimiento"
         case .tasks: "Nueva tarea"
         case .notes: "Nueva nota"
-        case .habits: "Nuevo hábito"
+        case .health: "Pesarse"
         }
     }
 }
@@ -65,7 +82,9 @@ struct ShellView: View {
 
             ForEach(modules, id: \.self) { module in
                 Tab(module.title, image: module.icon, value: module.rawValue) {
-                    ModuleRootView(module: module) { selection = $0 }
+                    let sections = module.sections(enabled: enabledIds)
+                    ModuleRootView(module: module, sections: sections) { selection = $0 }
+                        .id(sections)
                 }
             }
         }
@@ -120,9 +139,13 @@ struct ShellView: View {
 
     /// Enabled modules only; until /modules answers, Finanzas alone.
     private var modules: [ModuleTab] {
-        guard let loaded = home?.modules else { return [.finance] }
-        let on = Set(loaded.filter(\.isOn).map(\.id))
-        return ModuleTab.allCases.filter { on.contains($0.rawValue) }
+        guard home?.modules != nil else { return [.finance] }
+        let on = enabledIds
+        return ModuleTab.allCases.filter { !on.isDisjoint(with: $0.moduleIds) }
+    }
+
+    private var enabledIds: Set<String> {
+        Set((home?.modules ?? []).filter(\.isOn).map(\.id))
     }
 }
 
@@ -131,12 +154,14 @@ struct ShellView: View {
 /// with a centred inline title, so the selector is a toolbar Menu instead.
 struct ModuleRootView: View {
     var module: ModuleTab
+    var sections: [ModuleSection]
     /// Switches the tab bar to another module (Hoy in Tareas links to Hábitos).
     var openTab: (String) -> Void = { _ in }
     @Environment(AuthModel.self) private var auth
     @Environment(AppRouter.self) private var router
     @State private var section: ModuleSection
     @State private var adding = false
+    @State private var weighing = false
     @State private var newKind: TransactionFormModel.Kind = .expense
     @State private var toast: String?
     /// Filters a link asked for; entering Movimientos from the header menu starts clean.
@@ -147,10 +172,12 @@ struct ModuleRootView: View {
     @State private var shoppingList: String?
     @State private var shoppingFocus = 0
 
-    init(module: ModuleTab, openTab: @escaping (String) -> Void = { _ in }) {
+    init(module: ModuleTab, sections: [ModuleSection]? = nil, openTab: @escaping (String) -> Void = { _ in }) {
+        let sections = sections.flatMap { $0.isEmpty ? nil : $0 } ?? module.sections
         self.module = module
+        self.sections = sections
         self.openTab = openTab
-        _section = State(initialValue: module.sections[0])
+        _section = State(initialValue: sections[0])
     }
 
     var body: some View {
@@ -172,11 +199,14 @@ struct ModuleRootView: View {
                         }
                         .buttonStyle(.glassProminent)
                         .tint(CarliColor.primary)
-                        .accessibilityLabel(module == .notes && section.id == "shopping" ? "Añadir producto" : module.addLabel)
+                        .accessibilityLabel(addLabel)
                     }
                 }
                 .sheet(isPresented: $adding) {
                     addSheet
+                }
+                .sheet(isPresented: $weighing) {
+                    WeighInSheet(api: auth.api) { toast = $0 }
                 }
                 .carliToast($toast)
         }
@@ -188,7 +218,7 @@ struct ModuleRootView: View {
         guard let link = router.take(for: module.rawValue) else { return }
         if module == .notes, notesStore == nil { notesStore = NotesStore(api: auth.api) }
         transactionFilters = link.filters ?? TransactionFilters()
-        if let id = link.section, let target = module.sections.first(where: { $0.id == id }) { section = target }
+        if let id = link.section, let target = sections.first(where: { $0.id == id }) { section = target }
         path = NavigationPath()
         let steps = link.steps
         if !steps.isEmpty {
@@ -201,6 +231,9 @@ struct ModuleRootView: View {
         if let kind = link.newTransaction, module == .finance {
             newKind = kind
             adding = true
+        }
+        if link.weighIn, module == .health {
+            weighing = true
         }
     }
 
@@ -218,6 +251,8 @@ struct ModuleRootView: View {
         case .tasksSettings: path.append(TasksSettingsRoute())
         case .habit(let id): path.append(HabitRoute(id: id))
         case .habitsSettings: path.append(HabitsSettingsRoute())
+        case .measurement(let id): path.append(MeasurementRoute(id: id))
+        case .healthSettings: path.append(HealthSettingsRoute())
         case .note(let id): path.append(NoteRoute(id: id))
         case .folder(let id): path.append(FolderRoute(id: id))
         case .notesCollection(let trash): path.append(NotesCollectionRoute(trash: trash))
@@ -239,18 +274,24 @@ struct ModuleRootView: View {
         case (.finance, "more"):
             FinanceMoreView(api: auth.api, go: open)
         case (.tasks, "today"):
-            TasksTodayView(api: auth.api) { openTab(ModuleTab.habits.rawValue) }
+            TasksTodayView(api: auth.api) { _ = router.open(url: "/habitos/hoy") }
         case (.tasks, "upcoming"):
             TasksUpcomingView(api: auth.api)
         case (.tasks, "lists"):
             TaskListsView(api: auth.api)
         case (.tasks, "templates"):
             TemplatesView(api: auth.api)
-        case (.habits, "today"):
+        case (.health, "summary"):
+            HealthSummaryView(api: auth.api, habitsOn: sections.contains(ModuleTab.habitSections[0])) { weighing = true }
+        case (.health, "measurements"):
+            MeasurementsView(api: auth.api)
+        case (.health, "trends"):
+            HealthTrendsView(api: auth.api)
+        case (.health, "habits-today"):
             HabitsTodayView(api: auth.api) { adding = true }
-        case (.habits, "list"):
+        case (.health, "habits"):
             HabitsListView(api: auth.api) { adding = true }
-        case (.habits, "progress"):
+        case (.health, "habits-progress"):
             HabitsProgressView(api: auth.api)
         case (.notes, "all"):
             if let notesStore {
@@ -287,7 +328,7 @@ struct ModuleRootView: View {
             NewTaskSheet(api: auth.api, onSaved: { toast = $0 }) { seed in
                 path.append(TemplateRoute(id: nil, seed: seed))
             }
-        case .habits:
+        case .health:
             HabitEditorView(api: auth.api) { id in path.append(HabitRoute(id: id)) }
         case .notes:
             NewNoteSheet { type in
@@ -301,10 +342,13 @@ struct ModuleRootView: View {
         }
     }
 
-    /// "+" opens the module's create sheet; in Compra it focuses the add-product field instead.
+    /// "+" opens the module's create sheet; in Compra it focuses the add-product field instead,
+    /// and in Salud's weight sections it opens "Pesarse".
     private func add() {
         if module == .notes && section.id == "shopping" {
             shoppingFocus += 1
+        } else if isWeightSection {
+            weighing = true
         } else {
             newKind = .expense
             adding = true
@@ -323,7 +367,17 @@ struct ModuleRootView: View {
 
     private func show(_ id: String) {
         path = NavigationPath()
-        if let target = module.sections.first(where: { $0.id == id }) { section = target }
+        if let target = sections.first(where: { $0.id == id }) { section = target }
+    }
+
+    private var isWeightSection: Bool {
+        module == .health && ModuleTab.weightSections.contains(section)
+    }
+
+    private var addLabel: String {
+        if module == .notes && section.id == "shopping" { return "Añadir producto" }
+        if module == .health && !isWeightSection { return "Nuevo hábito" }
+        return module.addLabel
     }
 
     private var sectionMenu: some View {
@@ -333,7 +387,7 @@ struct ModuleRootView: View {
                 path = NavigationPath()
                 section = picked
             })) {
-                ForEach(module.sections) { Text($0.title).tag($0) }
+                ForEach(sections) { Text($0.title).tag($0) }
             }
         } label: {
             VStack(alignment: .leading, spacing: 0) {

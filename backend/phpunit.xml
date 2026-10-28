@@ -24,6 +24,7 @@
             <directory>app/Modules/Tasks/tests</directory>
             <directory>app/Modules/Notes/tests</directory>
             <directory>app/Modules/Habits/tests</directory>
+            <directory>app/Modules/Health/tests</directory>
         </exclude>
     </source>
     <php>
