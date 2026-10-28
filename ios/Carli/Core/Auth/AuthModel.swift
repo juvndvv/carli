@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import WidgetKit
 
 struct Credentials: Encodable {
     var email: String
@@ -65,6 +66,7 @@ final class AuthModel {
         if response.twoFactor == true { return .twoFactorRequired }
         guard let token = response.token else { throw APIError(status: 500) }
         tokens.write(token)
+        WidgetCenter.shared.reloadAllTimelines()
         state = .signedIn(response.user)
         return .signedIn
     }
@@ -84,6 +86,7 @@ final class AuthModel {
         await PushManager.shared.forget()
         try? await api.delete("v1/auth/token")
         tokens.clear()
+        WidgetCenter.shared.reloadAllTimelines()
         state = .signedOut(expired: false)
     }
 

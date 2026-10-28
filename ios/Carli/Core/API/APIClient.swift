@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 /// Thin JSON client for the carli Laravel API (Sanctum bearer tokens).
 final class APIClient {
@@ -82,6 +83,10 @@ final class APIClient {
         guard (200..<300).contains(status) else {
             if status == 401, token != nil { onUnauthorized?() }
             throw APIError.from(status: status, body: data)
+        }
+        // Any finance write can change what the Lock Screen widgets show.
+        if method != "GET", path.hasPrefix("v1/finance/") {
+            WidgetCenter.shared.reloadAllTimelines()
         }
         if data.isEmpty || status == 204, let empty = Empty() as? T {
             return empty

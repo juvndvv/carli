@@ -16,16 +16,34 @@ final class ApnsClient
 
     public function send(string $deviceToken, ApnsEnvironment $environment, ApnsMessage $message): ApnsDelivery
     {
+        return $this->post($deviceToken, $environment, (string) ApnsConfiguration::bundleId(), 'alert', '10', $message->payload());
+    }
+
+    /**
+     * Asks WidgetKit to reload the widget timelines. The system budgets these, so callers should coalesce them.
+     */
+    public function refreshWidgets(string $deviceToken, ApnsEnvironment $environment): ApnsDelivery
+    {
+        return $this->post($deviceToken, $environment, ApnsConfiguration::bundleId().'.push-type.widgets', 'widgets', '5', [
+            'aps' => ['content-changed' => true],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function post(string $deviceToken, ApnsEnvironment $environment, string $topic, string $pushType, string $priority, array $payload): ApnsDelivery
+    {
         try {
             $response = Http::withOptions(['version' => 2.0])
                 ->withToken($this->providerToken(), 'bearer')
                 ->withHeaders([
-                    'apns-topic' => ApnsConfiguration::bundleId(),
-                    'apns-push-type' => 'alert',
-                    'apns-priority' => '10',
+                    'apns-topic' => $topic,
+                    'apns-push-type' => $pushType,
+                    'apns-priority' => $priority,
                 ])
                 ->timeout(ApnsConfiguration::timeoutSeconds())
-                ->post("{$environment->host()}/3/device/{$deviceToken}", $message->payload());
+                ->post("{$environment->host()}/3/device/{$deviceToken}", $payload);
         } catch (ConnectionException $exception) {
             Log::warning('APNs request failed', ['error' => $exception->getMessage()]);
 
@@ -46,7 +64,7 @@ final class ApnsClient
             Cache::forget($this->cacheKey());
         }
 
-        Log::warning('APNs rejected a notification', ['status' => $response->status(), 'reason' => $reason]);
+        Log::warning('APNs rejected a notification', ['status' => $response->status(), 'reason' => $reason, 'push_type' => $pushType]);
 
         return ApnsDelivery::Failed;
     }

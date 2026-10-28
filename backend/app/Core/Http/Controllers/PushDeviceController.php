@@ -6,6 +6,7 @@ use App\Core\Http\Requests\DeletePushDeviceRequest;
 use App\Core\Http\Requests\StorePushDeviceRequest;
 use App\Core\Models\PushDevice;
 use App\Core\Push\ApnsConfiguration;
+use App\Core\Push\PushDeviceKind;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,11 @@ class PushDeviceController
     {
         $device = PushDevice::query()->updateOrCreate(
             ['token' => strtolower((string) $request->validated('token'))],
-            ['user_id' => $this->user($request)->id, 'environment' => $request->validated('environment')],
+            [
+                'user_id' => $this->user($request)->id,
+                'environment' => $request->validated('environment'),
+                'kind' => $request->validated('kind', PushDeviceKind::App->value),
+            ],
         );
 
         return response()->json([
@@ -31,7 +36,8 @@ class PushDeviceController
 
     public function destroy(DeletePushDeviceRequest $request): Response
     {
-        $this->user($request)->pushDevices()
+        PushDevice::query()
+            ->where('user_id', $this->user($request)->id)
             ->where('token', strtolower((string) $request->validated('token')))
             ->delete();
 

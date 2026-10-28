@@ -3,6 +3,7 @@
 namespace App\Modules\Finance;
 
 use App\Core\Pending\PendingRegistry;
+use App\Core\Push\RefreshWidgets;
 use App\Core\Search\ModuleSearcher;
 use App\Modules\Finance\BankSync\Contracts\BankDataProvider;
 use App\Modules\Finance\BankSync\Providers\EnableBankingProvider;
@@ -132,6 +133,12 @@ class FinanceServiceProvider extends ServiceProvider
         Event::listen(TransactionSaved::class, CheckBudgetThresholds::class);
         Event::listen(TransactionSaved::class, CheckGoalMilestones::class);
         Event::listen(TransactionSaved::class, SyncDebtClosure::class);
+
+        // Bank imports save rows directly, so watch the model rather than TransactionSaved.
+        $refreshWidgets = fn (Transaction $transaction) => RefreshWidgets::dispatch($transaction->user_id);
+        Transaction::saved($refreshWidgets);
+        Transaction::deleted($refreshWidgets);
+        Transaction::restored($refreshWidgets);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
