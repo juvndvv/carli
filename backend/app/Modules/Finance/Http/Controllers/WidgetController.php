@@ -53,7 +53,7 @@ final class WidgetController extends FinanceController
             ],
             'latest' => $latest->map(fn (Transaction $transaction) => [
                 'id' => $transaction->id,
-                'name' => $transaction->payee ?? $transaction->description ?? $transaction->category?->name ?? 'Gasto',
+                'name' => $transaction->payee ?? $transaction->description ?? $transaction->category->name ?? 'Gasto',
                 'amount_cents' => $transaction->amount_cents,
                 'date' => $transaction->date->toDateString(),
             ])->values()->all(),
