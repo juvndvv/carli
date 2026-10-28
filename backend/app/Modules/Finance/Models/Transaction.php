@@ -212,8 +212,6 @@ class Transaction extends Model
             return $this->amount_cents;
         }
 
-        $own = $this->amount_cents + $this->sharedCents();
-
-        return $this->account === null ? $own : $this->account->ownShareOf($own);
+        return $this->account->ownShareOf($this->amount_cents + $this->sharedCents());
     }
 }
