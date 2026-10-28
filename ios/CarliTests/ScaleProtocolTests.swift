@@ -78,7 +78,8 @@ struct ScaleProtocolTests {
 }
 
 struct ScaleResultTests {
-    /// The three frames Juanda's CS10G (firmware V48.0) sent at the end of a weigh-in on 2026-10-28.
+    /// The three frames Juanda's CS10G (firmware V48.0) sent at the end of a weigh-in on 2026-10-28;
+    /// the display showed 137.8 kg.
     private let frames: [[UInt8]] = [
         [0x10, 0x14, 0x01, 0x02, 0x31, 0x35, 0xD4, 0x0B, 0x68, 0x09, 0xEB, 0x0B, 0x3F, 0x09, 0xC6, 0x09, 0x92, 0x08, 0x0D, 0x91],
         [0x10, 0x14, 0x09, 0x20, 0x32, 0x07, 0xBA, 0x00, 0xD4, 0x00, 0xCA, 0x0B, 0x51, 0x09, 0xF8, 0x0A, 0xEA, 0x09, 0xAE, 0xE6],
@@ -106,6 +107,9 @@ struct ScaleResultTests {
         }
         let full = try #require(result)
         #expect(full.parts == frames)
-        #expect(Array(full.impedances.prefix(6)) == [3028, 2408, 3051, 2367, 2502, 2194])
+        #expect(full.kg == 137.8)
+        #expect(full.impedances == [2920, 2539, 2879, 2502, 2450, 2061,
+                                    2336, 1978, 212, 202, 2897, 2552, 2794, 2478,
+                                    2487, 2126, 2476, 2115, 272, 256, 0, 22272])
     }
 }

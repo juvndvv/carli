@@ -155,6 +155,10 @@ final class ScaleClient: NSObject {
         case .resultPart(let part):
             guard let result = assembler.add(part) else { return }
             results.insert(result, at: 0)
+            let imp = result.impedances
+            readings.insert(ScaleReading(date: .now, kg: result.kg, r1: imp.first ?? 0, r2: imp.dropFirst().first ?? 0,
+                                         source: .live, frame: result.parts.map(QN.hex).joined(separator: " | ")), at: 0)
+            note(String(format: "Peso: %.2f kg", result.kg))
             note("Resultado completo (\(result.parts.count) tramas): \(result.impedances.map(String.init).joined(separator: " "))")
         case .weight(let weight):
             // Readings outside a person's range mean we misread the frame; keep them only in the log.

@@ -115,14 +115,25 @@ nonisolated struct QNResultPart: Equatable {
     var bytes: [UInt8]
 }
 
-/// All parts of one final result. The weight's position is still unknown; the impedances read
-/// as little-endian pairs from byte 6 of each part, in tenths of an ohm.
+/// All parts of one final result. Part 1 starts with the weight (bytes 5–6, big-endian,
+/// hundredths of a kg, confirmed against the display: 0x35D4 = 137.80 kg). The rest are
+/// big-endian impedances in tenths of an ohm, in pairs per segment at two frequencies (arms
+/// ~250–290 Ω, legs ~200–245 Ω, trunk ~20 Ω); which segment is which is still to be mapped.
 nonisolated struct QNResult: Equatable {
     var parts: [[UInt8]]
 
+    var kg: Double {
+        guard let first = parts.first, first.count > 6 else { return 0 }
+        return Double(UInt16(first[5]) << 8 | UInt16(first[6])) / 100
+    }
+
+    /// Part 1 carries values from byte 7 (after the weight); later parts from byte 2, skipping the
+    /// part number in byte 4. The checksum is left out.
     var impedances: [UInt16] {
-        parts.flatMap { part in
-            stride(from: 6, to: part.count - 2, by: 2).map { UInt16(part[$0 + 1]) << 8 | UInt16(part[$0]) }
+        parts.enumerated().flatMap { offset, part -> [UInt16] in
+            guard part.count == 20 else { return [] }
+            let data = offset == 0 ? Array(part[7...18]) : Array(part[2...3] + part[5...18])
+            return stride(from: 0, to: data.count - 1, by: 2).map { UInt16(data[$0]) << 8 | UInt16(data[$0 + 1]) }
         }
     }
 }
