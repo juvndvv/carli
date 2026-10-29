@@ -211,12 +211,7 @@ struct TransactionsView: View {
         .alignmentGuide(.listRowSeparatorLeading) { _ in 68 }
         .swipeActions(edge: .trailing, allowsFullSwipe: !selecting) {
             if !selecting {
-            Button(role: .destructive) {
-                delete(transaction)
-            } label: {
-                Label("Eliminar", systemImage: "trash")
-            }
-            .tint(CarliColor.dangerFill)
+                DeleteSwipeButton("Eliminar") { delete(transaction) }
             }
         }
     }

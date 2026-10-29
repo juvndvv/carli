@@ -223,7 +223,7 @@ struct NotificationsView: View {
             }
         }
         .swipeActions(edge: .trailing) {
-            Button("Borrar", systemImage: "trash", role: .destructive) { Task { await model.delete(item.id) } }
+            DeleteSwipeButton("Borrar") { Task { await model.delete(item.id) } }
         }
     }
 }

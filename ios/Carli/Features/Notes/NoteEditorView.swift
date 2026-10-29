@@ -185,7 +185,7 @@ private struct ListNoteEditor: View {
             Section {
                 ForEach(visible) { item in
                     ItemRow(store: store, item: item, focus: $focus) { focus = store.addItem(note.id, "", at: item.position + 1) }
-                        .swipeActions { Button("Borrar", systemImage: "trash", role: .destructive) { store.deleteItem(item) } }
+                        .swipeActions { DeleteSwipeButton("Borrar") { store.deleteItem(item) } }
                 }
                 .onMove { from, to in
                     var ordered = visible
@@ -211,7 +211,7 @@ private struct ListNoteEditor: View {
                     if showDone {
                         ForEach(done) { item in
                             ItemRow(store: store, item: item, focus: $focus, onSubmit: nil)
-                                .swipeActions { Button("Borrar", systemImage: "trash", role: .destructive) { store.deleteItem(item) } }
+                                .swipeActions { DeleteSwipeButton("Borrar") { store.deleteItem(item) } }
                         }
                     }
                 } header: {

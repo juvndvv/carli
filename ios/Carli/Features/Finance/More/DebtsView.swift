@@ -491,8 +491,7 @@ struct DebtDetailView: View {
                 .foregroundStyle(payment.amountCents > 0 ? CarliColor.positive : CarliColor.text)
         }
         .swipeActions {
-            Button("Borrar", systemImage: "trash", role: .destructive) { Task { await removePayment(payment) } }
-                .tint(CarliColor.dangerFill)
+            DeleteSwipeButton("Borrar") { Task { await removePayment(payment) } }
         }
     }
 

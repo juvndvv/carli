@@ -140,7 +140,7 @@ struct ShoppingListView: View {
                 Section(group.title) {
                     ForEach(group.items) { item in
                         row(item, product: item.productId.flatMap { byId[$0] })
-                            .swipeActions { Button("Quitar", systemImage: "trash", role: .destructive) { store.deleteItem(item, undoText: "\(item.text) quitado") } }
+                            .swipeActions { DeleteSwipeButton("Quitar") { store.deleteItem(item, undoText: "\(item.text) quitado") } }
                     }
                 }
             }
@@ -617,7 +617,7 @@ struct NotesSettingsView: View {
                     Text(section.name)
                         .contentShape(.rect)
                         .onTapGesture { renaming = section }
-                        .swipeActions { Button("Borrar", systemImage: "trash", role: .destructive) { store.deleteSection(section.id) } }
+                        .swipeActions { DeleteSwipeButton("Borrar") { store.deleteSection(section.id) } }
                 }
                 .onMove { from, to in
                     var ordered = snapshot.sections

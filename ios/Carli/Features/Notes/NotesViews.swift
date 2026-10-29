@@ -341,7 +341,7 @@ struct NotesHomeView: View {
             Section {
                 ForEach(snapshot.recent) { note in
                     NavigationLink(value: NoteRoute(id: note.id)) { NoteRow(note: note, path: snapshot.folderPath(of: note)) }
-                        .swipeActions { Button("Borrar", systemImage: "trash", role: .destructive) { store.delete(note) } }
+                        .swipeActions { DeleteSwipeButton("Borrar") { store.delete(note) } }
                         .contextMenu { NoteMenuItems(store: store, note: note) { moving = note } }
                 }
             } header: { header("Recientes") }
@@ -477,7 +477,7 @@ struct FolderView: View {
                 }
                 ForEach(notes) { note in
                     NavigationLink(value: NoteRoute(id: note.id)) { NoteRow(note: note) }
-                        .swipeActions { Button("Borrar", systemImage: "trash", role: .destructive) { store.delete(note) } }
+                        .swipeActions { DeleteSwipeButton("Borrar") { store.delete(note) } }
                         .contextMenu { NoteMenuItems(store: store, note: note) { movingNote = note } }
                 }
             }
