@@ -22,6 +22,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 
@@ -190,6 +191,25 @@ describe('import', function () {
 
         expect($this->connection->refresh()->status->value)->toBe('expired');
         Http::assertNothingSent();
+    });
+});
+
+describe('hold diagnostics', function () {
+    it('logs pending transactions and every balance type without importing the pending ones', function () {
+        Log::spy();
+        EB::fakeAccountData([
+            EB::transaction('12.34', 'DBIT', '2026-10-21', 'ref-1'),
+            EB::transaction('45.00', 'DBIT', '2026-10-23', null, 'GASOLINERA', ['status' => 'PDNG']),
+        ], '3487.66');
+
+        $result = runSync($this->connection);
+
+        expect($result['imported'])->toBe(1);
+        Log::shouldHaveReceived('info')->withArgs(fn (string $message, array $context = []) => $message === 'bank.sync.holds'
+            && $context['balances'] === ['ITAV' => 999900, 'CLBD' => 348766]
+            && count($context['pending']) === 1
+            && $context['pending'][0]['status'] === 'PDNG'
+            && $context['pending'][0]['amount'] === '45.00');
     });
 });
 

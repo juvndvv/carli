@@ -205,13 +205,22 @@ final class EnableBankingProvider implements BankDataProvider
             );
         }
 
+        $preferred = null;
         foreach (self::BALANCE_PREFERENCE as $type) {
             if (isset($balances[$type])) {
-                return $balances[$type];
+                $preferred = $balances[$type];
+                break;
             }
         }
 
-        return $balances === [] ? null : reset($balances);
+        $preferred ??= $balances === [] ? null : reset($balances);
+
+        return $preferred === null ? null : new BankBalance(
+            amountCents: $preferred->amountCents,
+            type: $preferred->type,
+            referenceDate: $preferred->referenceDate,
+            all: array_map(fn (BankBalance $balance) => $balance->amountCents, $balances),
+        );
     }
 
     public function revoke(string $sessionId): void
