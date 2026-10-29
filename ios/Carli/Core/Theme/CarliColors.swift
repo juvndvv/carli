@@ -25,6 +25,8 @@ enum CarliColor {
     static let warning = dynamic(0xB45309, 0xF59E0B)
     static let negative = dynamic(0xC8281C, 0xED5A46)
     static let dangerFill = Color(hex: 0xC8281C)
+    /// Fill for neutral swipe actions: swipe glyphs are always white, so it stays mid grey in both modes.
+    static let neutralFill = Color(hex: 0x636366)
 
     /// Category slots c1–c8 in the lime family (lime, green, teal, olive) so charts stay within the brand;
     /// hues and lightness both alternate between neighbours so slices stay apart.

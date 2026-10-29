@@ -304,7 +304,7 @@ struct MeasurementsView: View {
                                 ForEach(month.items) { item in
                                     NavigationLink(value: MeasurementRoute(id: item.id)) { MeasurementRow(item: item) }
                                         .swipeActions {
-                                            Button("Borrar", systemImage: "trash", role: .destructive) { Task { await delete(item) } }
+                                            DeleteSwipeButton("Borrar") { Task { await delete(item) } }
                                         }
                                 }
                             }

@@ -144,14 +144,13 @@ struct TaskDetailView: View {
                         .foregroundStyle(subtask.done ? CarliColor.text2 : CarliColor.text)
                 }
                 .swipeActions {
-                    Button("Borrar", systemImage: "trash", role: .destructive) {
+                    DeleteSwipeButton("Borrar") {
                         Task {
                             do { try await actions.deleteSubtask(item, subtask) } catch {
                                 toast = error.apiMessage(fallback: "No se ha podido borrar la subtarea.")
                             }
                         }
                     }
-                    .tint(CarliColor.dangerFill)
                 }
             }
             TextField("Añadir subtarea", text: $subtaskDraft)

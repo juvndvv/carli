@@ -256,7 +256,7 @@ struct TemplateEditorView: View {
             ForEach(Array(subtasks.enumerated()), id: \.offset) { index, subtask in
                 Text(subtask)
                     .swipeActions {
-                        Button("Quitar", systemImage: "xmark", role: .destructive) { subtasks.remove(at: index) }
+                        DeleteSwipeButton("Quitar", systemImage: "xmark") { subtasks.remove(at: index) }
                     }
             }
             .onMove { subtasks.move(fromOffsets: $0, toOffset: $1) }

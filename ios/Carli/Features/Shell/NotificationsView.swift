@@ -217,13 +217,13 @@ struct NotificationsView: View {
         .accessibilityValue(item.unread ? "Sin leer" : "")
         .swipeActions(edge: .leading) {
             if item.unread {
-                Button("Leída", systemImage: "checkmark") { Task { await model.markRead([item.id]) } }.tint(CarliColor.text2)
+                Button("Leída", systemImage: "checkmark") { Task { await model.markRead([item.id]) } }.tint(CarliColor.neutralFill)
             } else {
-                Button("No leída", systemImage: "circle.inset.filled") { Task { await model.markUnread(item.id) } }.tint(CarliColor.text2)
+                Button("No leída", systemImage: "circle.inset.filled") { Task { await model.markUnread(item.id) } }.tint(CarliColor.neutralFill)
             }
         }
         .swipeActions(edge: .trailing) {
-            Button("Borrar", systemImage: "trash", role: .destructive) { Task { await model.delete(item.id) } }
+            DeleteSwipeButton("Borrar") { Task { await model.delete(item.id) } }
         }
     }
 }

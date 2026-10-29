@@ -235,7 +235,7 @@ struct TransactionSheet: View {
                         .onChange(of: split.amountText) { model.splitsDirty = true }
                 }
                 .swipeActions {
-                    Button("Quitar", systemImage: "trash", role: .destructive) { model.removeSplit(split) }
+                    DeleteSwipeButton("Quitar") { model.removeSplit(split) }
                 }
             }
             Button("Añadir parte", systemImage: "plus") {
