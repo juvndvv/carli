@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Finance\BankSync\Contracts\BankDataProvider;
 use App\Modules\Finance\BankSync\Data\BankAccount;
 use App\Modules\Finance\BankSync\Data\BankAmount;
+use App\Modules\Finance\BankSync\Data\BankBalance;
 use App\Modules\Finance\BankSync\Data\PsuContext;
 use App\Modules\Finance\BankSync\Exceptions\BankProviderException;
 use App\Modules\Finance\Domain\Enums\BankConnectionStatus;
@@ -27,6 +28,7 @@ use App\Modules\Finance\Notifications\BankSyncFailed;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
@@ -122,10 +124,11 @@ final class BankSyncService
         $today = SpanishCalendar::today();
         $from = $this->windowStart($account, $syncFrom);
         $imported = new Collection;
+        $fetched = [];
 
         if ($from->lessThanOrEqualTo($today)) {
-            $rows = $this->map($this->provider->fetchTransactions($uid, $from, $today, $psu), $syncFrom);
-            $imported = $this->store($account, $rows, $rules);
+            $fetched = $this->provider->fetchTransactions($uid, $from, $today, $psu);
+            $imported = $this->store($account, $this->map($fetched, $syncFrom), $rules);
         }
 
         $balance = $this->provider->fetchBalance($uid, $psu);
@@ -136,7 +139,41 @@ final class BankSyncService
             ])->save();
         }
 
+        $this->logHoldSignals($account, $fetched, $balance);
+
         return $imported;
+    }
+
+    /**
+     * Temporary diagnostic: tells whether the bank exposes card holds, either as
+     * pending transactions or as an available balance below the booked one.
+     *
+     * @param  list<array<string, mixed>>  $transactions
+     */
+    private function logHoldSignals(Account $account, array $transactions, ?BankBalance $balance): void
+    {
+        $pending = [];
+
+        foreach ($transactions as $transaction) {
+            if (($transaction['status'] ?? null) === 'BOOK') {
+                continue;
+            }
+
+            $pending[] = [
+                'status' => $transaction['status'] ?? null,
+                'indicator' => $transaction['credit_debit_indicator'] ?? null,
+                'amount' => is_array($transaction['transaction_amount'] ?? null) ? ($transaction['transaction_amount']['amount'] ?? null) : null,
+                'date' => $transaction['transaction_date'] ?? $transaction['value_date'] ?? null,
+                'remittance' => $transaction['remittance_information'] ?? null,
+            ];
+        }
+
+        Log::info('bank.sync.holds', [
+            'account_id' => $account->id,
+            'account' => $account->name,
+            'balances' => $balance === null ? [] : $balance->all,
+            'pending' => $pending,
+        ]);
     }
 
     public function windowStart(Account $account, CarbonImmutable $syncFrom): CarbonImmutable
