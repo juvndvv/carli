@@ -53,20 +53,21 @@ struct AppLink: Equatable, Identifiable {
 
     private static func route(_ s: [String], _ query: [String: String]) -> AppLink? {
         let finance = ModuleTab.finance.rawValue
-        func more(_ steps: AppLinkStep...) -> AppLink { AppLink(tab: finance, section: "more", steps: steps) }
+        // Finanzas' admin pages are sections of their own, picked from the header selector.
+        func page(_ page: FinanceMorePage, _ steps: AppLinkStep...) -> AppLink { AppLink(tab: finance, section: page.rawValue, steps: steps) }
         func financeSettings(_ extra: [AppLinkStep] = []) -> AppLink {
-            AppLink(tab: finance, section: "more", steps: [.financePage(.settings)] + extra)
+            AppLink(tab: finance, section: FinanceMorePage.settings.rawValue, steps: extra)
         }
-        let listsUnderMore: [String: FinanceMorePage] = ["cuentas": .accounts, "categorias": .categories, "recurrentes": .recurring,
+        let financePages: [String: FinanceMorePage] = ["cuentas": .accounts, "categorias": .categories, "recurrentes": .recurring,
                                                           "objetivos": .goals, "deudas": .debts, "compartidos": .shared]
         let settingsPages: [String: SettingsPage] = ["perfil": .profile, "seguridad": .security, "avisos": .notifications,
                                                      "notificaciones": .notifications, "modulos": .modules, "apariencia": .appearance]
 
         func detail(_ page: FinanceMorePage, _ id: String) -> AppLink? {
             switch page {
-            case .accounts: more(.financePage(.accounts), .account(id))
-            case .goals: more(.financePage(.goals), .goal(id))
-            case .shared: more(.financePage(.shared), .contact(id))
+            case .accounts: page(.accounts, .account(id))
+            case .goals: page(.goals, .goal(id))
+            case .shared: page(.shared, .contact(id))
             default: nil
             }
         }
@@ -97,19 +98,19 @@ struct AppLink: Equatable, Identifiable {
             case (1, "ajustes"): return financeSettings()
             case (2, "ajustes") where at(1) == "bancos": return financeSettings([.banks])
             case (4, "ajustes") where at(1) == "bancos" && at(3) == "vincular": return financeSettings(bankLink(rest[2]))
-            case (1, let list?): return listsUnderMore[list].map { more(.financePage($0)) }
-            case (2, let list?): return listsUnderMore[list].flatMap { detail($0, rest[1]) }
+            case (1, let list?): return financePages[list].map { page($0) }
+            case (2, let list?): return financePages[list].flatMap { detail($0, rest[1]) }
             default: return nil
             }
         case "mas":
             switch (rest.count, at(0)) {
-            case (0, _): return AppLink(tab: finance, section: "more")
+            case (0, _): return AppLink(tab: finance, section: "summary")
             case (_, "ajustes"): return settings(rest.dropFirst())
             case (1, "ajustes-finanzas"): return financeSettings()
             case (2, "ajustes-finanzas") where at(1) == "bancos": return financeSettings([.banks])
             case (4, "ajustes-finanzas") where at(1) == "bancos" && at(3) == "vincular": return financeSettings(bankLink(rest[2]))
-            case (1, let list?): return listsUnderMore[list].map { more(.financePage($0)) }
-            case (2, let list?): return listsUnderMore[list].flatMap { detail($0, rest[1]) }
+            case (1, let list?): return financePages[list].map { page($0) }
+            case (2, let list?): return financePages[list].flatMap { detail($0, rest[1]) }
             default: return nil
             }
         case "pendientes":
@@ -179,7 +180,7 @@ struct AppLink: Equatable, Identifiable {
     /// "Ajustes de <módulo>" lives inside each module.
     static func moduleSettings(_ module: String) -> AppLink? {
         switch module {
-        case AppModule.finance: AppLink(tab: ModuleTab.finance.rawValue, section: "more", steps: [.financePage(.settings)])
+        case AppModule.finance: AppLink(tab: ModuleTab.finance.rawValue, section: FinanceMorePage.settings.rawValue)
         case AppModule.tasks: AppLink(tab: ModuleTab.tasks.rawValue, section: "today", steps: [.tasksSettings])
         case AppModule.notes: AppLink(tab: ModuleTab.notes.rawValue, section: "all", steps: [.notesSettings])
         case AppModule.habits: AppLink(tab: ModuleTab.health.rawValue, section: "habits", steps: [.habitsSettings])

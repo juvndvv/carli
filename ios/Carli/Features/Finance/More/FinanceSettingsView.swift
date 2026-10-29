@@ -61,7 +61,7 @@ struct FinanceSettingsInput: Encodable {
     }
 }
 
-/// Más › Ajustes de Finanzas: general settings, banks, categories that open a period and periods.
+/// Finanzas › Ajustes de Finanzas: general settings, banks, categories that open a period and periods.
 struct FinanceSettingsView: View {
     @State var model: FinanceSettingsModel
 

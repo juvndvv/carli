@@ -25,7 +25,8 @@ enum ModuleTab: String, CaseIterable {
     var sections: [ModuleSection] {
         switch self {
         case .finance: [.init(id: "summary", title: "Resumen"), .init(id: "transactions", title: "Movimientos"),
-                        .init(id: "budgets", title: "Presupuestos"), .init(id: "more", title: "Más")]
+                        .init(id: "budgets", title: "Presupuestos")]
+            + FinanceMorePage.allCases.map { .init(id: $0.rawValue, title: $0.sectionTitle) }
         case .tasks: [.init(id: "today", title: "Hoy"), .init(id: "upcoming", title: "Próximas"),
                       .init(id: "lists", title: "Listas"), .init(id: "templates", title: "Plantillas")]
         case .notes: [.init(id: "all", title: "Notas"), .init(id: "shopping", title: "Compra")]
@@ -191,15 +192,18 @@ struct ModuleRootView: View {
                         sectionMenu
                     }
                     .sharedBackgroundVisibility(.hidden)
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: add) {
-                            // glassProminent picks its glyph colour from the tint; force the inverse of the ink fill.
-                            Image(systemName: "plus")
-                                .foregroundStyle(CarliColor.onPrimary)
+                    // Finanzas' admin pages bring their own create button.
+                    if !isFinancePage {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(action: add) {
+                                // glassProminent picks its glyph colour from the tint; force the inverse of the ink fill.
+                                Image(systemName: "plus")
+                                    .foregroundStyle(CarliColor.onPrimary)
+                            }
+                            .buttonStyle(.glassProminent)
+                            .tint(CarliColor.primary)
+                            .accessibilityLabel(addLabel)
                         }
-                        .buttonStyle(.glassProminent)
-                        .tint(CarliColor.primary)
-                        .accessibilityLabel(addLabel)
                     }
                 }
                 .sheet(isPresented: $adding) {
@@ -271,8 +275,8 @@ struct ModuleRootView: View {
         case (.finance, "transactions"):
             TransactionsView(model: TransactionsModel(api: auth.api, filters: transactionFilters))
                 .id(transactionFilters)
-        case (.finance, "more"):
-            FinanceMoreView(api: auth.api, go: open)
+        case (.finance, let id) where FinanceMorePage(rawValue: id) != nil:
+            FinancePageView(page: FinanceMorePage(rawValue: id)!, api: auth.api, go: open)
         case (.tasks, "today"):
             TasksTodayView(api: auth.api) { _ = router.open(url: "/habitos/hoy") }
         case (.tasks, "upcoming"):
@@ -368,6 +372,10 @@ struct ModuleRootView: View {
     private func show(_ id: String) {
         path = NavigationPath()
         if let target = sections.first(where: { $0.id == id }) { section = target }
+    }
+
+    private var isFinancePage: Bool {
+        module == .finance && FinanceMorePage(rawValue: section.id) != nil
     }
 
     private var isWeightSection: Bool {

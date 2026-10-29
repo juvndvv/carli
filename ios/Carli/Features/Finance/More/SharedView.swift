@@ -122,7 +122,7 @@ private func peopleLabel(_ count: Int) -> String {
     }
 }
 
-/// Más › Compartidos: who owes you from shared expenses, and settling up.
+/// Finanzas › Compartidos: who owes you from shared expenses, and settling up.
 struct SharedView: View {
     @State var model: SharedModel
     @State private var adding = false

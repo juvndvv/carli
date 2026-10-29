@@ -155,7 +155,7 @@ final class RecurringModel {
     }
 }
 
-/// Más › Recurrentes: subscriptions totals, upcoming charges and every rule.
+/// Finanzas › Recurrentes: subscriptions totals, upcoming charges and every rule.
 struct RecurringView: View {
     @State var model: RecurringModel
     @State private var tab: RecurringModel.Tab = .all

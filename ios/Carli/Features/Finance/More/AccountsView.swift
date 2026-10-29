@@ -43,7 +43,7 @@ final class AccountsModel {
     }
 }
 
-/// Más › Cuentas: net worth, a card per account and archived ones on demand.
+/// Finanzas › Cuentas: net worth, a card per account and archived ones on demand.
 struct AccountsView: View {
     @State var model: AccountsModel
     var go: (FinanceRoute) -> Void
