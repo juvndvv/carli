@@ -105,7 +105,7 @@ final class CategoriesModel {
     }
 }
 
-/// Más › Categorías y etiquetas.
+/// Finanzas › Categorías y etiquetas.
 struct CategoriesView: View {
     enum Tab: String, CaseIterable { case expense = "Gastos", income = "Ingresos", tags = "Etiquetas" }
 

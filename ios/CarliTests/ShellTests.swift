@@ -13,12 +13,21 @@ struct ShellTests {
         #expect(filters.categoryIds == ["a", "b"])
     }
 
-    @Test func detailLinksPushUnderMas() throws {
-        #expect(AppLink.parse("/finanzas/objetivos/7")?.steps == [.financePage(.goals), .goal("7")])
-        #expect(AppLink.parse("/mas/cuentas/3")?.steps == [.financePage(.accounts), .account("3")])
-        #expect(AppLink.parse("/finanzas/ajustes/bancos/c1/vincular?renovado=1")?.steps
-            == [.financePage(.settings), .banks, .bankLink("c1", renewed: true)])
-        #expect(AppLink.parse("/finanzas/recurrentes")?.steps == [.financePage(.recurring)])
+    @Test func financePagesAreSectionsOfTheirOwn() throws {
+        let goal = try #require(AppLink.parse("/finanzas/objetivos/7"))
+        #expect(goal.section == "goals")
+        #expect(goal.steps == [.goal("7")])
+        let account = try #require(AppLink.parse("/mas/cuentas/3"))
+        #expect(account.section == "accounts")
+        #expect(account.steps == [.account("3")])
+        let bank = try #require(AppLink.parse("/finanzas/ajustes/bancos/c1/vincular?renovado=1"))
+        #expect(bank.section == "settings")
+        #expect(bank.steps == [.banks, .bankLink("c1", renewed: true)])
+        #expect(AppLink.parse("/finanzas/recurrentes")?.section == "recurring")
+        #expect(AppLink.parse("/finanzas/recurrentes")?.steps == [])
+        #expect(AppLink.parse("/mas")?.section == "summary")
+        #expect(ModuleTab.finance.sections.map(\.title)
+            == ["Resumen", "Movimientos", "Presupuestos", "Cuentas", "Categorías", "Recurrentes", "Objetivos", "Deudas", "Compartidos", "Ajustes"])
     }
 
     @Test func homeLinks() throws {
@@ -59,7 +68,7 @@ struct ShellTests {
         #expect(ModuleTab.health.sections(enabled: [AppModule.health]).map(\.id) == ["summary", "measurements", "trends"])
         #expect(ModuleTab.health.sections(enabled: [AppModule.habits]).map(\.id) == ["habits-today", "habits", "habits-progress"])
         #expect(ModuleTab.health.sections(enabled: [AppModule.health, AppModule.habits]).count == 6)
-        #expect(ModuleTab.finance.sections(enabled: []).count == 4)
+        #expect(ModuleTab.finance.sections(enabled: []).count == 10)
     }
 
     @Test func externalAndUnknownLinksAreIgnored() {

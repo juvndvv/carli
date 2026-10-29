@@ -119,7 +119,7 @@ final class GoalsModel {
     }
 }
 
-/// Más › Objetivos: a card per savings goal with its progress and the monthly effort.
+/// Finanzas › Objetivos: a card per savings goal with its progress and the monthly effort.
 struct GoalsView: View {
     @State var model: GoalsModel
     @State private var form: GoalFormTarget?

@@ -104,7 +104,7 @@ final class DebtsModel {
     }
 }
 
-/// Más › Deudas: what you owe and are owed, each loan with its progress, and shared balances.
+/// Finanzas › Deudas: what you owe and are owed, each loan with its progress, and shared balances.
 struct DebtsView: View {
     @State var model: DebtsModel
     @State private var form: DebtFormTarget?
