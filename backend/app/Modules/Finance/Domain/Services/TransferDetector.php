@@ -271,6 +271,7 @@ final class TransferDetector
     private function pairs(string $userId): array
     {
         $eligible = fn (string $alias): string => $this->eligibleSql($alias);
+        $bookedOn = fn (string $alias): string => "COALESCE(left({$alias}.raw->>'booking_date', 10)::date, {$alias}.date)";
 
         /** @var list<object{outgoing_id: string, incoming_id: string}> $rows */
         $rows = DB::select(<<<SQL
@@ -280,7 +281,7 @@ final class TransferDetector
               ON i.user_id = o.user_id
              AND i.amount_cents = -o.amount_cents
              AND i.account_id <> o.account_id
-             AND abs(i.date - o.date) <= ?
+             AND abs({$bookedOn('i')} - {$bookedOn('o')}) <= ?
             WHERE o.user_id = ?
               AND o.kind = 'expense' AND o.amount_cents < 0
               AND i.kind = 'income'

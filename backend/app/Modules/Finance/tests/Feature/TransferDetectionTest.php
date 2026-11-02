@@ -238,6 +238,13 @@ describe('no match', function () {
         expect(detectTransfers($this->user)['converted'])->toHaveCount(1);
     });
 
+    it('measures the gap on booking dates, so a charge dated back still pairs', function () {
+        importedMovement($this->bbva, -5000, '2026-10-05', 'Personal Revolut', ['booking_date' => '2026-10-09', 'value_date' => '2026-10-05']);
+        importedMovement($this->revolut, 5000, '2026-10-10', 'Top-up', ['booking_date' => '2026-10-10']);
+
+        expect(detectTransfers($this->user)['converted'])->toHaveCount(1);
+    });
+
     it('ignores different amounts', function () {
         importedMovement($this->bbva, -5000, '2026-10-10', 'Personal Revolut');
         importedMovement($this->revolut, 5001, '2026-10-10', 'Top-up');

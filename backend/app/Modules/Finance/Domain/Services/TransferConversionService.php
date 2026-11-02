@@ -34,7 +34,7 @@ final class TransferConversionService
             $errors['incoming_transaction_id'] = 'Los movimientos deben ser de dos cuentas distintas.';
         } elseif ($outgoing->amount_cents >= 0 || $incoming->amount_cents !== -$outgoing->amount_cents) {
             $errors['incoming_transaction_id'] = 'Los importes de los dos movimientos no coinciden.';
-        } elseif (abs($outgoing->date->diffInDays($incoming->date, false)) > TransferDetector::MAX_DAYS_APART) {
+        } elseif (abs($outgoing->bookedOn()->diffInDays($incoming->bookedOn(), false)) > TransferDetector::MAX_DAYS_APART) {
             $errors['incoming_transaction_id'] = 'Las fechas de los dos movimientos están demasiado separadas.';
         }
 

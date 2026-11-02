@@ -6,6 +6,7 @@ use App\Modules\Finance\Domain\Enums\TransactionKind;
 use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Domain\Enums\TransactionStatus;
 use App\Modules\Finance\Domain\Enums\TransferSource;
+use App\Modules\Finance\Domain\Support\SpanishCalendar;
 use App\Modules\Finance\Models\Concerns\BelongsToUser;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -199,6 +200,13 @@ class Transaction extends Model
     public function isConvertedTransfer(): bool
     {
         return $this->isTransfer() && $this->transfer_source !== null;
+    }
+
+    public function bookedOn(): CarbonImmutable
+    {
+        $booked = $this->raw['booking_date'] ?? null;
+
+        return is_string($booked) && preg_match('/^\d{4}-\d{2}-\d{2}/', $booked) === 1 ? SpanishCalendar::date($booked) : $this->date;
     }
 
     public function sharedCents(): int
