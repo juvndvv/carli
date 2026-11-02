@@ -151,6 +151,20 @@ describe('moves to an account the bank does not expose', function () {
             ->and(detectRevolut($this)['linked'])->toBe([]);
     });
 
+    it('links a move instead of suggesting a third party with the same amount', function () {
+        $out = revolutMovement($this->gastos, -1500, '2026-10-28', 'To Cuenta Remunerada');
+        revolutMovement($this->main, 1500, '2026-10-28', 'Pago', [
+            'debtor' => ['name' => 'Oleksandr Abramyan Khaydarov'],
+            'debtor_account' => ['iban' => 'ES6215830001119028609827'],
+        ]);
+
+        $result = detectRevolut($this);
+
+        expect($result['suggested'])->toBe([])
+            ->and($result['linked'])->toHaveCount(1)
+            ->and($out->refresh()->kind->value)->toBe('transfer');
+    });
+
     it('prefers a pair with another imported account over the manual link', function () {
         $pocket = F::account($this->user, ['name' => 'Gastos']);
         revolutMovement($this->main, -20000, '2026-10-03', 'To EUR Gastos');
