@@ -208,10 +208,10 @@ final class BankSyncService
                 continue;
             }
 
-            $date = $this->bookingDate($transaction);
+            $bookedOn = $this->bookingDate($transaction);
             $amount = $this->signedAmount($transaction);
 
-            if ($date === null || $amount === null || $amount === 0 || $date->lessThan($syncFrom)) {
+            if ($bookedOn === null || $amount === null || $amount === 0 || $bookedOn->lessThan($syncFrom)) {
                 continue;
             }
 
@@ -222,7 +222,7 @@ final class BankSyncService
 
             $externalId = $this->externalId($transaction);
             if ($externalId === null) {
-                $base = implode('|', [$date->toDateString(), $amount, $description ?? $payee ?? '']);
+                $base = implode('|', [$bookedOn->toDateString(), $amount, $description ?? $payee ?? '']);
                 $index = $occurrences[$base] = ($occurrences[$base] ?? -1) + 1;
                 $externalId = hash('sha256', $base.'|'.$index);
             }
@@ -236,7 +236,7 @@ final class BankSyncService
                 'external_id' => $externalId,
                 'kind' => $isDebit ? TransactionKind::Expense : TransactionKind::Income,
                 'amount_cents' => $amount,
-                'date' => $date,
+                'date' => $isDebit ? $this->chargeDate($transaction, $bookedOn) : $bookedOn,
                 'payee' => $payee,
                 'description' => $description,
                 'raw' => $transaction,
@@ -360,6 +360,21 @@ final class BankSyncService
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $transaction
+     */
+    private function chargeDate(array $transaction, CarbonImmutable $bookedOn): CarbonImmutable
+    {
+        foreach (['transaction_date', 'value_date'] as $key) {
+            $value = $transaction[$key] ?? null;
+            if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1 && SpanishCalendar::date($value)->lessThan($bookedOn)) {
+                return SpanishCalendar::date($value);
+            }
+        }
+
+        return $bookedOn;
     }
 
     /**

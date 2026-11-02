@@ -136,6 +136,25 @@ describe('import', function () {
             ->and($ids[0])->toBe(hash('sha256', '2026-10-22|-150|COMPRA TARJETA CAFE|0'));
     });
 
+    it('dates a charge booked late on the day it was made', function () {
+        EB::fakeAccountData([
+            EB::transaction('40.00', 'DBIT', '2026-10-23', 'held', 'CINE', ['value_date' => '2026-10-20']),
+            EB::transaction('5.00', 'DBIT', '2026-10-23', 'future', 'BAR', ['value_date' => '2026-10-24']),
+            EB::transaction('9.00', 'CRDT', '2026-10-23', 'refund', 'CINE', ['value_date' => '2026-10-20']),
+        ]);
+        runSync($this->connection);
+
+        $dates = bankRows($this->account->id)->mapWithKeys(fn (Transaction $row) => [$row->external_id => $row->date->toDateString()]);
+        expect($dates->all())->toEqual(['held' => '2026-10-20', 'future' => '2026-10-23', 'refund' => '2026-10-23']);
+    });
+
+    it('keeps the fallback id on the booking date so re-dating a charge cannot duplicate it', function () {
+        EB::fakeAccountData([EB::transaction('1.50', 'DBIT', '2026-10-22', null, 'CAFE', ['value_date' => '2026-10-20'])]);
+        runSync($this->connection);
+
+        expect(bankRows($this->account->id)->sole()->external_id)->toBe(hash('sha256', '2026-10-22|-150|COMPRA TARJETA CAFE|0'));
+    });
+
     it('fetches from the last booking date minus five days but never before the import date', function () {
         EB::fakeAccountData([EB::transaction('12.34', 'DBIT', '2026-10-23', 'ref-1')]);
         runSync($this->connection);
