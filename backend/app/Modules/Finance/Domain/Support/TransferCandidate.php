@@ -29,7 +29,7 @@ final readonly class TransferCandidate
 
     public function daysApart(): int
     {
-        return (int) abs($this->outgoing->date->diffInDays($this->incoming->date, false));
+        return (int) abs($this->outgoing->bookedOn()->diffInDays($this->incoming->bookedOn(), false));
     }
 
     public function latestDate(): CarbonImmutable

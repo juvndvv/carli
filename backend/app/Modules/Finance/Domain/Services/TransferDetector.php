@@ -228,23 +228,29 @@ final class TransferDetector
         $ids = array_unique(array_merge(array_column($pairs, 'outgoing_id'), array_column($pairs, 'incoming_id')));
         $transactions = Transaction::query()->ownedBy($userId)->with('account.bankConnection')->whereIn('id', $ids)->get()->keyBy('id');
         $userName = User::query()->whereKey($userId)->value('name');
-        $outgoingCount = array_count_values(array_column($pairs, 'outgoing_id'));
-        $incomingCount = array_count_values(array_column($pairs, 'incoming_id'));
+        $userName = is_string($userName) ? $userName : null;
 
-        $candidates = [];
+        $legs = [];
         foreach ($pairs as $pair) {
             $outgoing = $transactions->get($pair['outgoing_id']);
             $incoming = $transactions->get($pair['incoming_id']);
 
-            if ($outgoing === null || $incoming === null) {
-                continue;
+            if ($outgoing !== null && $incoming !== null && ! $this->contradicts($outgoing, $incoming, $userName)) {
+                $legs[] = [$outgoing, $incoming];
             }
+        }
 
+        $legs = $this->preferMutualMatches($legs);
+        $outgoingCount = array_count_values(array_map(fn (array $pair) => $pair[0]->id, $legs));
+        $incomingCount = array_count_values(array_map(fn (array $pair) => $pair[1]->id, $legs));
+
+        $candidates = [];
+        foreach ($legs as [$outgoing, $incoming]) {
             $candidates[] = new TransferCandidate(
                 $outgoing,
                 $incoming,
-                $this->signals($outgoing, $incoming, is_string($userName) ? $userName : null),
-                $outgoingCount[$pair['outgoing_id']] === 1 && $incomingCount[$pair['incoming_id']] === 1,
+                $this->signals($outgoing, $incoming, $userName),
+                $outgoingCount[$outgoing->id] === 1 && $incomingCount[$incoming->id] === 1,
             );
         }
 
@@ -266,11 +272,60 @@ final class TransferDetector
     }
 
     /**
+     * @param  list<array{Transaction, Transaction}>  $legs
+     * @return list<array{Transaction, Transaction}>
+     */
+    private function preferMutualMatches(array $legs): array
+    {
+        $mutual = array_filter($legs, fn (array $pair) => $this->isMutualMatch($pair[0], $pair[1]));
+        $claimed = [];
+        foreach ($mutual as [$outgoing, $incoming]) {
+            $claimed[$outgoing->id] = $claimed[$incoming->id] = true;
+        }
+
+        return array_values(array_filter($legs, fn (array $pair) => in_array($pair, $mutual, true)
+            || (! isset($claimed[$pair[0]->id]) && ! isset($claimed[$pair[1]->id]))));
+    }
+
+    private function isMutualMatch(Transaction $outgoing, Transaction $incoming): bool
+    {
+        return $this->ibanMatches($outgoing, 'creditor_account', $incoming->account)
+            && $this->ibanMatches($incoming, 'debtor_account', $outgoing->account);
+    }
+
+    private function contradicts(Transaction $outgoing, Transaction $incoming, ?string $userName): bool
+    {
+        $holders = array_filter([$userName, $this->partyName($outgoing, 'debtor')]);
+
+        return $this->pointsElsewhere($outgoing, 'creditor', $incoming->account, $holders)
+            || $this->pointsElsewhere($incoming, 'debtor', $outgoing->account, $holders);
+    }
+
+    /**
+     * @param  array<int, string>  $holders
+     */
+    private function pointsElsewhere(Transaction $leg, string $party, Account $other, array $holders): bool
+    {
+        if ($this->accountIdentifiers($leg, $party.'_account') === [] || $this->ibanMatches($leg, $party.'_account', $other)) {
+            return false;
+        }
+
+        if ($this->maskedIban($other) !== null) {
+            return true;
+        }
+
+        $name = $this->partyName($leg, $party);
+
+        return $name !== null && array_filter($holders, fn (string $holder) => self::sameHolder($name, $holder)) === [];
+    }
+
+    /**
      * @return list<array{outgoing_id: string, incoming_id: string}>
      */
     private function pairs(string $userId): array
     {
         $eligible = fn (string $alias): string => $this->eligibleSql($alias);
+        $bookedOn = fn (string $alias): string => "COALESCE(left({$alias}.raw->>'booking_date', 10)::date, {$alias}.date)";
 
         /** @var list<object{outgoing_id: string, incoming_id: string}> $rows */
         $rows = DB::select(<<<SQL
@@ -280,7 +335,7 @@ final class TransferDetector
               ON i.user_id = o.user_id
              AND i.amount_cents = -o.amount_cents
              AND i.account_id <> o.account_id
-             AND abs(i.date - o.date) <= ?
+             AND abs({$bookedOn('i')} - {$bookedOn('o')}) <= ?
             WHERE o.user_id = ?
               AND o.kind = 'expense' AND o.amount_cents < 0
               AND i.kind = 'income'
@@ -397,19 +452,31 @@ final class TransferDetector
             return false;
         }
 
-        $account = $transaction->raw[$party] ?? null;
-        if (! is_array($account)) {
-            return false;
-        }
-
-        $scheme = is_array($account['other'] ?? null) ? $account['other'] : [];
-        foreach ([$account['iban'] ?? null, $account['bban'] ?? null, $scheme['identification'] ?? null] as $identifier) {
-            if (is_string($identifier) && self::ibanMatchesMasked($identifier, $masked)) {
+        foreach ($this->accountIdentifiers($transaction, $party) as $identifier) {
+            if (self::ibanMatchesMasked($identifier, $masked)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function accountIdentifiers(Transaction $transaction, string $party): array
+    {
+        $account = $transaction->raw[$party] ?? null;
+        if (! is_array($account)) {
+            return [];
+        }
+
+        $scheme = is_array($account['other'] ?? null) ? $account['other'] : [];
+
+        return array_values(array_filter(
+            [$account['iban'] ?? null, $account['bban'] ?? null, $scheme['identification'] ?? null],
+            fn (mixed $identifier) => is_string($identifier) && $identifier !== '',
+        ));
     }
 
     private function maskedIban(Account $account): ?string

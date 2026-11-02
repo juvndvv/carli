@@ -19,6 +19,8 @@ const BBVA_IBAN = 'ES3901820000000000005055';
 
 const REVOLUT_IBAN = 'ES7515830000000000007919';
 
+const JOINT_IBAN = 'ES8015830000000000004156';
+
 function linkedBankAccount(User $user, string $bank, string $uid, string $iban, string $name): Account
 {
     $connection = EB::connection($user, [
@@ -172,6 +174,37 @@ describe('doubtful matches', function () {
             ->and($out->refresh()->kind->value)->toBe('expense');
     });
 
+    it('converts the incoming movement that names the outgoing account over a same-amount lookalike', function () {
+        $joint = linkedBankAccount($this->user, 'Revolut Joint', 'joint-uid', JOINT_IBAN, 'Compartida');
+        $out = importedMovement($this->revolut, -2790, '2026-11-01', 'JUAN DANIEL FORNER GARRIGA & OLEKSANDR ABRAMYAN KHAYDAROV', [
+            'creditor' => ['name' => 'JUAN DANIEL FORNER GARRIGA & OLEKSANDR ABRAMYAN KHAYDAROV'],
+            'creditor_account' => ['iban' => JOINT_IBAN],
+            'debtor' => ['name' => 'Juan Daniel Forner Garriga'],
+        ]);
+        $topUp = importedMovement($joint, 2790, '2026-11-01', null, [], 'Apple Pay Top-Up by *3129');
+        $own = importedMovement($joint, 2790, '2026-11-01', 'Juan Daniel Forner Garriga', [
+            'debtor' => ['name' => 'Juan Daniel Forner Garriga'],
+            'debtor_account' => ['iban' => REVOLUT_IBAN],
+        ], 'From Juan Daniel F');
+
+        $result = detectTransfers($this->user);
+
+        expect($result['converted'])->toHaveCount(1)
+            ->and($own->refresh()->transfer_group_id)->not->toBeNull()->toBe($out->refresh()->transfer_group_id)
+            ->and($topUp->refresh()->kind->value)->toBe('income');
+    });
+
+    it('never pairs an incoming movement sent from an account the user does not own', function () {
+        $joint = linkedBankAccount($this->user, 'Revolut Joint', 'joint-uid', JOINT_IBAN, 'Compartida');
+        importedMovement($this->revolut, -1500, '2026-10-28', 'ACME');
+        importedMovement($joint, 1500, '2026-10-28', 'Oleksandr Abramyan Khaydarov', [
+            'debtor' => ['name' => 'Oleksandr Abramyan Khaydarov'],
+            'debtor_account' => ['iban' => 'ES6215830001119028609827'],
+        ]);
+
+        expect(detectTransfers($this->user))->toBe(['converted' => [], 'suggested' => [], 'linked' => []]);
+    });
+
     it('suggests instead of converting a clear pair the user already categorized', function () {
         importedMovement($this->bbva, -5000, '2026-10-10', 'Personal Revolut')
             ->forceFill(['category_id' => F::category($this->user, 'Supermercado')->id])->save();
@@ -234,6 +267,13 @@ describe('no match', function () {
     it('accepts pairs exactly three days apart', function () {
         importedMovement($this->bbva, -5000, '2026-10-10', 'Personal Revolut');
         importedMovement($this->revolut, 5000, '2026-10-13', 'Top-up');
+
+        expect(detectTransfers($this->user)['converted'])->toHaveCount(1);
+    });
+
+    it('measures the gap on booking dates, so a charge dated back still pairs', function () {
+        importedMovement($this->bbva, -5000, '2026-10-05', 'Personal Revolut', ['booking_date' => '2026-10-09', 'value_date' => '2026-10-05']);
+        importedMovement($this->revolut, 5000, '2026-10-10', 'Top-up', ['booking_date' => '2026-10-10']);
 
         expect(detectTransfers($this->user)['converted'])->toHaveCount(1);
     });
