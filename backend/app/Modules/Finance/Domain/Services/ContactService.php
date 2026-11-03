@@ -10,21 +10,23 @@ use App\Modules\Finance\Models\Contact;
 use App\Modules\Finance\Models\Debt;
 use App\Modules\Finance\Models\SharedExpenseShare;
 use App\Modules\Finance\Models\Transaction;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class ContactService
 {
-    public function __construct(private readonly TransactionService $transactions) {}
+    public function __construct(
+        private readonly TransactionService $transactions,
+        private readonly ReimbursementService $reimbursements,
+    ) {}
 
     /**
      * @return array{balance_cents: int, shares_pending_cents: int, owed_to_me_cents: int, i_owe_cents: int}
      */
     public function balance(Contact $contact): array
     {
-        $shares = (int) $this->pendingShares($contact)->sum('amount_cents');
+        $shares = (int) $this->pendingShares($contact)->with('settlements')->get()->sum(fn (SharedExpenseShare $share) => $share->pendingCents());
         $owedToMe = 0;
         $iOwe = 0;
 
@@ -63,8 +65,8 @@ final class ContactService
     {
         return DB::transaction(function () use ($contact, $data): array {
             $date = $data['date'] ?? SpanishCalendar::today()->toDateString();
-            $shares = $this->pendingShares($contact)->lockForUpdate()->get();
-            $sharesTotal = (int) $shares->sum('amount_cents');
+            $shares = $this->pendingShares($contact)->with('settlements')->lockForUpdate()->get();
+            $sharesTotal = (int) $shares->sum(fn (SharedExpenseShare $share) => $share->pendingCents());
             $debts = Debt::query()->ownedBy($contact->user_id)
                 ->where('contact_id', $contact->id)
                 ->whereNull('closed_at')
@@ -88,10 +90,7 @@ final class ContactService
                     'description' => 'Liquidación · '.$contact->name,
                 ]);
 
-                SharedExpenseShare::query()->whereIn('id', $shares->pluck('id'))->update([
-                    'settled_at' => CarbonImmutable::now(),
-                    'settlement_transaction_id' => $settlement->id,
-                ]);
+                $this->reimbursements->settleAllWith($contact, $settlement);
 
                 $created[] = $settlement;
             }

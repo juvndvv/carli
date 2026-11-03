@@ -10,6 +10,8 @@ struct TransactionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var amountFocused: Bool
     @State private var confirmingDelete = false
+    @State private var reimbursing = false
+    @State private var undoingReimbursement = false
 
     var body: some View {
         NavigationStack {
@@ -64,6 +66,7 @@ struct TransactionSheet: View {
                 }
 
                 if let editing = model.editing {
+                    reimbursementInfo(editing)
                     actions(editing)
                 }
             }
@@ -97,6 +100,14 @@ struct TransactionSheet: View {
                 }
             } message: {
                 if model.fromBank { Text("No volverá en la siguiente sincronización.") }
+            }
+        }
+        .sheet(isPresented: $reimbursing) {
+            if let editing = model.editing {
+                ReimbursementSheet(api: model.api, origin: editing) { message in
+                    onSaved(message)
+                    dismiss()
+                }
             }
         }
         .task(id: ObjectIdentifier(model)) { await model.load() }
@@ -431,9 +442,55 @@ struct TransactionSheet: View {
         }
     }
 
+    /// What this income pays back: that part is neither income nor spending.
+    @ViewBuilder
+    private func reimbursementInfo(_ editing: FinanceTransaction) -> some View {
+        if let links = editing.reimburses, !links.isEmpty {
+            Section {
+                ForEach(Array(links.enumerated()), id: \.offset) { _, link in
+                    LabeledContent {
+                        Text(Money.format(link.amountCents)).monospacedDigit()
+                    } label: {
+                        Text(link.expenseTitle)
+                        Text([link.name, link.expenseDate.flatMap(CarliDate.day).map(CarliDate.short)].compactMap { $0 }.joined(separator: " · "))
+                    }
+                }
+                Button("Deshacer reembolso", systemImage: "arrow.uturn.backward") {
+                    Task { await undoReimbursement(editing) }
+                }
+                .disabled(undoingReimbursement)
+            } header: {
+                Text("Reembolso de")
+            } footer: {
+                let rest = editing.amountCents - (editing.reimbursedCents ?? 0)
+                Text(rest > 0
+                     ? "No cuenta como ingreso salvo \(Money.format(rest)), lo que excede los gastos."
+                     : "No cuenta como ingreso: te devuelve lo que adelantaste.")
+            }
+        }
+    }
+
+    private func undoReimbursement(_ editing: FinanceTransaction) async {
+        undoingReimbursement = true
+        defer { undoingReimbursement = false }
+        do {
+            try await model.api.delete("v1/finance/transactions/\(editing.id)/reimbursements")
+            NotificationCenter.default.post(name: .financeChanged, object: nil)
+            onSaved("Reembolso deshecho")
+            dismiss()
+        } catch {
+            model.error = error.apiMessage(fallback: "No se ha podido deshacer el reembolso.")
+        }
+    }
+
     @ViewBuilder
     private func actions(_ editing: FinanceTransaction) -> some View {
         Section {
+            if editing.canBeReimbursement {
+                Button("Es un reembolso…", systemImage: "arrow.uturn.left.circle") { reimbursing = true }
+            } else if editing.canReceiveReimbursement {
+                Button("Vincular reembolso…", systemImage: "arrow.uturn.left.circle") { reimbursing = true }
+            }
             if editing.transferUndoable == true {
                 Button("Deshacer transferencia", systemImage: "arrow.uturn.backward") {
                     Task {

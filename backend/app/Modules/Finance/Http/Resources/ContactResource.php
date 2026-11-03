@@ -47,7 +47,7 @@ final class ContactResource extends JsonResource
         $shares = SharedExpenseShare::query()
             ->where('contact_id', $contact->id)
             ->whereHas('transaction', fn ($query) => $query->whereNull('deleted_at'))
-            ->with('transaction')
+            ->with(['transaction', 'settlements'])
             ->get()
             ->sortByDesc(fn (SharedExpenseShare $share) => $share->transaction->date->toDateString())
             ->values();
@@ -62,7 +62,9 @@ final class ContactResource extends JsonResource
             'amount_cents' => $share->amount_cents,
             'settled' => $share->settled_at !== null,
             'settled_at' => $share->settled_at?->toIso8601String(),
-            'settlement_transaction_id' => $share->settlement_transaction_id,
+            'settled_cents' => $share->settledCents(),
+            'pending_cents' => $share->pendingCents(),
+            'settlement_transaction_ids' => $share->settlements->pluck('transaction_id')->values()->all(),
         ])->all();
 
         $data['debts'] = DebtResource::collection(

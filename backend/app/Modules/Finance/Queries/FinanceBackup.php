@@ -21,7 +21,7 @@ final class FinanceBackup
         'id', 'user_id', 'provider', 'aspsp_name', 'aspsp_country', 'valid_until', 'status', 'last_synced_at', 'last_error', 'created_at', 'updated_at',
     ];
 
-    private const array TRANSACTION_CHILD_TABLES = ['transaction_splits', 'transaction_tag', 'shared_expense_shares'];
+    private const array TRANSACTION_CHILD_TABLES = ['transaction_splits', 'transaction_tag', 'shared_expense_shares', 'share_settlements'];
 
     /**
      * @return array{format: string, version: int, exported_at: string, tables: array<string, list<array<string, mixed>>>}

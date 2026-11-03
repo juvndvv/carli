@@ -32,6 +32,7 @@ final class TransactionService
         private readonly TagService $tags,
         private readonly ShareCalculator $shareCalculator,
         private readonly TransferService $transfers,
+        private readonly ReimbursementService $reimbursements,
     ) {}
 
     /**
@@ -113,17 +114,14 @@ final class TransactionService
                 return;
             }
 
-            if ($transaction->shares()->whereNotNull('settled_at')->exists()) {
+            if ($transaction->shares()->whereHas('settlements')->exists()) {
                 throw ValidationException::withMessages(['transaction' => 'Este gasto tiene partes compartidas ya liquidadas.']);
             }
 
             $wasPayroll = $this->periods->isPayroll($transaction);
             $openedPeriod = Period::query()->ownedBy($transaction->user_id)->where('opening_transaction_id', $transaction->id)->exists();
 
-            SharedExpenseShare::query()->where('settlement_transaction_id', $transaction->id)->update([
-                'settled_at' => null,
-                'settlement_transaction_id' => null,
-            ]);
+            $this->reimbursements->unlink($transaction);
 
             $transaction->delete();
 
@@ -326,9 +324,7 @@ final class TransactionService
      */
     private function syncShares(Transaction $transaction, ?array $spec): void
     {
-        $existing = $transaction->shares()->get();
-
-        if ($existing->whereNotNull('settled_at')->isNotEmpty()) {
+        if ($transaction->shares()->whereHas('settlements')->exists()) {
             throw ValidationException::withMessages(['shares' => 'No puedes cambiar un gasto compartido con partes ya liquidadas.']);
         }
 
@@ -342,9 +338,9 @@ final class TransactionService
 
     private function resizeShares(Transaction $transaction): void
     {
-        $shares = $transaction->shares()->orderBy('created_at')->orderBy('id')->get();
+        $shares = $transaction->shares()->withExists('settlements')->orderBy('created_at')->orderBy('id')->get();
 
-        if ($shares->whereNotNull('settled_at')->isEmpty() && $shares->first()?->mode !== ShareMode::Amount) {
+        if ($shares->where('settlements_exists', true)->isEmpty() && $shares->first()?->mode !== ShareMode::Amount) {
             $this->syncShares($transaction, ShareCalculator::specFrom($shares));
 
             return;

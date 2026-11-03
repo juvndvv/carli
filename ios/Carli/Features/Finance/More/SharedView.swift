@@ -546,8 +546,16 @@ struct SettleView: View {
     @State private var date = Date.now
     @State private var saving = false
     @State private var error: String?
+    /// Incomes already in the accounts (e.g. Bizums from the bank) that can pay the shares back.
+    @State private var candidates: [FinanceTransaction] = []
+    @State private var incomeIds: Set<String> = []
+    @State private var useExisting = false
 
     private var effectiveAccountId: String? { accountId ?? DebtsCopy.preferredAccount(accounts) }
+    private var selectedCents: Int {
+        candidates.filter { incomeIds.contains($0.id) }.reduce(0) { $0 + ReimbursementSheet.available($1) }
+    }
+    private var canSave: Bool { useExisting ? !incomeIds.isEmpty : effectiveAccountId != nil }
 
     private struct Payload: Encodable {
         var accountId: String
@@ -574,22 +582,18 @@ struct SettleView: View {
                 } footer: {
                     Text("Registra el cobro de los gastos compartidos pendientes.")
                 }
-                Section {
-                    Picker("Cuenta donde lo recibes", selection: Binding(get: { effectiveAccountId }, set: { accountId = $0 })) {
-                        if effectiveAccountId == nil { Text("Elige una cuenta").tag(String?.none) }
-                        ForEach(accounts.filter { !$0.isArchived }) { account in
-                            Label(account.name, systemImage: account.symbol).tag(Optional(account.id))
+                if !candidates.isEmpty {
+                    Section {
+                        Picker("Cobro", selection: $useExisting) {
+                            Text("Ya está en mis cuentas").tag(true)
+                            Text("Registrar uno nuevo").tag(false)
                         }
-                    }
-                    DatePicker("Fecha", selection: $date, in: ...Date.now, displayedComponents: .date)
-                } footer: {
-                    VStack(alignment: .leading, spacing: CarliSpace.s4) {
-                        Text("Se crea un ingreso que no cuenta como ingreso del periodo: solo te devuelve lo que adelantaste.")
-                        if contact.iOweCents > 0 || contact.owedToMeCents > 0 {
-                            Text("Las deudas con \(contact.name) se gestionan aparte, en Deudas.")
-                        }
+                        .pickerStyle(.segmented)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
                     }
                 }
+                if useExisting { existingSection } else { newIncomeSection }
                 if let error {
                     Section { Text(error).foregroundStyle(CarliColor.negative) }
                 }
@@ -602,19 +606,80 @@ struct SettleView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if saving { ProgressView() } else {
-                        Button("Registrar cobro", role: .confirm) { Task { await settle() } }
-                            .disabled(effectiveAccountId == nil)
+                        Button(useExisting ? "Vincular" : "Registrar cobro", role: .confirm) { Task { await settle() } }
+                            .disabled(!canSave)
                     }
                 }
             }
             .task {
                 if let page: AccountsPage = try? await api.get("v1/finance/accounts") { accounts = page.data }
+                if let envelope: DataEnvelope<[FinanceTransaction]> = try? await api.get(
+                    "v1/finance/reimbursements/candidates", query: ["contact_id": contact.id]) {
+                    candidates = envelope.data
+                    useExisting = !candidates.isEmpty
+                }
             }
         }
         .presentationDetents([.medium, .large])
     }
 
+    private var existingSection: some View {
+        Section {
+            ForEach(candidates) { income in
+                Button {
+                    if incomeIds.contains(income.id) { incomeIds.remove(income.id) } else { incomeIds.insert(income.id) }
+                } label: {
+                    HStack(spacing: CarliSpace.s12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(income.title).foregroundStyle(CarliColor.text).lineLimit(1)
+                            Text("\(CarliDate.day(income.date).map(CarliDate.short) ?? income.date) · \(income.account.name)")
+                                .font(.footnote).foregroundStyle(CarliColor.text2)
+                        }
+                        Spacer()
+                        Text(Money.format(ReimbursementSheet.available(income), .signed))
+                            .monospacedDigit()
+                            .foregroundStyle(CarliColor.positive)
+                        Image(systemName: "checkmark")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(CarliColor.brandInk)
+                            .opacity(incomeIds.contains(income.id) ? 1 : 0)
+                    }
+                }
+            }
+        } header: {
+            Text("Ingresos con los que te ha pagado")
+        } footer: {
+            VStack(alignment: .leading, spacing: CarliSpace.s4) {
+                if selectedCents > 0 { Text("Seleccionado: \(Money.format(selectedCents))") }
+                Text("No se crea ningún movimiento. Lo vinculado no cuenta como ingreso; se aplica a los gastos más antiguos primero.")
+            }
+        }
+    }
+
+    private var newIncomeSection: some View {
+        Section {
+            Picker("Cuenta donde lo recibes", selection: Binding(get: { effectiveAccountId }, set: { accountId = $0 })) {
+                if effectiveAccountId == nil { Text("Elige una cuenta").tag(String?.none) }
+                ForEach(accounts.filter { !$0.isArchived }) { account in
+                    Label(account.name, systemImage: account.symbol).tag(Optional(account.id))
+                }
+            }
+            DatePicker("Fecha", selection: $date, in: ...Date.now, displayedComponents: .date)
+        } footer: {
+            VStack(alignment: .leading, spacing: CarliSpace.s4) {
+                Text("Se crea un ingreso que no cuenta como ingreso del periodo: solo te devuelve lo que adelantaste.")
+                if contact.iOweCents > 0 || contact.owedToMeCents > 0 {
+                    Text("Las deudas con \(contact.name) se gestionan aparte, en Deudas.")
+                }
+            }
+        }
+    }
+
     private func settle() async {
+        if useExisting {
+            await settleWithExisting()
+            return
+        }
         guard let accountId = effectiveAccountId else {
             error = "Elige la cuenta donde recibes el dinero."
             return
@@ -628,6 +693,21 @@ struct SettleView: View {
             NotificationCenter.default.post(name: .financeChanged, object: nil)
             let name = accounts.first { $0.id == accountId }?.name
             onDone("Liquidado con \(contact.name): \(Money.format(result.data.netCents ?? contact.sharesPendingCents, .signed))\(name.map { " en \($0)" } ?? "")")
+            dismiss()
+        } catch {
+            self.error = error.apiMessage(fallback: "No se ha podido liquidar.")
+        }
+    }
+
+    private func settleWithExisting() async {
+        saving = true
+        error = nil
+        defer { saving = false }
+        do {
+            let _: Empty = try await api.post("v1/finance/contacts/\(contact.id)/settle",
+                                              body: Patch(["income_ids": .array(incomeIds.sorted().map(JSONValue.string))]))
+            NotificationCenter.default.post(name: .financeChanged, object: nil)
+            onDone("\(Money.format(min(selectedCents, contact.sharesPendingCents))) de \(contact.name) vinculados")
             dismiss()
         } catch {
             self.error = error.apiMessage(fallback: "No se ha podido liquidar.")

@@ -59,8 +59,8 @@ final class SpendingQuery
             // Income landing in a shared account is mostly the co-owner's contribution, not ours.
             ->whereNotExists(fn ($query) => $query->from('finance.accounts as a')->whereColumn('a.id', 't.account_id')->where('a.ownership_percent', '<', 100))
             ->whereBetween('t.date', [$from->toDateString(), $to->toDateString()])
-            ->whereNotExists(fn ($query) => $query->from('finance.shared_expense_shares as s')->whereColumn('s.settlement_transaction_id', 't.id'))
-            ->sum('t.amount_cents');
+            // The part that pays back someone's share of an expense is not income.
+            ->sum(DB::raw('t.amount_cents - COALESCE((SELECT SUM(ss.amount_cents) FROM finance.share_settlements ss WHERE ss.transaction_id = t.id), 0)'));
     }
 
     /**

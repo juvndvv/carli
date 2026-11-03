@@ -4,6 +4,7 @@ namespace App\Modules\Finance\Http\Resources;
 
 use App\Modules\Finance\Domain\Enums\TransactionSource;
 use App\Modules\Finance\Models\SharedExpenseShare;
+use App\Modules\Finance\Models\ShareSettlement;
 use App\Modules\Finance\Models\Tag;
 use App\Modules\Finance\Models\Transaction;
 use App\Modules\Finance\Models\TransactionSplit;
@@ -15,7 +16,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 final class TransactionResource extends JsonResource
 {
-    public const array RELATIONS = ['account.bankConnection', 'category.parent', 'tags', 'splits.category.parent', 'shares.contact', 'transferLegs', 'settledShares'];
+    public const array RELATIONS = ['account.bankConnection', 'category.parent', 'tags', 'splits.category.parent', 'shares.contact', 'transferLegs', 'shares.settlements', 'settlements.share.contact', 'settlements.share.transaction'];
 
     /**
      * @return array<string, mixed>
@@ -76,7 +77,19 @@ final class TransactionResource extends JsonResource
                 'include_self' => $share->include_self,
                 'settled' => $share->settled_at !== null,
                 'settled_at' => $share->settled_at?->toIso8601String(),
-                'settlement_transaction_id' => $share->settlement_transaction_id,
+                'settled_cents' => $share->settledCents(),
+                'settlement_transaction_ids' => $share->settlements->pluck('transaction_id')->values()->all(),
+            ])->values()->all(),
+            'reimbursed_cents' => $transaction->reimbursedCents(),
+            'reimburses' => $transaction->settlements->map(fn (ShareSettlement $settlement) => [
+                'share_id' => $settlement->share_id,
+                'expense_id' => $settlement->share->transaction_id,
+                'expense_date' => $settlement->share->transaction->date->toDateString(),
+                'expense_payee' => $settlement->share->transaction->payee,
+                'expense_description' => $settlement->share->transaction->description,
+                'contact_id' => $settlement->share->contact_id,
+                'name' => $settlement->share->contact->name,
+                'amount_cents' => $settlement->amount_cents,
             ])->values()->all(),
             'deleted' => $transaction->deleted_at !== null,
             'created_at' => $transaction->created_at?->toIso8601String(),

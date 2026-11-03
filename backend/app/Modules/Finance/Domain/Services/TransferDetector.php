@@ -361,7 +361,7 @@ final class TransferDetector
             AND {$alias}.debt_id IS NULL
             AND {$alias}.recurring_rule_id IS NULL
             AND NOT EXISTS (SELECT 1 FROM finance.transaction_splits s WHERE s.transaction_id = {$alias}.id)
-            AND NOT EXISTS (SELECT 1 FROM finance.shared_expense_shares sh WHERE sh.transaction_id = {$alias}.id OR sh.settlement_transaction_id = {$alias}.id)
+            AND NOT EXISTS (SELECT 1 FROM finance.shared_expense_shares sh WHERE sh.transaction_id = {$alias}.id UNION ALL SELECT 1 FROM finance.share_settlements ss WHERE ss.transaction_id = {$alias}.id)
             SQL;
     }
 

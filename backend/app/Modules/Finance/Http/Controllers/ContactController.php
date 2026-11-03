@@ -3,6 +3,7 @@
 namespace App\Modules\Finance\Http\Controllers;
 
 use App\Modules\Finance\Domain\Services\ContactService;
+use App\Modules\Finance\Domain\Services\ReimbursementService;
 use App\Modules\Finance\Http\Requests\SettleContactRequest;
 use App\Modules\Finance\Http\Requests\StoreContactRequest;
 use App\Modules\Finance\Http\Resources\ContactResource;
@@ -16,7 +17,10 @@ use Illuminate\Http\Response;
 
 final class ContactController extends FinanceController
 {
-    public function __construct(private readonly ContactService $contacts) {}
+    public function __construct(
+        private readonly ContactService $contacts,
+        private readonly ReimbursementService $reimbursements,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -74,8 +78,20 @@ final class ContactController extends FinanceController
     {
         $this->authorizeOwner('update', $contact);
 
-        /** @var array{account_id: string, date?: string|null} $data */
         $data = $request->validated();
+
+        if (isset($data['income_ids'])) {
+            $incomes = $this->reimbursements->settleContact($contact, array_values(array_map('strval', (array) $data['income_ids'])));
+
+            return response()->json(['data' => [
+                'transaction' => (new TransactionResource($incomes[0]))->resolve($request),
+                'transactions' => array_map(fn ($transaction) => (new TransactionResource($transaction))->resolve($request), $incomes),
+                'net_cents' => 0,
+                'contact' => (new ContactResource($contact->refresh()))->resolve($request),
+            ]]);
+        }
+
+        /** @var array{account_id: string, date?: string|null} $data */
         $settlement = $this->contacts->settle($contact, $data);
 
         return response()->json(['data' => [
