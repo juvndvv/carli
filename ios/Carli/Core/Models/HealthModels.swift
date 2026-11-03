@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 extension Notification.Name {
     /// Posted after a weigh-in is saved or deleted, or the Salud settings change.
@@ -56,7 +57,13 @@ struct HealthProfile: Decodable, Equatable {
     var reminderEnabled: Bool
     var reminderTime: String
     var reminderDays: [Int]
+    /// What the reminder covers; both missing before body measurements existed.
+    var reminderWeight: Bool?
+    var reminderBody: Bool?
     var age: Int?
+
+    var remindsWeight: Bool { reminderWeight ?? true }
+    var remindsBody: Bool { reminderBody ?? false }
 
     var isComplete: Bool { heightCm != nil && age != nil && sex != nil }
 
@@ -154,5 +161,157 @@ enum WeightFormat {
     static func change(_ value: Double) -> String {
         if abs(value) < 0.05 { return "Sin cambios" }
         return "\(value < 0 ? "−" : "+")\(kg(abs(value)))"
+    }
+}
+
+// MARK: Medidas del cuerpo
+
+/// Where on the body a site sits; the viewer places its dot from this.
+enum BodyZone: String, CaseIterable, Identifiable {
+    case neck, shoulders, chest, arm, forearm, wrist, waist, abdomen, hips, thigh, calf, ankle
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .neck: "Cuello"
+        case .shoulders: "Hombros"
+        case .chest: "Pecho"
+        case .arm: "Brazo"
+        case .forearm: "Antebrazo"
+        case .wrist: "Muñeca"
+        case .waist: "Cintura"
+        case .abdomen: "Abdomen"
+        case .hips: "Cadera"
+        case .thigh: "Muslo"
+        case .calf: "Gemelo"
+        case .ankle: "Tobillo"
+        }
+    }
+
+    /// Limbs come in pairs and take a side.
+    var paired: Bool {
+        switch self {
+        case .arm, .forearm, .wrist, .thigh, .calf, .ankle: true
+        default: false
+        }
+    }
+
+    /// Point on the front silhouette, 0…1 across its width and height. The person faces the
+    /// viewer, so their left side is drawn on the right.
+    func point(side: String?) -> CGPoint {
+        let y: CGFloat
+        var x: CGFloat = 0.5
+        switch self {
+        case .neck: y = 0.135
+        case .shoulders: y = 0.175
+        case .chest: y = 0.24
+        case .arm: y = 0.29; x = 0.243
+        case .forearm: y = 0.40; x = 0.20
+        case .wrist: y = 0.485; x = 0.175
+        case .waist: y = 0.39
+        case .abdomen: y = 0.33
+        case .hips: y = 0.47
+        case .thigh: y = 0.60; x = 0.405
+        case .calf: y = 0.79; x = 0.415
+        case .ankle: y = 0.91; x = 0.42
+        }
+        if paired && side == "left" { x = 1 - x }
+        return CGPoint(x: x, y: y)
+    }
+}
+
+struct BodySite: Decodable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var zone: String
+    var side: String?
+    var position: Int
+    var archived: Bool
+
+    var bodyZone: BodyZone { BodyZone(rawValue: zone) ?? .waist }
+}
+
+/// One value taken with the tape.
+struct SiteValue: Decodable, Identifiable, Hashable {
+    var id: String
+    var siteId: String
+    var measuredAt: String
+    var valueCm: Double
+
+    var date: Date { HealthDate.parse(measuredAt) ?? .distantPast }
+}
+
+/// A site on the body viewer: its latest value and the one it is compared with.
+struct BodySiteOverview: Decodable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var zone: String
+    var side: String?
+    var position: Int
+    var archived: Bool
+    var latest: SiteValue?
+    var baseline: SiteValue?
+    var changeCm: Double?
+    var count: Int
+
+    var bodyZone: BodyZone { BodyZone(rawValue: zone) ?? .waist }
+    var site: BodySite { BodySite(id: id, name: name, zone: zone, side: side, position: position, archived: archived) }
+}
+
+struct BodyOverview: Decodable, Equatable {
+    var sites: [BodySiteOverview]
+    var lastMeasuredAt: String?
+    var measuredToday: Bool
+}
+
+/// What the viewer compares the latest values with.
+enum BodyCompare: String, CaseIterable, Identifiable {
+    case first, month, quarter, year
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .first: "Inicio"
+        case .month: "1 M"
+        case .quarter: "3 M"
+        case .year: "1 A"
+        }
+    }
+
+    var caption: String {
+        switch self {
+        case .first: "desde la primera medida"
+        case .month: "en el último mes"
+        case .quarter: "en 3 meses"
+        case .year: "en un año"
+        }
+    }
+
+    /// The `compare` the server takes: "first" or the day to compare with.
+    var query: String {
+        let calendar = CarliDate.calendar
+        let months: Int
+        switch self {
+        case .first: return "first"
+        case .month: months = 1
+        case .quarter: months = 3
+        case .year: months = 12
+        }
+        return HealthDate.day(calendar.date(byAdding: .month, value: -months, to: .now) ?? .now)
+    }
+}
+
+enum BodyFormat {
+    static func cm(_ value: Double) -> String {
+        "\(value.formatted(.number.precision(.fractionLength(1)).locale(Locale(identifier: "es_ES")))) cm"
+    }
+
+    /// "−2,1", "+0,4", "=" (centimetres implied).
+    static func change(_ value: Double) -> String {
+        if abs(value) < 0.05 { return "=" }
+        let number = abs(value).formatted(.number.precision(.fractionLength(1)).locale(Locale(identifier: "es_ES")))
+        return "\(value < 0 ? "−" : "+")\(number)"
     }
 }

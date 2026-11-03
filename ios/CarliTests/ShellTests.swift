@@ -61,13 +61,18 @@ struct ShellTests {
         #expect(weigh.weighIn)
         #expect(AppLink.parse("/salud")?.section == "summary")
         #expect(AppLink.parse("/salud/mediciones/m1")?.steps == [.measurement("m1")])
+        let measure = try #require(AppLink.parse("/salud/medirse"))
+        #expect(measure.section == "body")
+        #expect(measure.measure)
+        #expect(!measure.weighIn)
+        #expect(AppLink.parse("/salud/cuerpo")?.section == "body")
         #expect(AppLink.moduleSettings(AppModule.health)?.steps == [.healthSettings])
     }
 
     @Test func saludShowsOnlyTheSectionsOfModulesThatAreOn() {
-        #expect(ModuleTab.health.sections(enabled: [AppModule.health]).map(\.id) == ["summary", "measurements", "trends"])
+        #expect(ModuleTab.health.sections(enabled: [AppModule.health]).map(\.id) == ["summary", "body", "measurements", "trends"])
         #expect(ModuleTab.health.sections(enabled: [AppModule.habits]).map(\.id) == ["habits-today", "habits", "habits-progress"])
-        #expect(ModuleTab.health.sections(enabled: [AppModule.health, AppModule.habits]).count == 6)
+        #expect(ModuleTab.health.sections(enabled: [AppModule.health, AppModule.habits]).count == 7)
         #expect(ModuleTab.finance.sections(enabled: []).count == 10)
     }
 
