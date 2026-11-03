@@ -221,6 +221,11 @@ struct DayBadge: View {
 struct CalendarTimeline: View {
     var days: [Date]
     var items: (Date) -> [CalendarItem]
+    /// The hour the last page was scrolled to; nil until the first page settles.
+    var topHour: Int?
+    /// Only the page on screen reports its scroll, so the pages beside it follow it.
+    var isCurrent: Bool
+    var scrolledTo: (Int) -> Void
     var pickDay: (Date) -> Void
     var showEvent: (CalendarItem) -> Void
 
@@ -248,7 +253,16 @@ struct CalendarTimeline: View {
                     .padding(.top, CarliSpace.s8)
                     .padding(.bottom, CarliSpace.s32)
                 }
-                .onAppear { proxy.scrollTo(firstHour, anchor: .top) }
+                .calendarVerticalScroll()
+                .onAppear { proxy.scrollTo(topHour ?? firstHour, anchor: .top) }
+                .onChange(of: topHour) {
+                    if !isCurrent, let topHour { proxy.scrollTo(topHour, anchor: .top) }
+                }
+                .onScrollGeometryChange(for: Int.self) { geo in
+                    min(max(Int(((geo.contentOffset.y + geo.contentInsets.top) / hourHeight).rounded()), 0), 23)
+                } action: { _, hour in
+                    if isCurrent { scrolledTo(hour) }
+                }
             }
         }
     }
@@ -452,6 +466,7 @@ struct CalendarMonthGrid: View {
                         }
                     }
                 }
+                .calendarVerticalScroll()
                 .scrollDisabled(rowHeight * CGFloat(rows) <= geo.size.height + 1)
             }
         }
@@ -524,6 +539,7 @@ struct CalendarYearGrid: View {
             }
             .padding(CarliSpace.s16)
         }
+        .calendarVerticalScroll()
     }
 }
 
