@@ -9,6 +9,8 @@ use App\Modules\Tasks\Notifications\TaskDue;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Notification;
 
+require_once __DIR__.'/../Support/GoogleFakes.php';
+
 beforeEach(function () {
     $this->travelTo(CalendarClock::date('2026-11-03')->setTime(10, 0));
     config([
