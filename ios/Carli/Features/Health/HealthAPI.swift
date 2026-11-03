@@ -52,6 +52,86 @@ enum HealthAPI {
     }
 }
 
+/// Calls to /v1/health/body: tape measurements of the body.
+enum BodyAPI {
+    static func overview(_ api: APIClient, compare: BodyCompare) async throws -> BodyOverview {
+        let envelope: DataEnvelope<BodyOverview> = try await api.get("v1/health/body", query: ["compare": compare.query])
+        return envelope.data
+    }
+
+    static func sites(_ api: APIClient, archived: Bool = false) async throws -> [BodySite] {
+        let envelope: DataEnvelope<[BodySite]> = try await api.get("v1/health/body/sites", query: archived ? ["archived": "1"] : [:])
+        return envelope.data
+    }
+
+    static func history(_ api: APIClient, site: String, from: Date? = nil) async throws -> [SiteValue] {
+        let query = from.map { ["from": HealthDate.day($0)] } ?? [:]
+        let envelope: DataEnvelope<[SiteValue]> = try await api.get("v1/health/body/sites/\(site)/measurements", query: query)
+        return envelope.data
+    }
+
+    struct SiteFields: Encodable {
+        var name: String
+        var zone: String
+        var side: String?
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+            try container.encode(zone, forKey: .zone)
+            // Explicit null, so editing a site to a centre zone clears its side.
+            try container.encode(side, forKey: .side)
+        }
+
+        private enum CodingKeys: String, CodingKey { case name, zone, side }
+    }
+
+    @discardableResult
+    static func createSite(_ api: APIClient, _ fields: SiteFields) async throws -> BodySite {
+        let envelope: DataEnvelope<BodySite> = try await api.post("v1/health/body/sites", body: fields)
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+        return envelope.data
+    }
+
+    @discardableResult
+    static func updateSite(_ api: APIClient, id: String, _ fields: SiteFields) async throws -> BodySite {
+        let envelope: DataEnvelope<BodySite> = try await api.patch("v1/health/body/sites/\(id)", body: fields)
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+        return envelope.data
+    }
+
+    static func archive(_ api: APIClient, id: String, _ archived: Bool) async throws {
+        struct Body: Encodable { var archived: Bool }
+        let _: DataEnvelope<BodySite> = try await api.patch("v1/health/body/sites/\(id)", body: Body(archived: archived))
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+
+    static func reorder(_ api: APIClient, ids: [String]) async throws {
+        struct Body: Encodable { var ids: [String] }
+        let _: Empty = try await api.put("v1/health/body/sites/order", body: Body(ids: ids))
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+
+    static func deleteSite(_ api: APIClient, id: String) async throws {
+        try await api.delete("v1/health/body/sites/\(id)")
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+
+    /// One session with the tape: every value shares the same moment.
+    static func record(_ api: APIClient, values: [(site: String, cm: Double)], at date: Date) async throws {
+        struct Value: Encodable { var siteId: String; var valueCm: Double }
+        struct Body: Encodable { var measuredAt: String; var values: [Value] }
+        let body = Body(measuredAt: HealthDate.string(date), values: values.map { Value(siteId: $0.site, valueCm: $0.cm) })
+        let _: DataEnvelope<[SiteValue]> = try await api.post("v1/health/body/measurements", body: body)
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+
+    static func deleteValue(_ api: APIClient, id: String) async throws {
+        try await api.delete("v1/health/body/measurements/\(id)")
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+}
+
 /// One scale result as the sync endpoint takes it: the decoded values plus the raw frames.
 struct ScaleUpload: Encodable {
     struct Metrics: Encodable {

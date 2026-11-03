@@ -11,6 +11,10 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
+/**
+ * The measurement reminder: says what is still missing today (the weight, the tape measurements or both)
+ * and opens the screen for the first of them.
+ */
 final class WeighReminder extends Notification implements ApnsNotification, ShouldQueue
 {
     use Queueable;
@@ -18,6 +22,13 @@ final class WeighReminder extends Notification implements ApnsNotification, Shou
     public const string TYPE = 'weigh_reminder';
 
     public const string URL = '/salud/pesarse';
+
+    public const string BODY_URL = '/salud/medirse';
+
+    /**
+     * @param  list<'weight'|'body'>  $missing
+     */
+    public function __construct(public readonly array $missing = ['weight']) {}
 
     /**
      * @return list<string>
@@ -37,7 +48,7 @@ final class WeighReminder extends Notification implements ApnsNotification, Shou
             'type' => self::TYPE,
             'title' => $this->title(),
             'body' => $this->body(),
-            'url' => self::URL,
+            'url' => $this->url(),
         ];
     }
 
@@ -46,18 +57,41 @@ final class WeighReminder extends Notification implements ApnsNotification, Shou
         return new ApnsMessage(
             title: $this->title(),
             body: $this->body(),
-            url: self::URL,
+            url: $this->url(),
             threadId: HealthSettings::MODULE.'.'.self::TYPE,
         );
     }
 
+    private function weight(): bool
+    {
+        return in_array('weight', $this->missing, true);
+    }
+
+    private function measures(): bool
+    {
+        return in_array('body', $this->missing, true);
+    }
+
+    private function url(): string
+    {
+        return $this->weight() ? self::URL : self::BODY_URL;
+    }
+
     private function title(): string
     {
-        return 'Hora de pesarse';
+        return match (true) {
+            $this->weight() && $this->measures() => 'Hora de pesarse y medirse',
+            $this->measures() => 'Hora de medirse',
+            default => 'Hora de pesarse',
+        };
     }
 
     private function body(): string
     {
-        return 'Súbete a la báscula descalzo con carli abierta.';
+        return match (true) {
+            $this->weight() && $this->measures() => 'Hoy te faltan el peso y las medidas del cuerpo.',
+            $this->measures() => 'Coge la cinta y apunta tus medidas del cuerpo en carli.',
+            default => 'Súbete a la báscula descalzo con carli abierta.',
+        };
     }
 }

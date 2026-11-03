@@ -9,6 +9,8 @@ extension View {
     func healthDestinations(api: APIClient) -> some View {
         navigationDestination(for: MeasurementRoute.self) { MeasurementDetailView(api: api, id: $0.id) }
             .navigationDestination(for: HealthSettingsRoute.self) { _ in HealthSettingsView(api: api) }
+            .navigationDestination(for: BodySiteRoute.self) { BodySiteDetailView(api: api, id: $0.id) }
+            .navigationDestination(for: BodySitesRoute.self) { _ in BodySitesView(api: api) }
             .habitsDestinations(api: api)
     }
 
@@ -16,7 +18,7 @@ extension View {
         onReceive(NotificationCenter.default.publisher(for: .healthChanged)) { _ in Task { await reload() } }
     }
 
-    fileprivate func healthSettingsButton() -> some View {
+    func healthSettingsButton() -> some View {
         toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink(value: HealthSettingsRoute()) { Image(systemName: "gearshape") }
@@ -27,7 +29,7 @@ extension View {
 }
 
 /// Scrolling page shell shared by the Salud sections.
-private struct HealthPage<Content: View>: View {
+struct HealthPage<Content: View>: View {
     var loaded: Bool
     var failed: String?
     var retry: () async -> Void
@@ -545,7 +547,7 @@ struct HealthTrendsView: View {
 
 // MARK: Ajustes
 
-/// Ajustes de Salud: the profile the scale needs, the goal, the weigh-in reminder and Hábitos.
+/// Ajustes de Salud: the profile the scale needs, the goal, the measurement reminder, the body sites and Hábitos.
 struct HealthSettingsView: View {
     let api: APIClient
 
@@ -587,8 +589,14 @@ struct HealthSettingsView: View {
                 }
 
                 Section {
-                    Toggle("Recordar pesarme", isOn: binding("reminder_enabled", profile.reminderEnabled) { .bool($0) })
+                    Toggle("Recordarme medir", isOn: binding("reminder_enabled", profile.reminderEnabled) { .bool($0) })
                     if profile.reminderEnabled {
+                        Toggle("Peso", isOn: Binding(get: { profile.remindsWeight }, set: { on in
+                            Task { await include("reminder_weight", on, other: profile.remindsBody) }
+                        }))
+                        Toggle("Medidas del cuerpo", isOn: Binding(get: { profile.remindsBody }, set: { on in
+                            Task { await include("reminder_body", on, other: profile.remindsWeight) }
+                        }))
                         DatePicker("Hora", selection: Binding(get: { reminderTime }, set: { date in
                             reminderTime = date
                             let c = CarliDate.calendar.dateComponents([.hour, .minute], from: date)
@@ -612,7 +620,11 @@ struct HealthSettingsView: View {
                 } header: {
                     Text("Recordatorio")
                 } footer: {
-                    Text("Solo avisa si ese día aún no te has pesado.")
+                    Text("Un solo aviso con lo que aún te falte ese día: pesarte, medirte o ambas.")
+                }
+
+                Section("Medidas del cuerpo") {
+                    NavigationLink("Sitios de medición", value: BodySitesRoute())
                 }
 
                 Section("Hábitos") {
@@ -647,6 +659,15 @@ struct HealthSettingsView: View {
     private func birth(_ profile: HealthProfile) -> Date {
         profile.birthDate.flatMap { HealthDate.parse("\($0)T12:00:00Z") }
             ?? CarliDate.calendar.date(byAdding: .year, value: -30, to: .now) ?? .now
+    }
+
+    /// Weight and measurements are both optional, but the reminder needs one of them.
+    private func include(_ key: String, _ on: Bool, other: Bool) async {
+        guard on || other else {
+            toast = "El recordatorio necesita peso o medidas"
+            return
+        }
+        await save([key: .bool(on)])
     }
 
     private func toggle(_ day: Int, in profile: HealthProfile) async {

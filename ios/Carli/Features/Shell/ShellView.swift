@@ -35,8 +35,8 @@ enum ModuleTab: String, CaseIterable {
     }
 
     /// Salud holds the weight and the Hábitos module; each half shows only while its module is on.
-    static let weightSections: [ModuleSection] = [.init(id: "summary", title: "Resumen"), .init(id: "measurements", title: "Mediciones"),
-                                                  .init(id: "trends", title: "Tendencias")]
+    static let weightSections: [ModuleSection] = [.init(id: "summary", title: "Resumen"), .init(id: "body", title: "Cuerpo"),
+                                                  .init(id: "measurements", title: "Pesadas"), .init(id: "trends", title: "Tendencias")]
     static let habitSections: [ModuleSection] = [.init(id: "habits-today", title: "Hábitos hoy"), .init(id: "habits", title: "Hábitos"),
                                                  .init(id: "habits-progress", title: "Progreso")]
 
@@ -163,6 +163,7 @@ struct ModuleRootView: View {
     @State private var section: ModuleSection
     @State private var adding = false
     @State private var weighing = false
+    @State private var measuring = false
     @State private var newKind: TransactionFormModel.Kind = .expense
     @State private var toast: String?
     /// Filters a link asked for; entering Movimientos from the header menu starts clean.
@@ -212,6 +213,9 @@ struct ModuleRootView: View {
                 .sheet(isPresented: $weighing) {
                     WeighInSheet(api: auth.api) { toast = $0 }
                 }
+                .sheet(isPresented: $measuring) {
+                    BodyMeasureSheet(api: auth.api) { toast = $0 }
+                }
                 .carliToast($toast)
         }
         .onChange(of: router.pending?.id, initial: true) { applyLink() }
@@ -238,6 +242,9 @@ struct ModuleRootView: View {
         }
         if link.weighIn, module == .health {
             weighing = true
+        }
+        if link.measure, module == .health {
+            measuring = true
         }
     }
 
@@ -287,6 +294,8 @@ struct ModuleRootView: View {
             TemplatesView(api: auth.api)
         case (.health, "summary"):
             HealthSummaryView(api: auth.api, habitsOn: sections.contains(ModuleTab.habitSections[0])) { weighing = true }
+        case (.health, "body"):
+            BodyView(api: auth.api) { measuring = true }
         case (.health, "measurements"):
             MeasurementsView(api: auth.api)
         case (.health, "trends"):
@@ -347,10 +356,12 @@ struct ModuleRootView: View {
     }
 
     /// "+" opens the module's create sheet; in Compra it focuses the add-product field instead,
-    /// and in Salud's weight sections it opens "Pesarse".
+    /// in Salud's weight sections it opens "Pesarse", and in Cuerpo "Medirse".
     private func add() {
         if module == .notes && section.id == "shopping" {
             shoppingFocus += 1
+        } else if isBodySection {
+            measuring = true
         } else if isWeightSection {
             weighing = true
         } else {
@@ -382,8 +393,13 @@ struct ModuleRootView: View {
         module == .health && ModuleTab.weightSections.contains(section)
     }
 
+    private var isBodySection: Bool {
+        module == .health && section.id == "body"
+    }
+
     private var addLabel: String {
         if module == .notes && section.id == "shopping" { return "Añadir producto" }
+        if isBodySection { return "Medirse" }
         if module == .health && !isWeightSection { return "Nuevo hábito" }
         return module.addLabel
     }

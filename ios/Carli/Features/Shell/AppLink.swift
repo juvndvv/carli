@@ -33,6 +33,8 @@ struct AppLink: Equatable, Identifiable {
     var transactionId: String?
     /// Opens "Pesarse" in Salud (the weigh-in reminder).
     var weighIn = false
+    /// Opens "Medirse" in Salud › Cuerpo (the measurement reminder).
+    var measure = false
 
     static func == (lhs: AppLink, rhs: AppLink) -> Bool { lhs.id == rhs.id }
 
@@ -153,7 +155,9 @@ struct AppLink: Equatable, Identifiable {
             switch (rest.count, at(0)) {
             case (0, _), (1, "resumen"): return AppLink(tab: health, section: "summary")
             case (1, "pesarse"): return AppLink(tab: health, section: "summary", weighIn: true)
-            case (1, "mediciones"): return AppLink(tab: health, section: "measurements")
+            case (1, "cuerpo"): return AppLink(tab: health, section: "body")
+            case (1, "medirse"): return AppLink(tab: health, section: "body", measure: true)
+            case (1, "mediciones"), (1, "pesadas"): return AppLink(tab: health, section: "measurements")
             case (2, "mediciones"): return AppLink(tab: health, section: "measurements", steps: [.measurement(rest[1])])
             case (1, "tendencias"): return AppLink(tab: health, section: "trends")
             case (1, "ajustes"): return AppLink(tab: health, section: "summary", steps: [.healthSettings])

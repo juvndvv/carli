@@ -11,12 +11,12 @@ final readonly class HealthSettings
 {
     public const string MODULE = 'health';
 
-    public const array KEYS = ['height_cm', 'birth_date', 'sex', 'goal_kg', 'reminder_enabled', 'reminder_time', 'reminder_days'];
+    public const array KEYS = ['height_cm', 'birth_date', 'sex', 'goal_kg', 'reminder_enabled', 'reminder_time', 'reminder_days', 'reminder_weight', 'reminder_body'];
 
     public function __construct(private ModuleRegistry $modules) {}
 
     /**
-     * @return array{height_cm: int|null, birth_date: string|null, sex: string|null, goal_kg: float|null, reminder_enabled: bool, reminder_time: string, reminder_days: list<int>, age: int|null}
+     * @return array{height_cm: int|null, birth_date: string|null, sex: string|null, goal_kg: float|null, reminder_enabled: bool, reminder_time: string, reminder_days: list<int>, reminder_weight: bool, reminder_body: bool, age: int|null}
      */
     public function for(User $user): array
     {
@@ -32,6 +32,9 @@ final readonly class HealthSettings
             'reminder_enabled' => (bool) ($settings['reminder_enabled'] ?? false),
             'reminder_time' => is_string($settings['reminder_time'] ?? null) ? $settings['reminder_time'] : '08:00',
             'reminder_days' => array_values(array_map('intval', $days)),
+            // One reminder for everything measured: the weight, the tape measurements or both.
+            'reminder_weight' => (bool) ($settings['reminder_weight'] ?? true),
+            'reminder_body' => (bool) ($settings['reminder_body'] ?? false),
             'age' => $birth === null ? null : (int) HabitCalendar::date($birth)->diffInYears(HabitCalendar::today()),
         ];
     }
