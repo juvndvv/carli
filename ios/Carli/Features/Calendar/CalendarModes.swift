@@ -253,6 +253,7 @@ struct CalendarTimeline: View {
                     .padding(.top, CarliSpace.s8)
                     .padding(.bottom, CarliSpace.s32)
                 }
+                .calendarVerticalScroll()
                 .onAppear { proxy.scrollTo(topHour ?? firstHour, anchor: .top) }
                 .onChange(of: topHour) {
                     if !isCurrent, let topHour { proxy.scrollTo(topHour, anchor: .top) }
@@ -465,6 +466,7 @@ struct CalendarMonthGrid: View {
                         }
                     }
                 }
+                .calendarVerticalScroll()
                 .scrollDisabled(rowHeight * CGFloat(rows) <= geo.size.height + 1)
             }
         }
@@ -537,6 +539,7 @@ struct CalendarYearGrid: View {
             }
             .padding(CarliSpace.s16)
         }
+        .calendarVerticalScroll()
     }
 }
 

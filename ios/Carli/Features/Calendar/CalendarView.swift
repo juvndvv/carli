@@ -296,6 +296,8 @@ struct CalendarPager<Page: View>: View {
     @Binding var page: Int?
     @ViewBuilder var content: (Int) -> Page
 
+    @State private var lock = CalendarAxisLock()
+
     var body: some View {
         GeometryReader { geo in
             ScrollView(.horizontal) {
@@ -310,7 +312,33 @@ struct CalendarPager<Page: View>: View {
             .scrollTargetBehavior(.paging)
             .scrollIndicators(.hidden)
             .scrollPosition(id: $page)
+            // One axis at a time: a vertical drag inside a page never turns the page, and a swipe never scrolls the hours.
+            .scrollDisabled(lock.vertical)
+            .onScrollPhaseChange { _, phase in lock.horizontal = phase == .interacting }
+            .environment(lock)
         }
+    }
+}
+
+/// Which way the calendar is being dragged right now, shared by the pager and the scroll views on its pages.
+@Observable
+final class CalendarAxisLock {
+    var horizontal = false
+    var vertical = false
+}
+
+extension View {
+    /// For a vertical scroll view on a calendar page: frozen while the pages slide, and it freezes them while it scrolls.
+    func calendarVerticalScroll() -> some View { modifier(CalendarVerticalScroll()) }
+}
+
+private struct CalendarVerticalScroll: ViewModifier {
+    @Environment(CalendarAxisLock.self) private var lock: CalendarAxisLock?
+
+    func body(content: Content) -> some View {
+        content
+            .scrollDisabled(lock?.horizontal ?? false)
+            .onScrollPhaseChange { _, phase in lock?.vertical = phase == .interacting }
     }
 }
 
