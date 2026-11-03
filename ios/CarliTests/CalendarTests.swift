@@ -37,8 +37,8 @@ struct CalendarTests {
     @Test func weeksStartOnMonday() {
         let wednesday = CarliDate.day("2026-11-04")!
         let sunday = CarliDate.day("2026-11-08")!
-        #expect(CarliDate.isoDay(CalendarView.monday(of: wednesday)) == "2026-11-02")
-        #expect(CarliDate.isoDay(CalendarView.monday(of: sunday)) == "2026-11-02")
+        #expect(CarliDate.isoDay(CalendarLayout.monday(of: wednesday)) == "2026-11-02")
+        #expect(CarliDate.isoDay(CalendarLayout.monday(of: sunday)) == "2026-11-02")
     }
 
     @Test func googleCallbackOutcomes() {
