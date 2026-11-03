@@ -5,11 +5,11 @@ return [
     'name' => 'Salud',
     'icon' => 'heart-pulse',
     'route' => '/salud',
-    'description' => 'Peso y composición corporal desde la báscula, y tus hábitos.',
+    'description' => 'Peso y composición desde la báscula, medidas del cuerpo y tus hábitos.',
     'notifications' => [
         'weigh_reminder' => [
-            'label' => 'Recordatorio para pesarse',
-            'description' => 'A la hora y los días que elijas en Ajustes de Salud, si ese día aún no te has pesado.',
+            'label' => 'Recordatorio de mediciones',
+            'description' => 'A la hora y los días que elijas en Ajustes de Salud, si ese día aún te falta pesarte o tomarte las medidas.',
             'push' => true,
             'in_app' => false,
         ],
@@ -22,5 +22,7 @@ return [
         'reminder_enabled' => false,
         'reminder_time' => '08:00',
         'reminder_days' => [1, 2, 3, 4, 5, 6, 7],
+        'reminder_weight' => true,
+        'reminder_body' => false,
     ],
 ];

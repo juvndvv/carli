@@ -4,8 +4,11 @@ namespace App\Modules\Health;
 
 use App\Modules\Habits\Policies\OwnedByUserPolicy;
 use App\Modules\Health\Console\WeighRemindersCommand;
+use App\Modules\Health\Domain\BodyService;
 use App\Modules\Health\Domain\HealthSettings;
 use App\Modules\Health\Domain\MeasurementService;
+use App\Modules\Health\Models\BodyMeasurement;
+use App\Modules\Health\Models\BodySite;
 use App\Modules\Health\Models\Measurement;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Gate;
@@ -25,6 +28,7 @@ class HealthServiceProvider extends ServiceProvider
     {
         $this->app->scoped(HealthSettings::class);
         $this->app->scoped(MeasurementService::class);
+        $this->app->scoped(BodyService::class);
     }
 
     public function boot(): void
@@ -36,6 +40,8 @@ class HealthServiceProvider extends ServiceProvider
             ->group(__DIR__.'/routes/api.php');
 
         Gate::policy(Measurement::class, OwnedByUserPolicy::class);
+        Gate::policy(BodySite::class, OwnedByUserPolicy::class);
+        Gate::policy(BodyMeasurement::class, OwnedByUserPolicy::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([WeighRemindersCommand::class]);

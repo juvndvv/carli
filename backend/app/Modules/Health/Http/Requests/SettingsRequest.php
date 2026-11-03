@@ -25,6 +25,8 @@ final class SettingsRequest extends FormRequest
             'reminder_time' => ['sometimes', 'date_format:H:i'],
             'reminder_days' => ['sometimes', 'array', 'min:1', 'max:7'],
             'reminder_days.*' => ['integer', 'between:1,7'],
+            'reminder_weight' => ['sometimes', 'boolean'],
+            'reminder_body' => ['sometimes', 'boolean'],
         ];
     }
 }
