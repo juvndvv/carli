@@ -121,6 +121,23 @@ struct FinanceTransaction: Decodable, Equatable, Identifiable {
         var name: String?
         var amountCents: Int?
         var settled: Bool?
+        var settledCents: Int?
+    }
+
+    /// Part of this income that pays back a contact's share of an expense.
+    struct Reimbursement: Decodable, Equatable {
+        var expenseId: String
+        var expenseDate: String?
+        var expensePayee: String?
+        var expenseDescription: String?
+        var name: String?
+        var amountCents: Int
+
+        var expenseTitle: String {
+            if let expensePayee, !expensePayee.isEmpty { return expensePayee }
+            if let expenseDescription, !expenseDescription.isEmpty { return expenseDescription }
+            return "Gasto compartido"
+        }
     }
 
     struct Bank: Decodable, Equatable {
@@ -147,11 +164,18 @@ struct FinanceTransaction: Decodable, Equatable, Identifiable {
     var bank: Bank?
     var transferSource: String?
     var transferUndoable: Bool?
+    var debtId: String?
+    var reimbursedCents: Int?
+    var reimburses: [Reimbursement]?
 
     var isTransfer: Bool { kind == "transfer" }
-    var sharesLocked: Bool { (shares ?? []).contains { $0.settled == true } }
+    var sharesLocked: Bool { (shares ?? []).contains { $0.settled == true || ($0.settledCents ?? 0) > 0 } }
+    /// Income that pays back someone's share: that part is neither income nor spending.
+    var isReimbursement: Bool { (reimbursedCents ?? 0) > 0 }
+    var canBeReimbursement: Bool { kind == "income" && transferGroupId == nil && debtId == nil && !isReimbursement }
+    var canReceiveReimbursement: Bool { kind == "expense" && transferGroupId == nil }
     /// A bank expense or income can be relinked as a transfer with a manual account.
-    var canBecomeTransfer: Bool { fromBank && (kind == "expense" || kind == "income") && !isSplit && (shares ?? []).isEmpty }
+    var canBecomeTransfer: Bool { fromBank && (kind == "expense" || kind == "income") && !isSplit && (shares ?? []).isEmpty && !isReimbursement }
     var isSplit: Bool { !(splits ?? []).isEmpty }
     var fromBank: Bool { source == "bank" }
     var needsCategory: Bool { isTransfer || kind == "adjustment" || (category == nil && !isSplit) }

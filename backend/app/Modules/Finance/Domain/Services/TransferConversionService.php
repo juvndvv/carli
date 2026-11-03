@@ -202,7 +202,7 @@ final class TransferConversionService
             ! in_array($transaction->kind, [TransactionKind::Expense, TransactionKind::Income], true) => 'Solo se pueden convertir gastos e ingresos.',
             $transaction->debt_id !== null => 'El movimiento es un pago de una deuda.',
             $transaction->splits()->exists() => 'El movimiento está dividido en varias categorías.',
-            $transaction->shares()->exists() || $transaction->settledShares()->exists() => 'El movimiento tiene partes compartidas.',
+            $transaction->shares()->exists() || $transaction->settlements()->exists() => 'El movimiento tiene partes compartidas.',
             default => null,
         };
 

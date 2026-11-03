@@ -13,6 +13,7 @@ use App\Modules\Finance\Http\Controllers\GoalController;
 use App\Modules\Finance\Http\Controllers\PayeeController;
 use App\Modules\Finance\Http\Controllers\PeriodController;
 use App\Modules\Finance\Http\Controllers\RecurringRuleController;
+use App\Modules\Finance\Http\Controllers\ReimbursementController;
 use App\Modules\Finance\Http\Controllers\SettingsController;
 use App\Modules\Finance\Http\Controllers\SimilarTransactionsController;
 use App\Modules\Finance\Http\Controllers\SummaryController;
@@ -82,6 +83,10 @@ Route::where([
     Route::post('goals/{goal}/contributions', [GoalController::class, 'storeContribution'])->name('goals.contributions.store');
     Route::delete('goals/{goal}/contributions/{contribution}', [GoalController::class, 'destroyContribution'])->name('goals.contributions.destroy');
     Route::apiResource('goals', GoalController::class);
+
+    Route::get('reimbursements/candidates', [ReimbursementController::class, 'candidates'])->name('reimbursements.candidates');
+    Route::post('reimbursements', [ReimbursementController::class, 'store'])->name('reimbursements.store');
+    Route::delete('transactions/{transaction}/reimbursements', [ReimbursementController::class, 'destroy'])->name('transactions.reimbursements.destroy');
 
     Route::post('contacts/{contact}/settle', [ContactController::class, 'settle'])->name('contacts.settle');
     Route::apiResource('contacts', ContactController::class);

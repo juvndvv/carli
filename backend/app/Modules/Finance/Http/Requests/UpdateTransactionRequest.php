@@ -57,7 +57,7 @@ final class UpdateTransactionRequest extends StoreTransactionRequest
                     return;
                 }
 
-                if ($transaction->source === TransactionSource::Bank || $transaction->settledShares()->exists()) {
+                if ($transaction->source === TransactionSource::Bank || $transaction->settlements()->exists()) {
                     return;
                 }
 

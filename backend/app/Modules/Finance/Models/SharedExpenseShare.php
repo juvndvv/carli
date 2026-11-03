@@ -4,9 +4,11 @@ namespace App\Modules\Finance\Models;
 
 use App\Modules\Finance\Domain\Enums\ShareMode;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property string $id
@@ -17,11 +19,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $basis_points
  * @property bool $include_self
  * @property CarbonImmutable|null $settled_at
- * @property string|null $settlement_transaction_id
+ * @property bool $from_reimbursement
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Contact $contact
  * @property-read Transaction $transaction
+ * @property-read Collection<int, ShareSettlement> $settlements
  */
 class SharedExpenseShare extends Model
 {
@@ -38,6 +41,7 @@ class SharedExpenseShare extends Model
             'mode' => ShareMode::class,
             'basis_points' => 'integer',
             'include_self' => 'boolean',
+            'from_reimbursement' => 'boolean',
             'settled_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
@@ -58,5 +62,23 @@ class SharedExpenseShare extends Model
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class)->withoutGlobalScopes();
+    }
+
+    /**
+     * @return HasMany<ShareSettlement, $this>
+     */
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(ShareSettlement::class, 'share_id');
+    }
+
+    public function settledCents(): int
+    {
+        return (int) $this->settlements->sum('amount_cents');
+    }
+
+    public function pendingCents(): int
+    {
+        return max(0, $this->amount_cents - $this->settledCents());
     }
 }

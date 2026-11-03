@@ -47,7 +47,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Collection<int, Tag> $tags
  * @property-read Collection<int, TransactionSplit> $splits
  * @property-read Collection<int, SharedExpenseShare> $shares
- * @property-read Collection<int, SharedExpenseShare> $settledShares
+ * @property-read Collection<int, ShareSettlement> $settlements
  * @property-read Transaction|null $counterpart
  * @property-read RecurringRule|null $recurringRule
  */
@@ -125,11 +125,13 @@ class Transaction extends Model
     }
 
     /**
-     * @return HasMany<SharedExpenseShare, $this>
+     * Shares of other expenses that this income pays back.
+     *
+     * @return HasMany<ShareSettlement, $this>
      */
-    public function settledShares(): HasMany
+    public function settlements(): HasMany
     {
-        return $this->hasMany(SharedExpenseShare::class, 'settlement_transaction_id');
+        return $this->hasMany(ShareSettlement::class);
     }
 
     /**
@@ -179,7 +181,7 @@ class Transaction extends Model
             ->where($query->qualifyColumn('status'), TransactionStatus::Cleared->value)
             ->whereNull($query->qualifyColumn('debt_id'))
             ->whereDoesntHave('splits')
-            ->whereDoesntHave('settledShares');
+            ->whereDoesntHave('settlements');
     }
 
     public function isUncategorized(): bool
@@ -189,7 +191,7 @@ class Transaction extends Model
             && $this->status === TransactionStatus::Cleared
             && $this->debt_id === null
             && $this->splits->isEmpty()
-            && $this->settledShares->isEmpty();
+            && $this->settlements->isEmpty();
     }
 
     public function isTransfer(): bool
@@ -209,6 +211,14 @@ class Transaction extends Model
         return is_string($booked) && preg_match('/^\d{4}-\d{2}-\d{2}/', $booked) === 1 ? SpanishCalendar::date($booked) : $this->date;
     }
 
+    /**
+     * Part of this income that pays back shares of expenses: it is neither income nor spending.
+     */
+    public function reimbursedCents(): int
+    {
+        return (int) $this->settlements->sum('amount_cents');
+    }
+
     public function sharedCents(): int
     {
         return (int) $this->shares->sum('amount_cents');
@@ -216,6 +226,10 @@ class Transaction extends Model
 
     public function ownAmountCents(): int
     {
+        if ($this->kind === TransactionKind::Income) {
+            return $this->amount_cents - $this->reimbursedCents();
+        }
+
         if ($this->kind !== TransactionKind::Expense) {
             return $this->amount_cents;
         }
