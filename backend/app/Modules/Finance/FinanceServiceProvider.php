@@ -2,6 +2,7 @@
 
 namespace App\Modules\Finance;
 
+use App\Core\Calendar\CalendarRegistry;
 use App\Core\Pending\PendingRegistry;
 use App\Core\Push\RefreshWidgets;
 use App\Core\Search\ModuleSearcher;
@@ -9,6 +10,7 @@ use App\Modules\Finance\BankSync\Contracts\BankDataProvider;
 use App\Modules\Finance\BankSync\Providers\EnableBankingProvider;
 use App\Modules\Finance\BankSync\Services\BankConnectionService;
 use App\Modules\Finance\BankSync\Services\BankSyncService;
+use App\Modules\Finance\Calendar\FinanceCalendarItems;
 use App\Modules\Finance\Console\BankConsentExpiryCommand;
 use App\Modules\Finance\Console\BankSyncCommand;
 use App\Modules\Finance\Console\DetectTransfersCommand;
@@ -111,6 +113,7 @@ class FinanceServiceProvider extends ServiceProvider
         }
 
         $this->callAfterResolving(PendingRegistry::class, fn (PendingRegistry $pending) => $pending->register(FinancePendingItems::class));
+        $this->callAfterResolving(CalendarRegistry::class, fn (CalendarRegistry $calendar) => $calendar->register(FinanceCalendarItems::class));
     }
 
     public function boot(): void

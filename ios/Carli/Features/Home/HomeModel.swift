@@ -22,6 +22,8 @@ final class HomeModel {
     var habits: HabitsToday?
     var health: HealthSummary?
     var notes: NotesSnapshot?
+    /// Today's calendar, for the Agenda card (only shown once a Google account is linked).
+    var agenda: CalendarRange?
     var toast: String?
 
     private let api: APIClient
@@ -46,7 +48,8 @@ final class HomeModel {
         async let habits: Void = isEnabled(AppModule.habits) ? loadHabits() : ()
         async let notes: Void = isEnabled(AppModule.notes) ? loadNotes() : ()
         async let health: Void = isEnabled(AppModule.health) ? loadHealth() : ()
-        _ = await (finance, pending, notifications, tasks, habits, notes, health)
+        async let agenda: Void = isEnabled(AppModule.calendar) ? loadAgenda() : ()
+        _ = await (finance, pending, notifications, tasks, habits, notes, health, agenda)
     }
 
     func loadModules() async {
@@ -97,6 +100,13 @@ final class HomeModel {
 
     func loadHealth() async {
         if let summary = try? await HealthAPI.summary(api) { health = summary }
+    }
+
+    func loadAgenda() async {
+        let today = CarliDate.isoDay(.now)
+        if let envelope: DataEnvelope<CalendarRange> = try? await api.get("v1/calendar", query: ["from": today, "to": today]) {
+            agenda = envelope.data
+        }
     }
 
     func loadNotes() async {

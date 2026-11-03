@@ -68,3 +68,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function (): void {
 
     Route::get('search', SearchController::class)->name('search');
 });
+
+// Public pages Google's OAuth consent screen links to (only /api reaches Laravel behind Caddy).
+Route::prefix('v1/legal')->group(function (): void {
+    Route::view('/', 'legal.home')->name('legal.home');
+    Route::view('privacidad', 'legal.privacy')->name('legal.privacy');
+});

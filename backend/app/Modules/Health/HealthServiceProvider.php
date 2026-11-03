@@ -2,7 +2,9 @@
 
 namespace App\Modules\Health;
 
+use App\Core\Calendar\CalendarRegistry;
 use App\Modules\Habits\Policies\OwnedByUserPolicy;
+use App\Modules\Health\Calendar\HealthCalendarItems;
 use App\Modules\Health\Console\WeighRemindersCommand;
 use App\Modules\Health\Domain\BodyService;
 use App\Modules\Health\Domain\HealthSettings;
@@ -26,6 +28,7 @@ class HealthServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->callAfterResolving(CalendarRegistry::class, fn (CalendarRegistry $calendar) => $calendar->register(HealthCalendarItems::class));
         $this->app->scoped(HealthSettings::class);
         $this->app->scoped(MeasurementService::class);
         $this->app->scoped(BodyService::class);

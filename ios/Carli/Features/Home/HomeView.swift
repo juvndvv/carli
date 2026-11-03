@@ -1,5 +1,17 @@
 import SwiftUI
 
+/// Inicio's sections, picked from the header selector like a module's.
+enum HomeSection: String, CaseIterable, Hashable {
+    case home, calendar
+
+    var title: String {
+        switch self {
+        case .home: "Inicio"
+        case .calendar: "Calendario"
+        }
+    }
+}
+
 enum HomeRoute: Hashable {
     case notifications, settings, search
     case pending(module: String? = nil, type: String? = nil)
@@ -13,15 +25,64 @@ struct HomeView: View {
     @Environment(AuthModel.self) private var auth
     @Environment(AppRouter.self) private var router
     @State private var path = NavigationPath()
+    @State private var section: HomeSection = .home
 
     var body: some View {
         NavigationStack(path: $path) {
+            Group {
+                if section == .calendar {
+                    CalendarView(api: auth.api)
+                } else {
+                    cards
+                }
+            }
+            .navigationTitle(section.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(removing: .title)
+            .toolbar { toolbar }
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case .notifications: NotificationsView(model: NotificationsModel(api: auth.api))
+                case .pending(let module, let type): PendingView(model: PendingModel(api: auth.api, module: module, type: type))
+                case .settings: SettingsView(modules: model.modules)
+                case .search: SearchView(api: auth.api, enabledModules: Set((model.modules ?? []).filter(\.isOn).map(\.id) + [AppModule.finance]))
+                }
+            }
+            .settingsDestinations(api: auth.api, modules: model.modules)
+            .tasksDestinations(api: auth.api)
+        }
+        .onChange(of: router.request?.id) {
+            // Leaving Inicio for another tab (search, settings shortcuts) closes what was pushed here.
+            if let tab = router.request?.tab, tab != "home" { path = NavigationPath() }
+        }
+        .onChange(of: router.pending?.id, initial: true) {
+            guard let link = router.take(for: "home") else { return }
+            if let target = link.section.flatMap(HomeSection.init(rawValue:)) { section = target }
+            var next = NavigationPath()
+            for step in link.steps {
+                switch step {
+                case .home(let route): next.append(route)
+                case .settings(let page): next.append(page)
+                default: break
+                }
+            }
+            path = next
+        }
+        .habitActions(model.habitActions)
+        .carliToast($model.toast)
+    }
+
+    /// Inicio's own section: a card per module plus pending items and recent notifications.
+    private var cards: some View {
             ScrollView {
                 LazyVStack(spacing: CarliSpace.s16) {
                     let hasNotifications = !(model.notifications.value ?? []).isEmpty
                     if hasNotifications { NotificationsCard(model: model) }
                     PendingCard(summary: model.pending)
                     FinanceCard(model: model) { openModule(AppModule.finance) }
+                    if model.isEnabled(AppModule.calendar), let agenda = model.agenda, agenda.google.accounts > 0 {
+                        AgendaCard(agenda: agenda) { section = .calendar }
+                    }
                     if model.isEnabled(AppModule.tasks) {
                         TasksCard(model: model) { openModule(AppModule.tasks) }
                     }
@@ -40,23 +101,12 @@ struct HomeView: View {
                 .padding(.bottom, CarliSpace.s32)
             }
             .background(CarliColor.bg)
-            .navigationTitle(title)
-            .navigationSubtitle(CarliDate.long(.now))
-            .toolbar { toolbar }
-            .navigationDestination(for: HomeRoute.self) { route in
-                switch route {
-                case .notifications: NotificationsView(model: NotificationsModel(api: auth.api))
-                case .pending(let module, let type): PendingView(model: PendingModel(api: auth.api, module: module, type: type))
-                case .settings: SettingsView(modules: model.modules)
-                case .search: SearchView(api: auth.api, enabledModules: Set((model.modules ?? []).filter(\.isOn).map(\.id) + [AppModule.finance]))
-                }
-            }
-            .settingsDestinations(api: auth.api, modules: model.modules)
             .refreshable { await model.load() }
             .task { await model.load() }
             .onHabitsChanged { await model.loadHabits() }
             .onHealthChanged { await model.loadHealth() }
             .onTasksChanged { await model.loadTasks() }
+            .onReceive(NotificationCenter.default.publisher(for: .calendarChanged)) { _ in Task { await model.loadAgenda() } }
             .onReceive(NotificationCenter.default.publisher(for: .notesChanged)) { _ in Task { await model.loadNotes() } }
             .onReceive(NotificationCenter.default.publisher(for: .notificationsChanged)) { _ in Task { await model.loadNotifications() } }
             .onReceive(NotificationCenter.default.publisher(for: .pendingChanged)) { _ in Task { await model.loadPending() } }
@@ -66,35 +116,61 @@ struct HomeView: View {
                     await model.loadPending()
                 }
             }
-        }
-        .onChange(of: router.request?.id) {
-            // Leaving Inicio for another tab (search, settings shortcuts) closes what was pushed here.
-            if let tab = router.request?.tab, tab != "home" { path = NavigationPath() }
-        }
-        .onChange(of: router.pending?.id, initial: true) {
-            guard let link = router.take(for: "home") else { return }
-            var next = NavigationPath()
-            for step in link.steps {
-                switch step {
-                case .home(let route): next.append(route)
-                case .settings(let page): next.append(page)
-                default: break
-                }
-            }
-            path = next
-        }
-        .habitActions(model.habitActions)
-        .carliToast($model.toast)
     }
 
-    private var title: String {
+    private var greeting: String {
         let greeting = CarliDate.greeting(.now)
         guard let name = auth.user?.firstName, !name.isEmpty else { return greeting }
         return "\(greeting), \(name)"
     }
 
+    /// "Inicio ⌄" / "Calendario ⌄", like the module tabs; under Inicio, the greeting and the date.
+    private var sectionMenu: some View {
+        Menu {
+            Picker("Vista", selection: Binding(get: { section }, set: { picked in
+                path = NavigationPath()
+                section = picked
+            })) {
+                ForEach(availableSections, id: \.self) { Text($0.title).tag($0) }
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 6) {
+                    Text(section.title)
+                        .font(.title2.weight(.bold))
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(CarliColor.text2)
+                }
+                Text(section == .home ? CarliDate.long(.now) : "Inicio")
+                    .font(.caption)
+                    .foregroundStyle(CarliColor.text2)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(CarliColor.text)
+            .fixedSize()
+        }
+        .accessibilityLabel("\(greeting). Inicio, vista \(section.title)")
+        .accessibilityHint("Cambiar de vista")
+    }
+
+    private var availableSections: [HomeSection] {
+        model.isEnabled(AppModule.calendar) ? HomeSection.allCases : [.home]
+    }
+
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            sectionMenu
+        }
+        .sharedBackgroundVisibility(.hidden)
+        if section == .home {
+            homeToolbar
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var homeToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             NavigationLink(value: HomeRoute.search) {
                 Image(systemName: "magnifyingglass")
@@ -289,6 +365,63 @@ private struct FinanceCard: View {
             Text("\(data.period.name) · \(Plural.daysLeft(data.period.daysRemaining ?? 0))")
                 .font(.footnote)
                 .foregroundStyle(CarliColor.text3)
+        }
+    }
+}
+
+/// Today's Google events still to come; tasks keep their own card.
+private struct AgendaCard: View {
+    var agenda: CalendarRange
+    var open: () -> Void
+
+    var body: some View {
+        CarliCard(padding: 0) {
+            Button(action: open) {
+                VStack(alignment: .leading, spacing: 0) {
+                    CardHeader(title: "Agenda", subtitle: subtitle, symbol: "calendar") { Chevron() }
+                        .padding(CarliSpace.s16)
+                    if !upcoming.isEmpty {
+                        Divider()
+                        ForEach(upcoming.prefix(3), id: \.key) { item in
+                            HStack(spacing: CarliSpace.s12) {
+                                Circle().fill(item.tint ?? CarliColor.text3).frame(width: 8, height: 8)
+                                Text(item.title)
+                                    .foregroundStyle(CarliColor.text)
+                                    .lineLimit(1)
+                                Spacer(minLength: CarliSpace.s8)
+                                Text(item.time ?? "Todo el día")
+                                    .font(.footnote)
+                                    .monospacedDigit()
+                                    .foregroundStyle(CarliColor.text2)
+                            }
+                            .padding(.horizontal, CarliSpace.s16)
+                            .padding(.vertical, CarliSpace.s12)
+                        }
+                    }
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Abrir el calendario")
+        }
+    }
+
+    /// Google events of today that have not ended yet, all-day ones first.
+    private var upcoming: [CalendarItem] {
+        let now = CarliDate.calendar.dateComponents([.hour, .minute], from: .now)
+        let clock = String(format: "%02d:%02d", now.hour ?? 0, now.minute ?? 0)
+        return agenda.items.filter { item in
+            guard item.kind == .google else { return false }
+            guard let time = item.time else { return true }
+            return (item.endTime ?? time) >= clock || (item.endTime ?? "") < time
+        }
+    }
+
+    private var subtitle: String {
+        switch upcoming.count {
+        case 0: "Nada más en tu calendario hoy"
+        case 1: "1 evento más hoy"
+        default: "\(upcoming.count) eventos más hoy"
         }
     }
 }
