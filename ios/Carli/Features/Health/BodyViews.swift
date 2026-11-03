@@ -281,8 +281,8 @@ private struct BodyFigureLabel: View {
     }
 }
 
-/// A neutral front silhouette in a 1 × 2.6 box, drawn from overlapping filled parts.
-struct BodySilhouette: Shape {
+/// A neutral front silhouette in a 1 × 2.6 box, the union of its overlapping parts.
+nonisolated struct BodySilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         let w = rect.width, h = rect.height
         func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * w, y: rect.minY + y * h) }
@@ -292,10 +292,9 @@ struct BodySilhouette: Shape {
             return line.strokedPath(StrokeStyle(lineWidth: width * w, lineCap: .round, lineJoin: .round))
         }
 
-        var path = Path()
         // Head and neck.
-        path.addEllipse(in: CGRect(x: rect.minX + 0.39 * w, y: rect.minY + 0.012 * h, width: 0.22 * w, height: 0.105 * h))
-        path.addPath(limb([p(0.5, 0.10), p(0.5, 0.17)], width: 0.13))
+        var path = Path(ellipseIn: CGRect(x: rect.minX + 0.39 * w, y: rect.minY + 0.012 * h, width: 0.22 * w, height: 0.105 * h))
+        path = path.union(limb([p(0.5, 0.10), p(0.5, 0.17)], width: 0.13))
 
         // Torso: shoulders, waist and hips.
         var torso = Path()
@@ -312,16 +311,16 @@ struct BodySilhouette: Shape {
         torso.addLine(to: p(0.27, 0.20))
         torso.addQuadCurve(to: p(0.36, 0.152), control: p(0.27, 0.152))
         torso.closeSubpath()
-        path.addPath(torso)
+        path = path.union(torso)
 
         // Arms and hands.
         for mirror in [false, true] {
             func m(_ x: CGFloat, _ y: CGFloat) -> CGPoint { p(mirror ? 1 - x : x, y) }
-            path.addPath(limb([m(0.29, 0.19), m(0.22, 0.34), m(0.17, 0.50)], width: 0.10))
-            path.addEllipse(in: CGRect(origin: m(mirror ? 0.21 : 0.12, 0.495), size: CGSize(width: 0.09 * w, height: 0.05 * h)))
+            path = path.union(limb([m(0.29, 0.19), m(0.22, 0.34), m(0.17, 0.50)], width: 0.10))
+            path = path.union(Path(ellipseIn: CGRect(origin: m(mirror ? 0.21 : 0.12, 0.495), size: CGSize(width: 0.09 * w, height: 0.05 * h))))
             // Legs and feet.
-            path.addPath(limb([m(0.405, 0.50), m(0.405, 0.70), m(0.42, 0.93)], width: 0.14))
-            path.addPath(limb([m(0.42, 0.95), m(0.37, 0.96)], width: 0.07))
+            path = path.union(limb([m(0.405, 0.50), m(0.405, 0.70), m(0.42, 0.93)], width: 0.14))
+            path = path.union(limb([m(0.42, 0.95), m(0.37, 0.96)], width: 0.07))
         }
         return path
     }
