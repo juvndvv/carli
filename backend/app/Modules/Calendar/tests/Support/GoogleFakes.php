@@ -71,6 +71,8 @@ function googleEvents(): array
             ['id' => 'declined', 'status' => 'confirmed', 'summary' => 'Reunión rechazada', 'start' => ['dateTime' => '2026-11-04T12:00:00+01:00'], 'end' => ['dateTime' => '2026-11-04T13:00:00+01:00'],
                 'attendees' => [['email' => 'juanda@jotade.io', 'self' => true, 'responseStatus' => 'declined']]],
             ['id' => 'cancelled', 'status' => 'cancelled'],
+            ['id' => 'office', 'status' => 'confirmed', 'eventType' => 'workingLocation', 'summary' => 'Oficina', 'start' => ['date' => '2026-11-04'], 'end' => ['date' => '2026-11-05'],
+                'workingLocationProperties' => ['type' => 'officeLocation']],
             ['id' => 'utc', 'status' => 'confirmed', 'summary' => 'Llamada', 'start' => ['dateTime' => '2026-11-05T17:00:00Z'], 'end' => ['dateTime' => '2026-11-05T17:30:00Z']],
         ],
         'family@group.calendar.google.com' => [
