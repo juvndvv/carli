@@ -48,9 +48,13 @@ describe('body sites', function () {
         $this->getJson('/api/v1/health/body/sites')->assertJsonCount(11, 'data');
         $this->getJson('/api/v1/health/body/sites?archived=1')->assertJsonCount(12, 'data');
 
-        $neck = bodySiteId('Cuello');
-        $this->putJson('/api/v1/health/body/sites/order', ['ids' => [$id, $neck]])->assertNoContent();
-        $this->getJson('/api/v1/health/body/sites?archived=1')->assertJsonPath('data.0.id', $id)->assertJsonPath('data.1.id', $neck);
+        // The app sends the whole list in its new order.
+        $ids = collect($this->getJson('/api/v1/health/body/sites?archived=1')->json('data'))->pluck('id')->reject(fn ($other) => $other === $id)->values();
+        $this->putJson('/api/v1/health/body/sites/order', ['ids' => [$id, ...$ids->reverse()->all()]])->assertNoContent();
+        $this->getJson('/api/v1/health/body/sites?archived=1')
+            ->assertJsonPath('data.0.id', $id)
+            ->assertJsonPath('data.1.name', 'Gemelo derecho')
+            ->assertJsonPath('data.11.name', 'Cuello');
     });
 
     it('validates sites', function () {
@@ -127,6 +131,8 @@ describe('body measurements', function () {
 describe('measurement reminder', function () {
     beforeEach(function () {
         Notification::fake();
+        configureApns(true);
+        $this->user->pushDevices()->create(['token' => str_repeat('ab', 32), 'environment' => 'sandbox']);
         // 2026-11-03 is a Tuesday.
         $this->putJson('/api/v1/health/settings', ['reminder_enabled' => true, 'reminder_time' => '09:30', 'reminder_days' => [2]]);
     });
