@@ -2,8 +2,10 @@
 
 namespace App\Modules\Habits;
 
+use App\Core\Calendar\CalendarRegistry;
 use App\Core\Pending\PendingRegistry;
 use App\Core\Search\ModuleSearcher;
+use App\Modules\Habits\Calendar\HabitsCalendarItems;
 use App\Modules\Habits\Digest\HabitsDigestProvider;
 use App\Modules\Habits\Domain\Evaluation\HabitEvaluator;
 use App\Modules\Habits\Domain\Services\BreakService;
@@ -43,6 +45,7 @@ class HabitsServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->callAfterResolving(CalendarRegistry::class, fn (CalendarRegistry $calendar) => $calendar->register(HabitsCalendarItems::class));
         foreach (self::SCOPED_SERVICES as $service) {
             $this->app->scoped($service);
         }

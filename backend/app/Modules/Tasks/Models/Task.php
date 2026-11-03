@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $due_time
  * @property TaskStatus $status
  * @property SkipReason|null $skip_reason
+ * @property CarbonImmutable|null $reminded_at
  * @property CarbonImmutable|null $completed_at
  * @property CarbonImmutable|null $skipped_at
  * @property bool $important
@@ -49,6 +50,16 @@ class Task extends Model
         'sort' => 0,
     ];
 
+    protected static function booted(): void
+    {
+        // A new date or time deserves a new reminder.
+        static::saving(function (self $task): void {
+            if ($task->exists && $task->isDirty(['due_date', 'due_time'])) {
+                $task->reminded_at = null;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -59,6 +70,7 @@ class Task extends Model
             'occurrence_date' => 'immutable_date',
             'due_date' => 'immutable_date',
             'completed_at' => 'immutable_datetime',
+            'reminded_at' => 'immutable_datetime',
             'skipped_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',

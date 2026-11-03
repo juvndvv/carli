@@ -54,4 +54,11 @@ return [
         'backoff_ms' => [500, 2000, 5000],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_url' => env('GOOGLE_REDIRECT_URL', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/v1/calendar/google/callback'),
+        'timeout' => (int) env('GOOGLE_TIMEOUT', 20),
+    ],
+
 ];

@@ -2,9 +2,12 @@
 
 namespace App\Modules\Tasks;
 
+use App\Core\Calendar\CalendarRegistry;
 use App\Core\Pending\PendingRegistry;
 use App\Core\Search\ModuleSearcher;
+use App\Modules\Tasks\Calendar\TasksCalendarItems;
 use App\Modules\Tasks\Console\GenerateTasksCommand;
+use App\Modules\Tasks\Console\TaskDueRemindersCommand;
 use App\Modules\Tasks\Domain\Services\OccurrenceGenerator;
 use App\Modules\Tasks\Domain\Services\TaskAgenda;
 use App\Modules\Tasks\Domain\Services\TaskListService;
@@ -52,6 +55,7 @@ class TasksServiceProvider extends ServiceProvider
         $this->app->tag([TasksSearcher::class], ModuleSearcher::TAG);
 
         $this->callAfterResolving(PendingRegistry::class, fn (PendingRegistry $pending) => $pending->register(TasksPendingItems::class));
+        $this->callAfterResolving(CalendarRegistry::class, fn (CalendarRegistry $calendar) => $calendar->register(TasksCalendarItems::class));
     }
 
     public function boot(): void
@@ -67,11 +71,12 @@ class TasksServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
-            $this->commands([GenerateTasksCommand::class]);
+            $this->commands([GenerateTasksCommand::class, TaskDueRemindersCommand::class]);
         }
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule): void {
             $schedule->command('tasks:generate')->dailyAt('00:05')->timezone(self::TIMEZONE)->withoutOverlapping()->onOneServer();
+            $schedule->command('tasks:due-reminders')->everyMinute()->timezone(self::TIMEZONE)->withoutOverlapping()->onOneServer();
         });
     }
 }

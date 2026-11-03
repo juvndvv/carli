@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Calendar\CalendarServiceProvider;
 use App\Modules\Finance\FinanceServiceProvider;
 use App\Modules\Habits\HabitsServiceProvider;
 use App\Modules\Health\HealthServiceProvider;
@@ -13,5 +14,6 @@ return [
         NotesServiceProvider::class,
         HabitsServiceProvider::class,
         HealthServiceProvider::class,
+        CalendarServiceProvider::class,
     ],
 ];

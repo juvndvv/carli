@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Core\Calendar\CalendarRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Pending\PendingRegistry;
 use Illuminate\Support\ServiceProvider;
@@ -15,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(PendingRegistry::class);
+        $this->app->singleton(CalendarRegistry::class);
 
         foreach (config('modules.providers', []) as $provider) {
             $this->app->register($provider);
