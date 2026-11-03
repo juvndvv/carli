@@ -11,6 +11,11 @@ struct CalendarView: View {
     @AppStorage("calendar.mode") private var mode: CalendarMode = .agenda
     @State private var store: CalendarStore
     @State private var selected = CalendarLayout.startOfDay(.now)
+    /// Pages of the swipeable views count from this date; page 0 shows it.
+    @State private var anchor = CalendarLayout.startOfDay(.now)
+    @State private var page: Int? = 0
+    /// The hour at the top of the hour grid, shared so every page opens where you left the last one.
+    @State private var topHour: Int?
     @State private var hidden: Set<CalendarSource> = []
     @State private var event: CalendarItem?
     @State private var adding = false
@@ -46,7 +51,13 @@ struct CalendarView: View {
         .onReceive(NotificationCenter.default.publisher(for: .financeChanged)) { _ in
             Task { await store.reloadAll(also: neededMonths) }
         }
-        .onChange(of: mode) { agendaMonths = 2 }
+        .onChange(of: mode) {
+            agendaMonths = 2
+            jump(to: selected)
+        }
+        .onChange(of: page) {
+            if let page { selected = CalendarLayout.step(mode, from: anchor, by: page) }
+        }
         .sheet(item: $event) { EventDetailSheet(item: $0) }
         .sheet(isPresented: $adding) {
             NewTaskSheet(api: api, date: selected, onSaved: { toast = $0 })
@@ -79,28 +90,37 @@ struct CalendarView: View {
                     more: { if agendaMonths < 24 { agendaMonths += 1 } }
                 )
             case .day, .threeDays, .week:
-                CalendarTimeline(
-                    days: CalendarLayout.days(mode, around: selected),
-                    items: visible,
-                    pickDay: { day in pick(day, as: .day) },
-                    showEvent: { event = $0 }
-                )
+                CalendarPager(page: $page) { index in
+                    CalendarTimeline(
+                        days: CalendarLayout.days(mode, around: date(at: index)),
+                        items: visible,
+                        topHour: topHour,
+                        isCurrent: index == (page ?? 0),
+                        scrolledTo: { topHour = $0 },
+                        pickDay: { day in pick(day, as: .day) },
+                        showEvent: { event = $0 }
+                    )
+                }
                 .id(mode)
-                .simultaneousGesture(swipe)
             case .month:
-                CalendarMonthGrid(
-                    month: CalendarLayout.firstOfMonth(selected),
-                    days: CalendarLayout.days(.month, around: selected),
-                    items: visible,
-                    pickDay: { day in pick(day, as: .day) }
-                )
-                .simultaneousGesture(swipe)
+                CalendarPager(page: $page) { index in
+                    let month = date(at: index)
+                    CalendarMonthGrid(
+                        month: CalendarLayout.firstOfMonth(month),
+                        days: CalendarLayout.days(.month, around: month),
+                        items: visible,
+                        pickDay: { day in pick(day, as: .day) }
+                    )
+                }
+                .id(mode)
             case .year:
-                CalendarYearGrid(
-                    year: CalendarLayout.firstOfYear(selected),
-                    pickMonth: { month in pick(month, as: .month) }
-                )
-                .simultaneousGesture(swipe)
+                CalendarPager(page: $page) { index in
+                    CalendarYearGrid(
+                        year: CalendarLayout.firstOfYear(date(at: index)),
+                        pickMonth: { month in pick(month, as: .month) }
+                    )
+                }
+                .id(mode)
             }
         }
     }
@@ -124,13 +144,6 @@ struct CalendarView: View {
         .foregroundStyle(CarliColor.text2)
         .padding(.horizontal, CarliSpace.s16)
         .padding(.vertical, CarliSpace.s8)
-    }
-
-    private var swipe: some Gesture {
-        DragGesture(minimumDistance: 30).onEnded { value in
-            guard abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-            move(value.translation.width < 0 ? 1 : -1)
-        }
     }
 
     @ToolbarContentBuilder
@@ -169,7 +182,7 @@ struct CalendarView: View {
         }
         if !CarliDate.calendar.isDateInToday(selected) {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Hoy") { withAnimation(.snappy) { selected = CalendarLayout.startOfDay(.now) } }
+                Button("Hoy") { jump(to: .now) }
             }
         }
         ToolbarSpacer(.fixed, placement: .topBarTrailing)
@@ -224,7 +237,8 @@ struct CalendarView: View {
         switch mode {
         case .agenda: agendaKeys
         case .year: []
-        default: CalendarLayout.monthKeys(for: CalendarLayout.days(mode, around: selected))
+        // The neighbouring pages too, so a swipe lands on a page that is already filled in.
+        default: CalendarLayout.monthKeys(for: (-1...1).flatMap { CalendarLayout.days(mode, around: CalendarLayout.step(mode, from: selected, by: $0)) })
         }
     }
 
@@ -235,13 +249,30 @@ struct CalendarView: View {
         }
     }
 
+    private func date(at index: Int) -> Date { CalendarLayout.step(mode, from: anchor, by: index) }
+
+    /// Arrows slide one page, like a swipe.
     private func move(_ direction: Int) {
-        withAnimation(.snappy) { selected = CalendarLayout.step(mode, from: selected, by: direction) }
+        if mode == .agenda {
+            selected = CalendarLayout.step(.month, from: selected, by: direction)
+            return
+        }
+        withAnimation(.snappy) { page = (page ?? 0) + direction }
+    }
+
+    /// Re-anchors the pages on a date: "Hoy", a tapped day or month, or a change of view.
+    private func jump(to day: Date) {
+        let day = CalendarLayout.startOfDay(day)
+        anchor = day
+        selected = day
+        page = 0
     }
 
     private func pick(_ day: Date, as next: CalendarMode) {
-        withAnimation(.snappy) {
-            selected = day
+        if mode == next {
+            jump(to: day)
+        } else {
+            selected = CalendarLayout.startOfDay(day)
             mode = next
         }
     }
@@ -255,6 +286,30 @@ struct CalendarView: View {
             NotificationCenter.default.post(name: .tasksChanged, object: nil)
         } catch {
             toast = error.apiMessage(fallback: "No se ha podido cambiar la tarea.")
+        }
+    }
+}
+
+/// Pages side by side that follow the finger and settle on one, like Google Calendar.
+/// Built lazily, so only the pages around the visible one exist.
+struct CalendarPager<Page: View>: View {
+    @Binding var page: Int?
+    @ViewBuilder var content: (Int) -> Page
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(-1200...1200, id: \.self) { index in
+                        content(index)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollIndicators(.hidden)
+            .scrollPosition(id: $page)
         }
     }
 }
