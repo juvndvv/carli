@@ -3,7 +3,7 @@ import Observation
 
 /// Settings screens pushed from Inicio › Ajustes.
 enum SettingsPage: String, Hashable {
-    case profile, security, notifications, modules, appearance, scaleLab
+    case profile, security, notifications, modules, appearance, scaleLab, calendars
 }
 
 /// One screen pushed on top of a tab's root, in order.
@@ -63,7 +63,8 @@ struct AppLink: Equatable, Identifiable {
         let financePages: [String: FinanceMorePage] = ["cuentas": .accounts, "categorias": .categories, "recurrentes": .recurring,
                                                           "objetivos": .goals, "deudas": .debts, "compartidos": .shared]
         let settingsPages: [String: SettingsPage] = ["perfil": .profile, "seguridad": .security, "avisos": .notifications,
-                                                     "notificaciones": .notifications, "modulos": .modules, "apariencia": .appearance]
+                                                     "notificaciones": .notifications, "modulos": .modules, "apariencia": .appearance,
+                                                     "calendarios": .calendars]
 
         func detail(_ page: FinanceMorePage, _ id: String) -> AppLink? {
             switch page {
@@ -125,6 +126,8 @@ struct AppLink: Equatable, Identifiable {
             return settings(rest[...])
         case "proximamente":
             return AppLink(tab: "home")
+        case "calendario":
+            return AppLink(tab: "home", section: "calendar")
         case "tareas":
             let tasks = ModuleTab.tasks.rawValue
             switch (rest.count, at(0)) {
@@ -189,6 +192,7 @@ struct AppLink: Equatable, Identifiable {
         case AppModule.notes: AppLink(tab: ModuleTab.notes.rawValue, section: "all", steps: [.notesSettings])
         case AppModule.habits: AppLink(tab: ModuleTab.health.rawValue, section: "habits", steps: [.habitsSettings])
         case AppModule.health: AppLink(tab: ModuleTab.health.rawValue, section: "summary", steps: [.healthSettings])
+        case AppModule.calendar: .home(.home(.settings), .settings(.calendars))
         default: nil
         }
     }

@@ -15,6 +15,7 @@ extension View {
             case .modules: ModuleSettingsView(api: api)
             case .appearance: AppearanceSettingsView()
             case .scaleLab: ScaleLabView()
+            case .calendars: GoogleCalendarsView(api: api)
             }
         }
     }
