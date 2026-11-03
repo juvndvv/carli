@@ -37,8 +37,8 @@ struct CalendarTests {
     @Test func weeksStartOnMonday() {
         let wednesday = CarliDate.day("2026-11-04")!
         let sunday = CarliDate.day("2026-11-08")!
-        #expect(CarliDate.isoDay(CalendarView.monday(of: wednesday)) == "2026-11-02")
-        #expect(CarliDate.isoDay(CalendarView.monday(of: sunday)) == "2026-11-02")
+        #expect(CarliDate.isoDay(CalendarLayout.monday(of: wednesday)) == "2026-11-02")
+        #expect(CarliDate.isoDay(CalendarLayout.monday(of: sunday)) == "2026-11-02")
     }
 
     @Test func googleCallbackOutcomes() {
@@ -54,5 +54,53 @@ struct CalendarTests {
         #expect(AppLink.parse("/calendario")?.tab == "home")
         #expect(AppLink.parse("/calendario")?.section == "calendar")
         #expect(AppLink.parse("/ajustes/calendarios")?.steps == [.home(.settings), .settings(.calendars)])
+    }
+
+    private func item(_ id: String, _ time: String?, _ end: String? = nil, allDay: Bool = false) -> CalendarItem {
+        CalendarItem(source: "google", id: id, title: id, date: "2026-11-04", time: time, endTime: end,
+                     allDay: allDay, done: false, subtitle: nil, color: nil, url: nil, meta: nil)
+    }
+
+    @Test func overlappingItemsShareLanes() {
+        let placed = CalendarLayout.place([
+            item("a", "09:00", "10:00"),
+            item("b", "09:30", "11:00"),
+            item("c", "10:00", "10:30"),
+            item("d", "12:00"),
+            item("e", nil, allDay: true),
+        ])
+        let lanes = Dictionary(uniqueKeysWithValues: placed.map { ($0.item.id, "\($0.lane)/\($0.lanes)") })
+        #expect(placed.count == 4)
+        #expect(lanes["a"] == "0/2")
+        #expect(lanes["b"] == "1/2")
+        #expect(lanes["c"] == "0/2")
+        #expect(lanes["d"] == "0/1")
+        #expect(placed.first { $0.item.id == "d" }?.end == 12 * 60 + 30)
+    }
+
+    @Test func modesCoverTheRightDays() throws {
+        let wednesday = try #require(CarliDate.day("2026-11-04"))
+        let week = CalendarLayout.days(.week, around: wednesday)
+        #expect(week.count == 7)
+        #expect(CarliDate.isoDay(week[0]) == "2026-11-02")
+        #expect(CalendarLayout.days(.threeDays, around: wednesday).map(CarliDate.isoDay) == ["2026-11-04", "2026-11-05", "2026-11-06"])
+        let month = CalendarLayout.days(.month, around: wednesday)
+        #expect(month.count == 42)
+        #expect(CarliDate.isoDay(month[0]) == "2026-10-26")
+        #expect(CalendarLayout.monthKeys(for: month) == ["2026-10", "2026-11", "2026-12"])
+        #expect(CalendarLayout.monthKeys(for: week) == ["2026-11"])
+        #expect(CarliDate.isoDay(CalendarLayout.step(.month, from: wednesday, by: 1)) == "2026-12-01")
+        #expect(CarliDate.isoDay(CalendarLayout.step(.threeDays, from: wednesday, by: -1)) == "2026-11-01")
+        #expect(CalendarLayout.bounds(ofMonth: "2027-02").map { CarliDate.isoDay($0.to) } == "2027-02-28")
+    }
+
+    @Test func titlesFollowTheVisibleDays() throws {
+        let now = try #require(CarliDate.day("2026-11-04"))
+        let endOfOctober = try #require(CarliDate.day("2026-10-30"))
+        #expect(CalendarLayout.title(.month, selected: now, now: now) == "Noviembre")
+        #expect(CalendarLayout.title(.week, selected: endOfOctober, now: now) == "Oct – nov")
+        #expect(CalendarLayout.title(.year, selected: now, now: now) == "2026")
+        let nextYear = try #require(CarliDate.day("2027-01-10"))
+        #expect(CalendarLayout.title(.day, selected: nextYear, now: now) == "Enero 2027")
     }
 }

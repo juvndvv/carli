@@ -22,6 +22,9 @@ final readonly class GoogleSync
 {
     private const int DESCRIPTION_LIMIT = 4000;
 
+    /** @var list<string> */
+    private const array SKIPPED_TYPES = ['workingLocation'];
+
     public function __construct(private GoogleClient $google) {}
 
     /**
@@ -199,6 +202,11 @@ final readonly class GoogleSync
         $googleId = $item['id'] ?? null;
 
         if (! is_string($googleId) || ($item['status'] ?? null) === 'cancelled' || $this->declined($item)) {
+            return null;
+        }
+
+        // Working location ("Oficina", "Casa") is a status in Google, not something on the agenda.
+        if (in_array($item['eventType'] ?? null, self::SKIPPED_TYPES, true)) {
             return null;
         }
 
