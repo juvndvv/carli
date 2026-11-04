@@ -264,6 +264,7 @@ struct ModuleRootView: View {
         case .habitsSettings: path.append(HabitsSettingsRoute())
         case .measurement(let id): path.append(MeasurementRoute(id: id))
         case .healthSettings: path.append(HealthSettingsRoute())
+        case .whoop: path.append(WhoopRoute())
         case .note(let id): path.append(NoteRoute(id: id))
         case .folder(let id): path.append(FolderRoute(id: id))
         case .notesCollection(let trash): path.append(NotesCollectionRoute(trash: trash))

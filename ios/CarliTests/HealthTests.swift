@@ -104,4 +104,38 @@ struct HealthTests {
         #expect(BodySiteEditor.zoneLabel(.wrist, side: "left") == "Muñeca izquierda")
         #expect(BodySiteEditor.zoneLabel(.waist, side: "left") == "Cintura")
     }
+
+    @Test func whoopDayDecodesTheServerPayload() throws {
+        let days: [WhoopDay] = try decode(#"""
+        [{"date":"2026-11-04","nap_minutes":30,
+          "recovery":{"state":"SCORED","calibrating":false,"score":74,"resting_heart_rate":52,"hrv_ms":61.234,"spo2":96.4,"skin_temp_c":33.7},
+          "sleep":{"state":"SCORED","starts_at":"2026-11-03T23:40:00+01:00","ends_at":"2026-11-04T07:10:00+01:00","asleep_minutes":420,"in_bed_minutes":450,
+                   "awake_minutes":30,"light_minutes":210,"deep_minutes":90,"rem_minutes":120,"need_minutes":482,"performance":92,"consistency":81,
+                   "efficiency":93.3,"respiratory_rate":15.3,"disturbances":12},
+          "strain":{"state":"SCORED","in_progress":true,"strain":8.4,"kcal":1981,"average_heart_rate":68,"max_heart_rate":141,"steps":6214},
+          "workouts":[{"id":"w1","state":"SCORED","sport":"running","starts_at":"2026-11-04T08:00:00+01:00","ends_at":"2026-11-04T08:45:00+01:00",
+                       "strain":11.2,"kcal":455,"average_heart_rate":148,"max_heart_rate":176,"distance_m":7210.5,"zone_minutes":[0,2,10,20,12,1]}]},
+         {"date":"2026-11-03","nap_minutes":0,"recovery":null,"sleep":null,"workouts":[],
+          "strain":{"state":"SCORED","in_progress":false,"strain":12.6,"kcal":2512,"average_heart_rate":72,"max_heart_rate":168,"steps":null}}]
+        """#)
+        #expect(days.map(\.id) == ["2026-11-04", "2026-11-03"])
+        #expect(days[0].recovery?.hrvMs == 61.234)
+        #expect(days[0].recovery?.skinTempC == 33.7)
+        #expect(days[0].strain?.steps == 6214)
+        #expect(days[0].workouts.first?.distanceM == 7210.5)
+        #expect(days[1].strain?.steps == nil)
+    }
+
+    @Test func whoopFormatsAndCallbacks() {
+        #expect(WhoopFormat.duration(420) == "7 h 00 min")
+        #expect(WhoopFormat.duration(30) == "30 min")
+        #expect(WhoopFormat.sport("running") == "Correr")
+        #expect(WhoopFormat.sport("rowing") == "Rowing")
+        if case .connected = WhoopAuth.outcome(URL(string: "carli://health/whoop?ok=1")!) {} else { Issue.record("expected connected") }
+        if case .failed(let message) = WhoopAuth.outcome(URL(string: "carli://health/whoop?error=otra")!) {
+            #expect(message.contains("otro usuario"))
+        } else {
+            Issue.record("expected failed")
+        }
+    }
 }

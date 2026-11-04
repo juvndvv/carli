@@ -168,3 +168,35 @@ struct ScaleUpload: Encodable {
         }
     }
 }
+
+/// Calls to /v1/health/whoop: the WHOOP link and the days copied from it.
+enum WhoopAPI {
+    static func status(_ api: APIClient) async throws -> WhoopStatus {
+        let envelope: DataEnvelope<WhoopStatus> = try await api.get("v1/health/whoop")
+        return envelope.data
+    }
+
+    static func authURL(_ api: APIClient) async throws -> URL? {
+        let envelope: DataEnvelope<WhoopAuthURL> = try await api.post("v1/health/whoop")
+        return URL(string: envelope.data.authUrl)
+    }
+
+    static func sync(_ api: APIClient) async throws {
+        let _: DataEnvelope<WhoopAccountInfo> = try await api.post("v1/health/whoop/sync")
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+
+    static func disconnect(_ api: APIClient) async throws {
+        try await api.delete("v1/health/whoop")
+        NotificationCenter.default.post(name: .healthChanged, object: nil)
+    }
+
+    /// Days with data in [from, to], newest first; the server defaults to the last two weeks.
+    static func days(_ api: APIClient, from: Date? = nil, to: Date? = nil) async throws -> [WhoopDay] {
+        var query: [String: String] = [:]
+        if let from { query["from"] = HealthDate.day(from) }
+        if let to { query["to"] = HealthDate.day(to) }
+        let envelope: DataEnvelope<[WhoopDay]> = try await api.get("v1/health/whoop/days", query: query)
+        return envelope.data
+    }
+}
