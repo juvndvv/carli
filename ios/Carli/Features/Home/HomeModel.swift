@@ -20,8 +20,9 @@ final class HomeModel {
     var unreadCount = 0
     var tasks: Slot<TasksToday> = .loading
     var habits: HabitsToday?
-    var health: HealthSummary?
-    var notes: NotesSnapshot?
+    /// The WHOOP link and its latest scored day, for the WHOOP card (only once connected).
+    var whoop: WhoopStatus?
+    var whoopDay: WhoopDay?
     /// Today's calendar, for the Agenda card (only shown once a Google account is linked).
     var agenda: CalendarRange?
     var toast: String?
@@ -46,10 +47,9 @@ final class HomeModel {
         async let notifications: Void = loadNotifications()
         async let tasks: Void = isEnabled(AppModule.tasks) ? loadTasks() : ()
         async let habits: Void = isEnabled(AppModule.habits) ? loadHabits() : ()
-        async let notes: Void = isEnabled(AppModule.notes) ? loadNotes() : ()
-        async let health: Void = isEnabled(AppModule.health) ? loadHealth() : ()
+        async let whoop: Void = isEnabled(AppModule.health) ? loadWhoop() : ()
         async let agenda: Void = isEnabled(AppModule.calendar) ? loadAgenda() : ()
-        _ = await (finance, pending, notifications, tasks, habits, notes, health, agenda)
+        _ = await (finance, pending, notifications, tasks, habits, whoop, agenda)
     }
 
     func loadModules() async {
@@ -98,20 +98,20 @@ final class HomeModel {
         }
     }
 
-    func loadHealth() async {
-        if let summary = try? await HealthAPI.summary(api) { health = summary }
+    func loadWhoop() async {
+        guard let status = try? await WhoopAPI.status(api) else { return }
+        whoop = status
+        guard status.account != nil else { whoopDay = nil; return }
+        // The latest day with a recovery or a night: today's appears once WHOOP has scored the sleep.
+        if let days = try? await WhoopAPI.days(api, from: Calendar.current.date(byAdding: .day, value: -2, to: .now)) {
+            whoopDay = days.first { $0.recovery != nil || $0.sleep != nil } ?? days.first
+        }
     }
 
     func loadAgenda() async {
         let today = CarliDate.isoDay(.now)
         if let envelope: DataEnvelope<CalendarRange> = try? await api.get("v1/calendar", query: ["from": today, "to": today]) {
             agenda = envelope.data
-        }
-    }
-
-    func loadNotes() async {
-        if let envelope: DataEnvelope<NotesSnapshot> = try? await api.get("v1/notes/snapshot") {
-            notes = envelope.data
         }
     }
 
@@ -131,21 +131,5 @@ final class HomeModel {
         }
         await loadTasks()
         await loadPending()
-    }
-
-    /// Ticks a shopping item through the notes sync endpoint, as the Flutter app does offline.
-    func check(_ item: NoteItem) async {
-        struct Payload: Encodable { var id: String, checked: Bool }
-        struct Operation: Encodable { var id: String, type: String, at: String, payload: Payload }
-        struct Body: Encodable { var operations: [Operation] }
-        let payload = Payload(id: item.id, checked: true)
-        let operation = Operation(id: UUID().uuidString.lowercased(), type: "item.upsert",
-                                  at: ISO8601DateFormatter().string(from: .now), payload: payload)
-        do {
-            let _: Empty = try await api.post("v1/notes/sync", body: Body(operations: [operation]))
-        } catch {
-            toast = error.apiMessage(fallback: "No se ha podido marcar \(item.text).")
-        }
-        await loadNotes()
     }
 }

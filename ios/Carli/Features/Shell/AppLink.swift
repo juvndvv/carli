@@ -127,7 +127,7 @@ struct AppLink: Equatable, Identifiable {
         case "proximamente":
             return AppLink(tab: "home")
         case "calendario":
-            return AppLink(tab: "home", section: "calendar")
+            return .home(.home(.calendar))
         case "tareas":
             let tasks = ModuleTab.tasks.rawValue
             switch (rest.count, at(0)) {

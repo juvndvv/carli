@@ -52,7 +52,7 @@ struct CalendarTests {
 
     @Test func calendarLinksOpenInicio() {
         #expect(AppLink.parse("/calendario")?.tab == "home")
-        #expect(AppLink.parse("/calendario")?.section == "calendar")
+        #expect(AppLink.parse("/calendario")?.steps == [.home(.calendar)])
         #expect(AppLink.parse("/ajustes/calendarios")?.steps == [.home(.settings), .settings(.calendars)])
     }
 
