@@ -1,23 +1,12 @@
 import SwiftUI
 
-/// Inicio's sections, picked from the header selector like a module's.
-enum HomeSection: String, CaseIterable, Hashable {
-    case home, calendar
-
-    var title: String {
-        switch self {
-        case .home: "Inicio"
-        case .calendar: "Calendario"
-        }
-    }
-}
-
 enum HomeRoute: Hashable {
-    case notifications, settings, search
+    case notifications, settings, search, calendar
     case pending(module: String? = nil, type: String? = nil)
 }
 
 /// Inicio: greeting, then a card per module plus pending items and recent notifications.
+/// A card with nothing to show is left out.
 struct HomeView: View {
     @Bindable var model: HomeModel
     var openModule: (String) -> Void
@@ -25,31 +14,29 @@ struct HomeView: View {
     @Environment(AuthModel.self) private var auth
     @Environment(AppRouter.self) private var router
     @State private var path = NavigationPath()
-    @State private var section: HomeSection = .home
 
     var body: some View {
         NavigationStack(path: $path) {
-            Group {
-                if section == .calendar {
-                    CalendarView(api: auth.api)
-                } else {
-                    cards
+            cards
+                .navigationTitle("Inicio")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(removing: .title)
+                .toolbar { toolbar }
+                .navigationDestination(for: HomeRoute.self) { route in
+                    switch route {
+                    case .notifications: NotificationsView(model: NotificationsModel(api: auth.api))
+                    case .pending(let module, let type): PendingView(model: PendingModel(api: auth.api, module: module, type: type))
+                    case .settings: SettingsView(modules: model.modules)
+                    case .search: SearchView(api: auth.api, enabledModules: Set((model.modules ?? []).filter(\.isOn).map(\.id) + [AppModule.finance]))
+                    case .calendar:
+                        CalendarView(api: auth.api)
+                            .navigationTitle("Calendario")
+                            .navigationBarTitleDisplayMode(.inline)
+                    }
                 }
-            }
-            .navigationTitle(section.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar(removing: .title)
-            .toolbar { toolbar }
-            .navigationDestination(for: HomeRoute.self) { route in
-                switch route {
-                case .notifications: NotificationsView(model: NotificationsModel(api: auth.api))
-                case .pending(let module, let type): PendingView(model: PendingModel(api: auth.api, module: module, type: type))
-                case .settings: SettingsView(modules: model.modules)
-                case .search: SearchView(api: auth.api, enabledModules: Set((model.modules ?? []).filter(\.isOn).map(\.id) + [AppModule.finance]))
-                }
-            }
-            .settingsDestinations(api: auth.api, modules: model.modules)
-            .tasksDestinations(api: auth.api)
+                .settingsDestinations(api: auth.api, modules: model.modules)
+                .tasksDestinations(api: auth.api)
+                .navigationDestination(for: WhoopRoute.self) { _ in WhoopView(api: auth.api) }
         }
         .onChange(of: router.request?.id) {
             // Leaving Inicio for another tab (search, settings shortcuts) closes what was pushed here.
@@ -57,7 +44,6 @@ struct HomeView: View {
         }
         .onChange(of: router.pending?.id, initial: true) {
             guard let link = router.take(for: "home") else { return }
-            if let target = link.section.flatMap(HomeSection.init(rawValue:)) { section = target }
             var next = NavigationPath()
             for step in link.steps {
                 switch step {
@@ -72,30 +58,25 @@ struct HomeView: View {
         .carliToast($model.toast)
     }
 
-    /// Inicio's own section: a card per module plus pending items and recent notifications.
+    /// A card per module plus pending items and recent notifications; empty ones are hidden.
     private var cards: some View {
             ScrollView {
                 LazyVStack(spacing: CarliSpace.s16) {
-                    let hasNotifications = !(model.notifications.value ?? []).isEmpty
-                    if hasNotifications { NotificationsCard(model: model) }
+                    if let items = model.notifications.value, !items.isEmpty { NotificationsCard(model: model, items: items) }
                     PendingCard(summary: model.pending)
+                    if model.isEnabled(AppModule.health), let whoop = model.whoop, whoop.configured, whoop.account != nil {
+                        WhoopTodayCard(status: whoop, day: model.whoopDay)
+                    }
                     FinanceCard(model: model) { openModule(AppModule.finance) }
-                    if model.isEnabled(AppModule.calendar), let agenda = model.agenda, agenda.google.accounts > 0 {
-                        AgendaCard(agenda: agenda) { section = .calendar }
+                    if model.isEnabled(AppModule.calendar), let agenda = model.agenda, agenda.google.accounts > 0, !AgendaCard.upcoming(in: agenda).isEmpty {
+                        AgendaCard(agenda: agenda)
                     }
-                    if model.isEnabled(AppModule.tasks) {
-                        TasksCard(model: model) { openModule(AppModule.tasks) }
+                    if model.isEnabled(AppModule.tasks), let tasks = model.tasks.value, !(tasks.overdue + tasks.today).isEmpty {
+                        TasksCard(model: model, view: tasks) { openModule(AppModule.tasks) }
                     }
-                    if model.isEnabled(AppModule.health), let health = model.health {
-                        WeightCard(summary: health) { _ = router.open(url: "/salud") } weigh: { _ = router.open(url: "/salud/pesarse") }
-                    }
-                    if model.isEnabled(AppModule.habits), let habits = model.habits, !habits.habits.isEmpty {
+                    if model.isEnabled(AppModule.habits), let habits = model.habits, habits.summary.total > 0 {
                         HabitsCard(model: model, habits: habits) { _ = router.open(url: "/habitos/hoy") }
                     }
-                    if model.isEnabled(AppModule.notes), let notes = model.notes {
-                        NotesCard(model: model, snapshot: notes) { openModule(AppModule.notes) }
-                    }
-                    if !hasNotifications { NotificationsCard(model: model) }
                 }
                 .padding(.horizontal, CarliSpace.s16)
                 .padding(.bottom, CarliSpace.s32)
@@ -104,10 +85,9 @@ struct HomeView: View {
             .refreshable { await model.load() }
             .task { await model.load() }
             .onHabitsChanged { await model.loadHabits() }
-            .onHealthChanged { await model.loadHealth() }
+            .onHealthChanged { await model.loadWhoop() }
             .onTasksChanged { await model.loadTasks() }
             .onReceive(NotificationCenter.default.publisher(for: .calendarChanged)) { _ in Task { await model.loadAgenda() } }
-            .onReceive(NotificationCenter.default.publisher(for: .notesChanged)) { _ in Task { await model.loadNotes() } }
             .onReceive(NotificationCenter.default.publisher(for: .notificationsChanged)) { _ in Task { await model.loadNotifications() } }
             .onReceive(NotificationCenter.default.publisher(for: .pendingChanged)) { _ in Task { await model.loadPending() } }
             .onReceive(NotificationCenter.default.publisher(for: .financeChanged)) { _ in
@@ -124,53 +104,37 @@ struct HomeView: View {
         return "\(greeting), \(name)"
     }
 
-    /// "Inicio ⌄" / "Calendario ⌄", like the module tabs; under Inicio, the greeting and the date.
-    private var sectionMenu: some View {
-        Menu {
-            Picker("Vista", selection: Binding(get: { section }, set: { picked in
-                path = NavigationPath()
-                section = picked
-            })) {
-                ForEach(availableSections, id: \.self) { Text($0.title).tag($0) }
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
-                    Text(section.title)
-                        .font(.title2.weight(.bold))
-                    Image(systemName: "chevron.down")
-                        .font(.footnote.weight(.bold))
-                        .foregroundStyle(CarliColor.text2)
-                }
-                Text(section == .home ? CarliDate.long(.now) : "Inicio")
-                    .font(.caption)
-                    .foregroundStyle(CarliColor.text2)
-                    .lineLimit(1)
-            }
-            .foregroundStyle(CarliColor.text)
-            .fixedSize()
+    /// "Inicio" and today's date, without a section menu.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Inicio")
+                .font(.title2.weight(.bold))
+            Text(CarliDate.long(.now))
+                .font(.caption)
+                .foregroundStyle(CarliColor.text2)
+                .lineLimit(1)
         }
-        .accessibilityLabel("\(greeting). Inicio, vista \(section.title)")
-        .accessibilityHint("Cambiar de vista")
-    }
-
-    private var availableSections: [HomeSection] {
-        model.isEnabled(AppModule.calendar) ? HomeSection.allCases : [.home]
+        .foregroundStyle(CarliColor.text)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(greeting). Inicio")
+        .accessibilityAddTraits(.isHeader)
     }
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            sectionMenu
+            header
         }
         .sharedBackgroundVisibility(.hidden)
-        if section == .home {
-            homeToolbar
+        if model.isEnabled(AppModule.calendar) {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(value: HomeRoute.calendar) {
+                    Image(systemName: "calendar")
+                }
+                .accessibilityLabel("Calendario")
+            }
         }
-    }
-
-    @ToolbarContentBuilder
-    private var homeToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             NavigationLink(value: HomeRoute.search) {
                 Image(systemName: "magnifyingglass")
@@ -202,6 +166,7 @@ struct HomeView: View {
 
 private struct NotificationsCard: View {
     var model: HomeModel
+    var items: [AppNotification]
     @Environment(AppRouter.self) private var router
 
     var body: some View {
@@ -212,39 +177,18 @@ private struct NotificationsCard: View {
             }
             .padding(CarliSpace.s16)
 
-            switch model.notifications {
-            case .loading:
-                VStack(alignment: .leading, spacing: CarliSpace.s8) {
-                    SkeletonBar(width: 200, height: 14)
-                    SkeletonBar(width: 140)
+            ForEach(Array(items.prefix(3).enumerated()), id: \.element.id) { index, item in
+                if index > 0 { Divider().padding(.leading, 34) }
+                Button {
+                    if item.unread { Task { await model.markRead(item) } }
+                    router.open(url: item.url)
+                } label: {
+                    NotificationRow(item: item).contentShape(.rect)
                 }
-                .padding([.horizontal, .bottom], CarliSpace.s16)
-            case .failed:
-                message("No se han podido cargar las notificaciones.")
-            case .loaded(let items) where items.isEmpty:
-                message("No tienes notificaciones recientes.")
-            case .loaded(let items):
-                ForEach(Array(items.prefix(3).enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { Divider().padding(.leading, 34) }
-                    Button {
-                        if item.unread { Task { await model.markRead(item) } }
-                        router.open(url: item.url)
-                    } label: {
-                        NotificationRow(item: item).contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.bottom, CarliSpace.s4)
+                .buttonStyle(.plain)
             }
+            .padding(.bottom, CarliSpace.s4)
         }
-    }
-
-    private func message(_ text: String) -> some View {
-        Text(text)
-            .font(.footnote)
-            .foregroundStyle(CarliColor.text3)
-            .frame(maxWidth: .infinity)
-            .padding([.horizontal, .bottom], CarliSpace.s16)
     }
 }
 
@@ -372,11 +316,10 @@ private struct FinanceCard: View {
 /// Today's Google events still to come; tasks keep their own card.
 private struct AgendaCard: View {
     var agenda: CalendarRange
-    var open: () -> Void
 
     var body: some View {
         CarliCard(padding: 0) {
-            Button(action: open) {
+            NavigationLink(value: HomeRoute.calendar) {
                 VStack(alignment: .leading, spacing: 0) {
                     CardHeader(title: "Agenda", subtitle: subtitle, symbol: "calendar") { Chevron() }
                         .padding(CarliSpace.s16)
@@ -406,8 +349,10 @@ private struct AgendaCard: View {
         }
     }
 
+    private var upcoming: [CalendarItem] { Self.upcoming(in: agenda) }
+
     /// Google events of today that have not ended yet, all-day ones first.
-    private var upcoming: [CalendarItem] {
+    static func upcoming(in agenda: CalendarRange) -> [CalendarItem] {
         let now = CarliDate.calendar.dateComponents([.hour, .minute], from: .now)
         let clock = String(format: "%02d:%02d", now.hour ?? 0, now.minute ?? 0)
         return agenda.items.filter { item in
@@ -419,7 +364,6 @@ private struct AgendaCard: View {
 
     private var subtitle: String {
         switch upcoming.count {
-        case 0: "Nada más en tu calendario hoy"
         case 1: "1 evento más hoy"
         default: "\(upcoming.count) eventos más hoy"
         }
@@ -428,6 +372,7 @@ private struct AgendaCard: View {
 
 private struct TasksCard: View {
     var model: HomeModel
+    var view: TasksToday
     var open: () -> Void
 
     var body: some View {
@@ -440,26 +385,15 @@ private struct TasksCard: View {
             .buttonStyle(.plain)
             .accessibilityHint("Abrir Tareas")
 
-            if let view = model.tasks.value {
-                let first = Array((view.overdue + view.today).prefix(3))
-                if !first.isEmpty {
-                    Divider()
-                    ForEach(first) { task in
-                        TaskLine(task: task) { Task { await model.complete(task) } }
-                    }
-                    .padding(.bottom, CarliSpace.s4)
-                }
+            Divider()
+            ForEach(Array((view.overdue + view.today).prefix(3))) { task in
+                TaskLine(task: task) { Task { await model.complete(task) } }
             }
+            .padding(.bottom, CarliSpace.s4)
         }
     }
 
-    private var subtitle: String? {
-        switch model.tasks {
-        case .loaded(let view): view.headline
-        case .failed: "No se han podido cargar"
-        case .loading: " "
-        }
-    }
+    private var subtitle: String { view.headline }
 }
 
 private struct TaskLine: View {
@@ -536,127 +470,5 @@ private struct HabitsCard: View {
         let s = habits.summary
         if s.total == 0 { return "Nada que hacer hoy" }
         return habits.pending.isEmpty ? "Todo hecho · \(s.done) de \(s.total)" : "\(s.done) de \(s.total)"
-    }
-}
-
-private struct WeightCard: View {
-    var summary: HealthSummary
-    var open: () -> Void
-    var weigh: () -> Void
-
-    var body: some View {
-        CarliCard {
-            Button(action: open) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Peso")
-                            .font(.footnote)
-                            .foregroundStyle(CarliColor.text2)
-                        Text(summary.latest.map { WeightFormat.kg($0.weightKg) } ?? "Sin pesadas")
-                            .font(.title.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(CarliColor.text)
-                        if let change = summary.weekChange {
-                            Text("\(WeightFormat.change(change)) en 7 días")
-                                .font(.footnote)
-                                .foregroundStyle(CarliColor.text2)
-                        }
-                    }
-                    Spacer()
-                    Chevron()
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Abrir Salud")
-
-            if !summary.weighedToday {
-                Button(action: weigh) {
-                    Label("Pesarse", systemImage: "scalemass")
-                }
-                .buttonStyle(.glass)
-                .padding(.top, CarliSpace.s12)
-            }
-        }
-    }
-}
-
-private struct NotesCard: View {
-    var model: HomeModel
-    var snapshot: NotesSnapshot
-    var open: () -> Void
-
-    var body: some View {
-        let shopping = snapshot.primaryShopping
-        let pinned = Array(snapshot.pinned.filter { $0.id != shopping?.id }.prefix(2))
-        if shopping != nil || !pinned.isEmpty {
-            CarliCard {
-                if let shopping {
-                    Button(action: open) {
-                        HStack(alignment: .bottom) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Notas · \(shopping.displayTitle)")
-                                    .font(.footnote)
-                                    .foregroundStyle(CarliColor.text2)
-                                Text("\(Text("\(shopping.openCount)").font(.title.weight(.semibold)).foregroundStyle(CarliColor.text)) \(Text("por comprar").font(.body).foregroundStyle(CarliColor.text2))")
-                                    .monospacedDigit()
-                            }
-                            Spacer()
-                            Chevron().padding(.bottom, CarliSpace.s8)
-                        }
-                        .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Abrir la lista de la compra")
-
-                    let open = shopping.items.filter { !$0.checked }.sorted { $0.position < $1.position }.prefix(3)
-                    ForEach(Array(open)) { item in
-                        Button { Task { await model.check(item) } } label: {
-                            HStack(spacing: CarliSpace.s12) {
-                                Image(systemName: "circle")
-                                    .font(.title3)
-                                    .foregroundStyle(CarliColor.text3)
-                                Text(item.text)
-                                    .font(.body)
-                                    .foregroundStyle(CarliColor.text)
-                                Spacer(minLength: 0)
-                                if let quantity = item.quantity, !quantity.isEmpty {
-                                    Text(quantity).font(.footnote).foregroundStyle(CarliColor.text2)
-                                }
-                            }
-                            .padding(.vertical, CarliSpace.s8)
-                            .contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Al carro")
-                    }
-                    .padding(.top, CarliSpace.s8)
-                }
-                if !pinned.isEmpty {
-                    if shopping != nil { Divider().padding(.vertical, CarliSpace.s12) }
-                    HStack(spacing: CarliSpace.s8) {
-                        ForEach(pinned) { note in
-                            Button(action: open) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Fijada")
-                                        .font(.footnote)
-                                        .foregroundStyle(CarliColor.text2)
-                                    Text(note.displayTitle)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(CarliColor.text)
-                                        .lineLimit(1)
-                                }
-                                .padding(.horizontal, CarliSpace.s12)
-                                .padding(.vertical, 10)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(CarliColor.surface2, in: .rect(cornerRadius: CarliRadius.control, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        if pinned.count == 1 { Spacer().frame(maxWidth: .infinity) }
-                    }
-                }
-            }
-        }
     }
 }
