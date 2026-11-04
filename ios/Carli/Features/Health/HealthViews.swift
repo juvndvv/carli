@@ -11,6 +11,7 @@ extension View {
             .navigationDestination(for: HealthSettingsRoute.self) { _ in HealthSettingsView(api: api) }
             .navigationDestination(for: BodySiteRoute.self) { BodySiteDetailView(api: api, id: $0.id) }
             .navigationDestination(for: BodySitesRoute.self) { _ in BodySitesView(api: api) }
+            .navigationDestination(for: WhoopRoute.self) { _ in WhoopView(api: api) }
             .habitsDestinations(api: api)
     }
 
@@ -62,7 +63,7 @@ struct HealthPage<Content: View>: View {
 
 // MARK: Resumen
 
-/// Resumen: the weight chart on top, then the latest weigh-in, its composition and today's habits.
+/// Resumen: the weight chart on top, then WHOOP's day, the latest weigh-in, its composition and today's habits.
 struct HealthSummaryView: View {
     let api: APIClient
     var habitsOn: Bool
@@ -72,6 +73,8 @@ struct HealthSummaryView: View {
     @State private var points: [BodyMeasurement] = []
     @State private var range: HealthRange = .quarter
     @State private var habits: HabitsToday?
+    @State private var whoop: WhoopStatus?
+    @State private var whoopDay: WhoopDay?
     @State private var failed: String?
     @State private var habitActions: HabitActions
 
@@ -133,6 +136,10 @@ struct HealthSummaryView: View {
                     Spacer(minLength: 0)
                 }
             }
+        }
+
+        if let whoop, whoop.configured {
+            WhoopTodayCard(status: whoop, day: whoopDay)
         }
 
         if !summary.weighedToday {
@@ -210,10 +217,20 @@ struct HealthSummaryView: View {
         }
         await loadPoints()
         await loadHabits()
+        await loadWhoop()
     }
 
     private func loadPoints() async {
         if let list = try? await HealthAPI.measurements(api, from: range.start) { points = list }
+    }
+
+    private func loadWhoop() async {
+        guard let status = try? await WhoopAPI.status(api) else { return }
+        whoop = status
+        // The latest day with a recovery or a night: today's appears once WHOOP has scored the sleep.
+        if status.account != nil, let days = try? await WhoopAPI.days(api, from: Calendar.current.date(byAdding: .day, value: -2, to: .now)) {
+            whoopDay = days.first { $0.recovery != nil || $0.sleep != nil } ?? days.first
+        }
     }
 
     private func loadHabits() async {
@@ -623,6 +640,9 @@ struct HealthSettingsView: View {
                     Text("Un solo aviso con lo que aún te falte ese día: pesarte, medirte o ambas.")
                 }
 
+                Section("WHOOP") {
+                    NavigationLink("Conexión y datos de WHOOP", value: WhoopRoute())
+                }
                 Section("Medidas del cuerpo") {
                     NavigationLink("Sitios de medición", value: BodySitesRoute())
                 }

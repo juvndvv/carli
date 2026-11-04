@@ -66,6 +66,7 @@ struct ShellTests {
         #expect(measure.measure)
         #expect(!measure.weighIn)
         #expect(AppLink.parse("/salud/cuerpo")?.section == "body")
+        #expect(AppLink.parse("/salud/whoop")?.steps == [.whoop])
         #expect(AppLink.moduleSettings(AppModule.health)?.steps == [.healthSettings])
     }
 

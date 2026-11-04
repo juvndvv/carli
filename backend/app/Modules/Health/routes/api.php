@@ -4,6 +4,7 @@ use App\Modules\Health\Http\Controllers\BodyController;
 use App\Modules\Health\Http\Controllers\MeasurementController;
 use App\Modules\Health\Http\Controllers\SettingsController;
 use App\Modules\Health\Http\Controllers\SummaryController;
+use App\Modules\Health\Http\Controllers\WhoopController;
 use Illuminate\Support\Facades\Route;
 
 Route::where([
@@ -21,6 +22,14 @@ Route::where([
     Route::post('measurements/sync', [MeasurementController::class, 'sync'])->name('measurements.sync');
     Route::get('measurements/{measurement}', [MeasurementController::class, 'show'])->name('measurements.show');
     Route::delete('measurements/{measurement}', [MeasurementController::class, 'destroy'])->name('measurements.destroy');
+
+    Route::prefix('whoop')->name('whoop.')->group(function (): void {
+        Route::get('/', [WhoopController::class, 'show'])->name('show');
+        Route::post('/', [WhoopController::class, 'connect'])->middleware('throttle:10,1')->name('connect');
+        Route::post('sync', [WhoopController::class, 'sync'])->middleware('throttle:6,1')->name('sync');
+        Route::delete('/', [WhoopController::class, 'destroy'])->name('destroy');
+        Route::get('days', [WhoopController::class, 'days'])->name('days');
+    });
 
     Route::prefix('body')->name('body.')->group(function (): void {
         Route::get('/', [BodyController::class, 'overview'])->name('overview');

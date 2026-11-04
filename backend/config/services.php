@@ -61,4 +61,11 @@ return [
         'timeout' => (int) env('GOOGLE_TIMEOUT', 20),
     ],
 
+    'whoop' => [
+        'client_id' => env('WHOOP_CLIENT_ID'),
+        'client_secret' => env('WHOOP_CLIENT_SECRET'),
+        'redirect_url' => env('WHOOP_REDIRECT_URL', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/v1/health/whoop/callback'),
+        'timeout' => (int) env('WHOOP_TIMEOUT', 20),
+    ],
+
 ];

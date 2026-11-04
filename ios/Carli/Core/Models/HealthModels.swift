@@ -315,3 +315,89 @@ enum BodyFormat {
         return "\(value < 0 ? "−" : "+")\(number)"
     }
 }
+
+// MARK: WHOOP
+
+struct WhoopStatus: Decodable, Equatable {
+    var configured: Bool
+    var account: WhoopAccountInfo?
+}
+
+struct WhoopAccountInfo: Decodable, Equatable {
+    var email: String?
+    var status: String
+    var syncedAt: String?
+    var lastError: String?
+
+    var needsReconnect: Bool { status == "reconnect" }
+}
+
+struct WhoopAuthURL: Decodable {
+    var authUrl: String
+}
+
+/// One day as WHOOP saw it: the recovery and night that end on it, its strain and steps, and its workouts.
+struct WhoopDay: Decodable, Identifiable, Equatable {
+    var date: String
+    var recovery: WhoopRecovery?
+    var sleep: WhoopSleep?
+    var napMinutes: Int
+    var strain: WhoopStrain?
+    var workouts: [WhoopWorkout]
+
+    var id: String { date }
+}
+
+struct WhoopRecovery: Decodable, Equatable {
+    var state: String
+    var calibrating: Bool
+    var score: Int?
+    var restingHeartRate: Int?
+    var hrvMs: Double?
+    var spo2: Double?
+    var skinTempC: Double?
+}
+
+struct WhoopSleep: Decodable, Equatable {
+    var state: String
+    var startsAt: String
+    var endsAt: String
+    var asleepMinutes: Int?
+    var inBedMinutes: Int?
+    var awakeMinutes: Int?
+    var lightMinutes: Int?
+    var deepMinutes: Int?
+    var remMinutes: Int?
+    var needMinutes: Int?
+    var performance: Int?
+    var consistency: Int?
+    var efficiency: Double?
+    var respiratoryRate: Double?
+    var disturbances: Int?
+}
+
+struct WhoopStrain: Decodable, Equatable {
+    var state: String
+    var inProgress: Bool
+    var strain: Double?
+    var kcal: Int?
+    var averageHeartRate: Int?
+    var maxHeartRate: Int?
+    /// Wake to wake, not midnight to midnight; nil when the band was not worn.
+    var steps: Int?
+}
+
+struct WhoopWorkout: Decodable, Identifiable, Equatable {
+    var id: String
+    var state: String
+    var sport: String?
+    var startsAt: String
+    var endsAt: String
+    var strain: Double?
+    var kcal: Int?
+    var averageHeartRate: Int?
+    var maxHeartRate: Int?
+    var distanceM: Double?
+    /// Minutes in heart rate zones 0 to 5.
+    var zoneMinutes: [Int]
+}

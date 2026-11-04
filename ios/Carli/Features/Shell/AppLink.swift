@@ -14,7 +14,7 @@ enum AppLinkStep: Hashable {
     case account(String), goal(String), contact(String), banks, bankLink(String, renewed: Bool)
     case task(String), taskList(String), template(String), tasksSettings
     case habit(String), habitsSettings
-    case measurement(String), healthSettings
+    case measurement(String), healthSettings, whoop
     case note(String), folder(String), notesCollection(trash: Bool), notesSettings
 }
 
@@ -164,6 +164,7 @@ struct AppLink: Equatable, Identifiable {
             case (2, "mediciones"): return AppLink(tab: health, section: "measurements", steps: [.measurement(rest[1])])
             case (1, "tendencias"): return AppLink(tab: health, section: "trends")
             case (1, "ajustes"): return AppLink(tab: health, section: "summary", steps: [.healthSettings])
+            case (1, "whoop"): return AppLink(tab: health, section: "summary", steps: [.whoop])
             default: return nil
             }
         case "notas":
